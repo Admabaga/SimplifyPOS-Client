@@ -1,0 +1,91 @@
+/* Contenedor principal de la cabecera */
+.profile-header-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+
+/* Avatar del usuario */
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.avatar-upload-label {
+    display: block;
+    position: relative;
+}
+
+/* Contenedor de información del usuario */
+.profile-user-info {
+    flex: 1;
+    width: 100%;
+}
+
+.profile-user-info h2 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.profile-user-info p {
+    color: #64748b;
+    margin: 0.25rem 0;
+    font-size: 1rem;
+}
+
+/* Efecto al subir imagen */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.avatar-uploading {
+    animation: pulse 1.5s infinite;
+    opacity: 0.8;
+}
+
+/* Media queries para responsive */
+@media (min-width: 768px) {
+    .profile-header-card {
+        flex-direction: row;
+        text-align: left;
+    }
+    
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .profile-user-info {
+        padding-left: 1rem;
+    }
+}
+
+/* Estilo para cuando falla la carga de la imagen */
+.profile-avatar[src*="default-avatar.png"] {
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-weight: bold;
+    font-size: 2.5rem;
+}

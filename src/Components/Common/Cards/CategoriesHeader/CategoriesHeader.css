@@ -1,0 +1,101 @@
+.category-card {
+    background-color: #4612bd;
+    padding: 1.5rem;
+    max-width: 100%;
+    box-sizing: border-box;
+    border-bottom-left-radius: 7%;
+    border-bottom-right-radius: 7%;
+}
+
+.category-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.category-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.btn-agregar {
+    background-color: #6baf12;
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 0.6rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-agregar:hover {
+    background-color: #559600;
+}
+
+.icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  background-color: #028d15;
+  color: white;
+  border-radius: 30%;
+  margin-right: 1rem;
+  font-size: 0.8rem;
+}
+
+.category-busqueda {
+    display: flex;
+    align-items: center;
+    background-color: #f5f4f3;
+    border-radius: 0.6rem;
+    padding: 0.6rem 1rem;
+}
+
+.icono-buscar {
+    color: #999;
+    font-size: 1rem;
+    margin-right: 0.5rem;
+}
+
+.input-buscar {
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    flex: 1;
+    outline: none;
+    color: #333;
+}
+
+.input-fecha {
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-right: 8px;
+}
+
+.category-fechas {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+}
+
+
+@media (max-width: 600px) {
+    .category-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .btn-agregar {
+        align-self: flex-end;
+    }
+}

@@ -1,0 +1,123 @@
+.categoria-card {
+  width: 100%;
+  max-width: 600px;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  margin: 1rem
+}
+
+.categoria-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.categoria-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.categoria-iva {
+  font-size: 1.3rem;
+  text-align: center;
+  color: #444;
+  margin-bottom: 1rem;
+}
+
+.categoria-edicion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.iva-input {
+  width: 90px;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.iva-input:focus {
+  outline: none;
+  border-color: #3A0CA3;
+  box-shadow: 0 0 0 2px rgba(58, 12, 163, 0.2);
+}
+
+.categoria-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
+
+.btn.editar {
+  background-color: #3A0CA3;
+  color: white;
+}
+
+.btn.guardar {
+  background-color: #00B36B;
+  color: white;
+}
+
+.btn.cancelar {
+  background-color: #EF476F;
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .categoria-card {
+    padding: 1rem;
+    margin: 1rem;
+  }
+
+  .categoria-title {
+    font-size: 1.3rem;
+  }
+
+  .categoria-iva {
+    font-size: 1.1rem;
+  }
+
+  .iva-input {
+    width: 75px;
+  }
+
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+}

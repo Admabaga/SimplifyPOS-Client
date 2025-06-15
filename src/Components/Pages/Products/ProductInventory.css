@@ -1,0 +1,59 @@
+.product-inventory {
+  margin: 3rem auto;
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.product-inventory h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1e3a8a;
+  text-align: center;
+}
+
+.add-product-button {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: block;
+  margin: 0 auto 1.5rem auto;
+}
+
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1.5rem 0 2rem;
+  padding: 1.5rem;
+  background-color: #f1f5f9;
+  border-radius: 1rem;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.summary-item {
+  flex: 1 1 200px;
+  text-align: center;
+}
+
+.summary-item span {
+  display: block;
+  font-size: 0.95rem;
+  color: #1e3a8a;
+  margin-bottom: 0.3rem;
+}
+
+.summary-item strong {
+  font-size: 1.4rem;
+  color: #0f3697;
+}
+
