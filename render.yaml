@@ -1,0 +1,40 @@
+# Render Blueprint — SimplifyPOS Client (frontend React)
+# Static site servido por CDN de Render (gratis, siempre activo, sin cold start).
+services:
+  - type: web
+    name: simplifypos-client
+    runtime: static
+    plan: free
+    branch: main
+    autoDeploy: false             # CI lo controla con deploy hook
+
+    buildCommand: |
+      npm ci && npm run build
+
+    staticPublishPath: ./dist
+
+    # SPA: cualquier ruta cae a index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    # Headers de seguridad
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      # Cache largo para assets con hash (Vite los versiona)
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+
+    envVars:
+      - key: VITE_API_URL
+        sync: false                # URL del backend en Render (la set manualmente)
