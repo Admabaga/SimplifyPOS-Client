@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { usuariosApi } from './api'
 import { rolesApi } from '../roles/api'
+import { masterApi } from '@/features/master/api'
 import {
   Button, Card, PageHeader, Table, Th, Td, Badge,
   Modal, ConfirmDialog, Input, Spinner, EmptyState, SearchInput,
@@ -26,6 +27,7 @@ const crearSchema = z.object({
   nombre: z.string().min(2, 'Mínimo 2 caracteres'),
   email:  z.string().email('Email inválido'),
   role_id: z.coerce.number().min(1, 'Selecciona un rol'),
+  created_by_admin_id: z.coerce.number().optional(),
 })
 type CrearForm = z.infer<typeof crearSchema>
 
@@ -60,6 +62,12 @@ export default function UsersPage() {
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
     queryFn: () => rolesApi.list(),
+  })
+
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['master-tenants'],
+    queryFn: () => masterApi.listTenants(),
+    enabled: isMaster,
   })
 
   // Roles que puede asignar según su propio rol
@@ -296,6 +304,22 @@ export default function UsersPage() {
             {...register('email')}
             error={errors.email?.message}
           />
+
+          {/* Admin destino (solo master) */}
+          {isMaster && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-slate-700">Negocio (admin) *</label>
+              <select
+                {...register('created_by_admin_id')}
+                className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none bg-white"
+              >
+                <option value="">-- Selecciona el negocio --</option>
+                {tenants.filter(t => t.activo).map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Rol */}
           <div className="space-y-1.5">
