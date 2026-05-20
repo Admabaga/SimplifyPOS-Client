@@ -35,6 +35,7 @@ const ROLE_LABELS: Record<string, { variant: 'purple' | 'blue' | 'green' | 'yell
   master:     { variant: 'purple', label: 'Master' },
   admin:      { variant: 'blue',   label: 'Admin' },
   supervisor: { variant: 'green',  label: 'Supervisor' },
+  cajero:     { variant: 'yellow', label: 'Cajero' },
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────
@@ -65,9 +66,8 @@ export default function UsersPage() {
   const rolesPermitidos = useMemo(() => {
     const sinMaster = roles.filter((r) => r.name.toLowerCase() !== 'master')
     if (isMaster) return sinMaster
-    // admin: solo supervisor; si no encuentra por nombre exacto, excluye master y admin como fallback
-    const soloSupervisor = sinMaster.filter((r) => r.name.toLowerCase() === 'supervisor')
-    return soloSupervisor.length > 0 ? soloSupervisor : sinMaster.filter((r) => r.name.toLowerCase() !== 'admin')
+    // admin: puede crear supervisor y cajero (no admin, no master)
+    return sinMaster.filter((r) => !['admin', 'master'].includes(r.name.toLowerCase()))
   }, [roles, isMaster])
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CrearForm>({
