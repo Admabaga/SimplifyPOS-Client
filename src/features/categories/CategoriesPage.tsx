@@ -140,12 +140,12 @@ export default function CategoriesPage() {
       ) : categorias.length === 0 ? (
         <EmptyState icon={<Tag size={40} />} title="Sin categorías" description="Crea la primera categoría global" />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="text-left py-2 px-3 text-slate-500 font-medium">Categoría</th>
-                <th className="text-left py-2 px-3 text-slate-500 font-medium">Descripción</th>
+                <th className="text-left py-2 px-3 text-slate-500 font-medium hidden sm:table-cell">Descripción</th>
                 <th className="text-center py-2 px-3 text-slate-500 font-medium">IVA</th>
                 {isMaster && <th className="py-2 px-3" />}
               </tr>
@@ -153,8 +153,15 @@ export default function CategoriesPage() {
             <tbody>
               {sorted.map((cat) => (
                 <tr key={cat.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 px-3 font-medium text-slate-800">{cat.nombre}</td>
-                  <td className="py-2.5 px-3 text-slate-500 text-xs">{cat.descripcion ?? '—'}</td>
+                  <td className="py-2.5 px-3 font-medium text-slate-800">
+                    <div>
+                      <span>{cat.nombre}</span>
+                      {cat.descripcion && (
+                        <span className="sm:hidden block text-xs text-slate-400 mt-0.5 font-normal">{cat.descripcion}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-2.5 px-3 text-slate-500 text-xs hidden sm:table-cell">{cat.descripcion ?? '—'}</td>
                   <td className="py-2.5 px-3 text-center">
                     <IvaBadge iva={cat.iva} />
                   </td>

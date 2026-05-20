@@ -175,18 +175,18 @@ export default function NotificationsPage() {
 
       {/* Resumen */}
       {data && data.count > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card className="p-4 text-center">
-            <p className="text-2xl font-black text-slate-800">{data.count}</p>
-            <p className="text-xs text-slate-500 mt-0.5">Total alertas</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <Card className="p-2 sm:p-4 text-center">
+            <p className="text-xl sm:text-2xl font-black text-slate-800">{data.count}</p>
+            <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5">Total alertas</p>
           </Card>
-          <Card className="p-4 text-center border-red-100 bg-red-50">
-            <p className="text-2xl font-black text-red-600">{data.critical}</p>
-            <p className="text-xs text-red-500 mt-0.5">Agotados</p>
+          <Card className="p-2 sm:p-4 text-center border-red-100 bg-red-50">
+            <p className="text-xl sm:text-2xl font-black text-red-600">{data.critical}</p>
+            <p className="text-[10px] sm:text-xs text-red-500 mt-0.5">Agotados</p>
           </Card>
-          <Card className="p-4 text-center border-yellow-100 bg-yellow-50">
-            <p className="text-2xl font-black text-yellow-600">{data.warning}</p>
-            <p className="text-xs text-yellow-500 mt-0.5">Stock bajo</p>
+          <Card className="p-2 sm:p-4 text-center border-yellow-100 bg-yellow-50">
+            <p className="text-xl sm:text-2xl font-black text-yellow-600">{data.warning}</p>
+            <p className="text-[10px] sm:text-xs text-yellow-500 mt-0.5">Stock bajo</p>
           </Card>
         </div>
       )}

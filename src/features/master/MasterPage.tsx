@@ -258,7 +258,7 @@ export default function MasterPage() {
   })
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div>
       <PageHeader
         title="Panel Master"
         subtitle="Gestiona todos los negocios registrados en la plataforma"

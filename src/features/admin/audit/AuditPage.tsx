@@ -35,7 +35,7 @@ export default function AuditPage() {
           placeholder="Filtrar por recurso (ej: productos)"
           value={resource}
           onChange={(e) => { setResource(e.target.value); setOffset(0) }}
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none bg-white w-64"
+          className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none bg-white w-full sm:w-64"
         />
       </div>
 
@@ -45,15 +45,16 @@ export default function AuditPage() {
         ) : entries.length === 0 ? (
           <EmptyState icon={<ClipboardList size={40} />} title="Sin registros" />
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <thead>
               <tr>
                 <Th>Usuario</Th>
                 <Th>Acción</Th>
                 <Th>Recurso</Th>
-                <Th>ID</Th>
-                <Th>IP</Th>
-                <Th>Fecha</Th>
+                <Th className="hidden sm:table-cell">ID</Th>
+                <Th className="hidden md:table-cell">IP</Th>
+                <Th className="hidden sm:table-cell">Fecha</Th>
               </tr>
             </thead>
             <tbody>
@@ -61,21 +62,22 @@ export default function AuditPage() {
                 <tr key={e.id} className="hover:bg-gray-50">
                   <Td>
                     <div>
-                      <p className="text-xs font-medium text-gray-700">{e.user_email}</p>
-                      <p className="text-[10px] text-gray-400">ID {e.user_id}</p>
+                      <p className="text-xs font-medium text-gray-700 truncate max-w-[140px]">{e.user_email}</p>
+                      <p className="text-[10px] text-gray-400 sm:hidden">{formatDate(e.created_at)}</p>
                     </div>
                   </Td>
                   <Td>
                     <Badge variant={ACTION_COLORS[e.action] ?? 'gray'}>{e.action}</Badge>
                   </Td>
                   <Td className="text-xs text-gray-600">{e.resource}</Td>
-                  <Td className="text-xs text-gray-400">{e.resource_id ?? '—'}</Td>
-                  <Td className="text-xs font-mono text-gray-400">{e.ip}</Td>
-                  <Td className="text-xs text-gray-400">{formatDate(e.created_at)}</Td>
+                  <Td className="text-xs text-gray-400 hidden sm:table-cell">{e.resource_id ?? '—'}</Td>
+                  <Td className="text-xs font-mono text-gray-400 hidden md:table-cell">{e.ip}</Td>
+                  <Td className="text-xs text-gray-400 hidden sm:table-cell">{formatDate(e.created_at)}</Td>
                 </tr>
               ))}
             </tbody>
           </Table>
+          </div>
         )}
       </Card>
 

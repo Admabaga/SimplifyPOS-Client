@@ -90,75 +90,74 @@ export default function ResolucionesTab() {
             description="Agrega tu primera resolución DIAN para comenzar a emitir documentos fiscales."
           />
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Tipo</Th>
-                <Th>Resolución</Th>
-                <Th>Prefijo · Rango</Th>
-                <Th>Usados / Disponibles</Th>
-                <Th>Vigencia</Th>
-                <Th>Estado</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {resoluciones.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100">
-                  <Td>
-                    <Badge variant="purple">Factura de venta</Badge>
-                  </Td>
-                  <Td>
-                    <div className="text-xs font-semibold">{r.numero_resolucion}</div>
-                    <div className="text-[10px] text-slate-400">{formatDate(r.fecha_resolucion)}</div>
-                  </Td>
-                  <Td>
-                    <div className="font-mono text-xs">{r.prefijo || '—'} · {r.rango_desde} - {r.rango_hasta}</div>
-                  </Td>
-                  <Td>
-                    <div className="text-xs tabular-nums">
-                      <span className="text-slate-600">{r.consecutivo_actual - r.rango_desde}</span>
-                      {' / '}
-                      <span className="font-bold">{r.numeros_disponibles}</span>
-                    </div>
-                  </Td>
-                  <Td>
-                    <div className="text-[10px] text-slate-500">
-                      {formatDate(r.fecha_vigencia_desde)} → {formatDate(r.fecha_vigencia_hasta)}
-                    </div>
-                  </Td>
-                  <Td>
-                    {r.activa ? (
-                      <Badge variant="green" dot><CheckCircle2 size={11} className="inline mr-0.5" /> Activa</Badge>
-                    ) : !r.vigente ? (
-                      <Badge variant="red" dot><AlertTriangle size={11} className="inline mr-0.5" /> Vencida</Badge>
-                    ) : (
-                      <Badge variant="gray" dot>Inactiva</Badge>
-                    )}
-                  </Td>
-                  <Td>
-                    <div className="flex gap-1 justify-end">
-                      {!r.activa && r.vigente && r.numeros_disponibles > 0 && (
-                        <Button
-                          size="sm" variant="ghost" icon={<Power size={12} />}
-                          onClick={() => activarMutation.mutate(r.id)}
-                          loading={activarMutation.isPending}
-                          title="Activar"
-                        >
-                          Activar
-                        </Button>
-                      )}
-                      <Button
-                        size="sm" variant="ghost" icon={<Trash2 size={12} />}
-                        onClick={() => setDeleteId(r.id)}
-                        title="Eliminar"
-                      />
-                    </div>
-                  </Td>
+          <div className="overflow-x-auto -mx-5 px-5">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Resolución</Th>
+                  <Th className="hidden sm:table-cell">Prefijo · Rango</Th>
+                  <Th className="hidden md:table-cell">Usados / Disp.</Th>
+                  <Th className="hidden lg:table-cell">Vigencia</Th>
+                  <Th>Estado</Th>
+                  <Th></Th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {resoluciones.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-100">
+                    <Td>
+                      <div className="text-xs font-semibold">{r.numero_resolucion}</div>
+                      <div className="text-[10px] text-slate-400">{formatDate(r.fecha_resolucion)}</div>
+                      <div className="sm:hidden text-[10px] text-slate-400 font-mono mt-0.5">{r.prefijo || '—'} · {r.rango_desde}-{r.rango_hasta}</div>
+                    </Td>
+                    <Td className="hidden sm:table-cell">
+                      <div className="font-mono text-xs whitespace-nowrap">{r.prefijo || '—'} · {r.rango_desde} - {r.rango_hasta}</div>
+                    </Td>
+                    <Td className="hidden md:table-cell">
+                      <div className="text-xs tabular-nums">
+                        <span className="text-slate-600">{r.consecutivo_actual - r.rango_desde}</span>
+                        {' / '}
+                        <span className="font-bold">{r.numeros_disponibles}</span>
+                      </div>
+                    </Td>
+                    <Td className="hidden lg:table-cell">
+                      <div className="text-[10px] text-slate-500 whitespace-nowrap">
+                        {formatDate(r.fecha_vigencia_desde)} → {formatDate(r.fecha_vigencia_hasta)}
+                      </div>
+                    </Td>
+                    <Td>
+                      {r.activa ? (
+                        <Badge variant="green" dot>Activa</Badge>
+                      ) : !r.vigente ? (
+                        <Badge variant="red" dot>Vencida</Badge>
+                      ) : (
+                        <Badge variant="gray" dot>Inactiva</Badge>
+                      )}
+                    </Td>
+                    <Td>
+                      <div className="flex gap-1 justify-end">
+                        {!r.activa && r.vigente && r.numeros_disponibles > 0 && (
+                          <Button
+                            size="sm" variant="ghost" icon={<Power size={12} />}
+                            onClick={() => activarMutation.mutate(r.id)}
+                            loading={activarMutation.isPending}
+                            title="Activar"
+                          >
+                            <span className="hidden sm:inline">Activar</span>
+                          </Button>
+                        )}
+                        <Button
+                          size="sm" variant="ghost" icon={<Trash2 size={12} />}
+                          onClick={() => setDeleteId(r.id)}
+                          title="Eliminar"
+                        />
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
         )}
       </Card>
 
@@ -211,11 +210,11 @@ function CreateResolucionModal({
         <Select label="Tipo de documento" {...register('tipo_documento')} options={[
           { value: 'FACTURA_VENTA', label: 'Factura de venta' },
         ]} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Número resolución" {...register('numero_resolucion')} error={errors.numero_resolucion?.message} placeholder="18764000001234" />
           <Input label="Fecha resolución" type="date" {...register('fecha_resolucion')} error={errors.fecha_resolucion?.message} />
           <Input label="Prefijo" {...register('prefijo')} placeholder="FE" />
-          <div /> {/* spacer */}
+          <div />
           <Input label="Rango desde" type="number" {...register('rango_desde')} error={errors.rango_desde?.message} />
           <Input label="Rango hasta" type="number" {...register('rango_hasta')} error={errors.rango_hasta?.message} />
           <Input label="Vigencia desde" type="date" {...register('fecha_vigencia_desde')} />

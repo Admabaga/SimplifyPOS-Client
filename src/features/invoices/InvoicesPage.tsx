@@ -225,14 +225,15 @@ export default function InvoicesPage() {
           />
         ) : (
           <Card padding={false} className="overflow-hidden">
+            <div className="overflow-x-auto">
             <Table>
               <thead>
                 <tr>
-                  <Th>#</Th>
+                  <Th className="hidden sm:table-cell">#</Th>
                   <Th>Proveedor</Th>
                   <Th>Total</Th>
-                  <Th>Ítems</Th>
-                  <Th>Fecha</Th>
+                  <Th className="hidden sm:table-cell">Ítems</Th>
+                  <Th className="hidden md:table-cell">Fecha</Th>
                   <Th> </Th>
                 </tr>
               </thead>
@@ -248,7 +249,7 @@ export default function InvoicesPage() {
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                         onClick={() => toggleExpand(f.id)}
                       >
-                        <Td className="font-mono text-xs text-slate-400">#{f.id}</Td>
+                        <Td className="font-mono text-xs text-slate-400 hidden sm:table-cell">#{f.id}</Td>
                         <Td>
                           <div>
                             <p className="font-semibold text-slate-800">{proveedorNombre(f.proveedor_id)}</p>
@@ -258,16 +259,19 @@ export default function InvoicesPage() {
                                 {f.compras.length > 2 && ` +${f.compras.length - 2} más`}
                               </p>
                             )}
+                            <span className="sm:hidden text-[10px] text-slate-400">
+                              {f.compras.length} ítem{f.compras.length !== 1 ? 's' : ''} · {formatDate(f.fecha_creacion)}
+                            </span>
                           </div>
                         </Td>
                         <Td className="font-bold text-slate-800 tabular-nums">{formatCOP(total)}</Td>
-                        <Td>
+                        <Td className="hidden sm:table-cell">
                           <Badge variant="gray">
                             <ShoppingCart size={10} className="mr-0.5" />
                             {f.compras.length} ítem{f.compras.length !== 1 ? 's' : ''}
                           </Badge>
                         </Td>
-                        <Td className="text-slate-400 text-xs whitespace-nowrap">{formatDate(f.fecha_creacion)}</Td>
+                        <Td className="text-slate-400 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(f.fecha_creacion)}</Td>
                         <Td>
                           <div className="flex items-center justify-end text-slate-400 group-hover:text-slate-600">
                             {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
@@ -304,6 +308,7 @@ export default function InvoicesPage() {
                 })}
               </tbody>
             </Table>
+            </div>
 
             <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
               <span>{filtered.length} factura{filtered.length !== 1 ? 's' : ''}</span>
@@ -463,8 +468,8 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
               </Button>
             </div>
 
-            {/* Header */}
-            <div className="grid grid-cols-12 gap-2 mb-1 px-1">
+            {/* Header — hidden on mobile, shown sm+ */}
+            <div className="hidden sm:grid grid-cols-12 gap-2 mb-1 px-1">
               <p className="col-span-5 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Producto</p>
               <p className="col-span-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Cant.</p>
               <p className="col-span-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Precio total</p>
@@ -477,9 +482,9 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
                 const ptotal    = parseNum(item.precioDisplay)
                 const costoUnit = ptotal / cant
                 return (
-                  <div key={item.id} className="grid grid-cols-12 gap-2 items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div key={item.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center">
                     {/* Producto */}
-                    <div className="col-span-5">
+                    <div className="sm:col-span-5">
                       <select
                         value={item.producto_id}
                         onChange={(e) => {
@@ -497,39 +502,42 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
                       </select>
                     </div>
 
-                    {/* Cantidad */}
-                    <div className="col-span-2">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="Cant."
-                        value={item.cantDisplay}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '')
-                          patchItem(item.id, { cantDisplay: raw ? parseInt(raw, 10).toLocaleString('es-CO') : '' })
-                        }}
-                        className={ITEM_INPUT_CLASS}
-                      />
-                    </div>
+                    {/* Cantidad + Precio row on mobile */}
+                    <div className="flex gap-2 sm:contents">
+                      {/* Cantidad */}
+                      <div className="flex-1 sm:col-span-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Cant."
+                          value={item.cantDisplay}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '')
+                            patchItem(item.id, { cantDisplay: raw ? parseInt(raw, 10).toLocaleString('es-CO') : '' })
+                          }}
+                          className={ITEM_INPUT_CLASS}
+                        />
+                      </div>
 
-                    {/* Precio total */}
-                    <div className="col-span-3 relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="Total"
-                        value={item.precioDisplay}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, '')
-                          patchItem(item.id, { precioDisplay: raw ? parseInt(raw, 10).toLocaleString('es-CO') : '' })
-                        }}
-                        className={`${ITEM_INPUT_CLASS} pl-5`}
-                      />
+                      {/* Precio total */}
+                      <div className="flex-1 sm:col-span-3 relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Total"
+                          value={item.precioDisplay}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, '')
+                            patchItem(item.id, { precioDisplay: raw ? parseInt(raw, 10).toLocaleString('es-CO') : '' })
+                          }}
+                          className={`${ITEM_INPUT_CLASS} pl-5`}
+                        />
+                      </div>
                     </div>
 
                     {/* Costo unitario + borrar */}
-                    <div className="col-span-2 flex items-center justify-between">
+                    <div className="sm:col-span-2 flex items-center justify-between">
                       <span className="text-[11px] text-slate-400 tabular-nums">
                         {costoUnit > 0 ? formatCOP(costoUnit) : '—'}
                       </span>

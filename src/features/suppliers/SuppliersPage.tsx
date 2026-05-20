@@ -92,37 +92,44 @@ export default function SuppliersPage() {
       ) : proveedores.length === 0 ? (
         <EmptyState icon={<Truck size={40} />} title="Sin proveedores" />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Nombre</Th>
-              <Th>Teléfono</Th>
-              <Th>Email</Th>
-              <Th>Dirección</Th>
-              <Th>Acciones</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {proveedores.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <Td className="font-medium">{p.nombre}</Td>
-                <Td>{p.telefono ?? '—'}</Td>
-                <Td>{p.email ?? '—'}</Td>
-                <Td>{p.direccion ?? '—'}</Td>
-                <Td>
-                  <div className="flex gap-1">
-                    <Can permission="proveedores:update">
-                      <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={() => setEditItem({ id: p.id, nombre: p.nombre, telefono: p.telefono ?? '', email: p.email ?? '', direccion: p.direccion ?? '' })} />
-                    </Can>
-                    <Can permission="proveedores:delete">
-                      <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setDeleteId(p.id)} className="text-red-500 hover:text-red-700" />
-                    </Can>
-                  </div>
-                </Td>
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nombre</Th>
+                <Th className="hidden sm:table-cell">Teléfono</Th>
+                <Th className="hidden md:table-cell">Email</Th>
+                <Th className="hidden lg:table-cell">Dirección</Th>
+                <Th>Acciones</Th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {proveedores.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <Td>
+                    <div>
+                      <span className="font-medium text-slate-800">{p.nombre}</span>
+                      <span className="sm:hidden block text-xs text-slate-400 mt-0.5">{p.telefono ?? p.email ?? ''}</span>
+                    </div>
+                  </Td>
+                  <Td className="hidden sm:table-cell">{p.telefono ?? '—'}</Td>
+                  <Td className="hidden md:table-cell">{p.email ?? '—'}</Td>
+                  <Td className="hidden lg:table-cell">{p.direccion ?? '—'}</Td>
+                  <Td>
+                    <div className="flex gap-1">
+                      <Can permission="proveedores:update">
+                        <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={() => setEditItem({ id: p.id, nombre: p.nombre, telefono: p.telefono ?? '', email: p.email ?? '', direccion: p.direccion ?? '' })} />
+                      </Can>
+                      <Can permission="proveedores:delete">
+                        <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setDeleteId(p.id)} className="text-red-500 hover:text-red-700" />
+                      </Can>
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       )}
 
       <ProveedorModal

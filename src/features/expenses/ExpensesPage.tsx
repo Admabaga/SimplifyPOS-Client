@@ -213,9 +213,9 @@ export default function ExpensesPage() {
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
                   <Th>Descripción</Th>
-                  <Th>Categoría</Th>
+                  <Th className="hidden sm:table-cell">Categoría</Th>
                   <Th>Monto</Th>
-                  <Th>Fecha</Th>
+                  <Th className="hidden sm:table-cell">Fecha</Th>
                   <Th> </Th>
                 </tr>
               </thead>
@@ -226,8 +226,20 @@ export default function ExpensesPage() {
 
                   return (
                     <tr key={g.id} className="hover:bg-slate-50 transition-colors">
-                      <Td className="font-medium text-slate-800">{g.descripcion}</Td>
                       <Td>
+                        <div>
+                          <span className="font-medium text-slate-800">{g.descripcion}</span>
+                          <div className="sm:hidden flex items-center gap-1.5 mt-0.5">
+                            {g.categoria && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px]">
+                                <Tag size={8} />{g.categoria}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400">{formatDate(g.fecha)}</span>
+                          </div>
+                        </div>
+                      </Td>
+                      <Td className="hidden sm:table-cell">
                         {g.categoria ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs">
                             <Tag size={9} />
@@ -242,7 +254,7 @@ export default function ExpensesPage() {
                           {formatCOP(monto)}
                         </span>
                       </Td>
-                      <Td className="text-slate-500 text-xs">{formatDate(g.fecha)}</Td>
+                      <Td className="text-slate-500 text-xs hidden sm:table-cell">{formatDate(g.fecha)}</Td>
                       <Td>
                         <div className="flex gap-1 justify-end">
                           <Can permission="gastos:update">

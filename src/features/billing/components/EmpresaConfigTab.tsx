@@ -73,7 +73,7 @@ export default function EmpresaConfigTab() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Input label="Razón social *" {...register('razon_social')} error={errors.razon_social?.message} />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 items-start">
             <div className="col-span-2">
               <Input label="NIT *" {...register('nit')} error={errors.nit?.message} placeholder="900123456" />
             </div>

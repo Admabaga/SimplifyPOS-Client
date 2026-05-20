@@ -154,7 +154,7 @@ export default function SalesPage() {
               <h2 className="text-sm font-semibold text-slate-800">Ventas en el período</h2>
             </div>
             <div className="px-2 pt-3 pb-2">
-              <ResponsiveContainer width="100%" height={180}>
+              <ResponsiveContainer width="100%" height={180} minWidth={0}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">

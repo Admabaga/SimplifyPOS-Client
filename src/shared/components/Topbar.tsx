@@ -262,7 +262,7 @@ export default function Topbar() {
   const [themeOpen, setThemeOpen] = useState(false)
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 sticky top-0 z-20">
+    <header className="hidden lg:flex h-14 bg-white border-b border-slate-200 items-center justify-between px-6 sticky top-0 z-20">
       <Breadcrumbs />
       <div className="flex items-center gap-1.5">
         {/* Personalizar tema */}

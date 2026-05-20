@@ -225,7 +225,7 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
 
           {/* Totales */}
           <div className="flex justify-end">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 min-w-[260px]">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 w-full sm:min-w-[260px] sm:w-auto">
               {!esInformal && <Row label="Subtotal (base gravable)" value={formatCOP(ticket.base_gravable)} />}
               {!esInformal && <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />}
               <div className={!esInformal ? 'border-t border-slate-300 pt-2 mt-2' : ''}>

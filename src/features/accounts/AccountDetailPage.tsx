@@ -368,7 +368,7 @@ export default function AccountDetailPage() {
       </Card>
 
       {/* ── Estadísticas ventas ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatCard
           label="Ventas registradas"
           value={String(cuenta.ventas.length)}

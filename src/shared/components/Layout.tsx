@@ -61,7 +61,7 @@ export default function Layout() {
       )}>
         <div>
           <Topbar />
-          <main className="p-4 md:p-6 max-w-7xl mx-auto">
+          <main className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto w-full overflow-x-hidden">
             <Outlet />
           </main>
         </div>

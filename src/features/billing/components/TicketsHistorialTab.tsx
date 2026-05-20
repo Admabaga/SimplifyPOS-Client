@@ -59,44 +59,46 @@ export default function TicketsHistorialTab() {
             }
           />
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Fecha</Th>
-                {subTab === 'dian' && <Th>Tipo</Th>}
-                <Th>Número</Th>
-                <Th>Cliente</Th>
-                <Th>Total</Th>
-                {subTab === 'dian' && <Th>IVA</Th>}
-                <Th>Estado</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((t) => (
-                <tr key={t.id} className="border-b border-slate-100">
-                  <Td><span className="text-[11px] text-slate-500">{formatDateTime(t.fecha_emision)}</span></Td>
-                  {subTab === 'dian' && (
-                    <Td><Badge variant="purple">Factura</Badge></Td>
-                  )}
-                  <Td><span className="font-mono text-xs font-semibold">{t.numero_completo}</span></Td>
-                  <Td><span className="text-xs">{t.cliente_nombre ?? '—'}</span></Td>
-                  <Td><span className="text-xs font-bold tabular-nums">{formatCOP(t.total)}</span></Td>
-                  {subTab === 'dian' && (
-                    <Td><span className="text-xs tabular-nums text-slate-500">{formatCOP(t.valor_iva)}</span></Td>
-                  )}
-                  <Td>
-                    {t.estado === 'EMITIDA'
-                      ? <Badge variant="green" dot>Emitida</Badge>
-                      : <Badge variant="red" dot>Anulada</Badge>}
-                  </Td>
-                  <Td>
-                    <Button size="sm" variant="ghost" icon={<Eye size={12} />} onClick={() => setViewing(t)} />
-                  </Td>
+          <div className="overflow-x-auto -mx-5 px-5">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Fecha</Th>
+                  {subTab === 'dian' && <Th>Tipo</Th>}
+                  <Th>Número</Th>
+                  <Th className="hidden sm:table-cell">Cliente</Th>
+                  <Th>Total</Th>
+                  {subTab === 'dian' && <Th className="hidden md:table-cell">IVA</Th>}
+                  <Th className="hidden sm:table-cell">Estado</Th>
+                  <Th></Th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {lista.map((t) => (
+                  <tr key={t.id} className="border-b border-slate-100">
+                    <Td><span className="text-[11px] text-slate-500 whitespace-nowrap">{formatDateTime(t.fecha_emision)}</span></Td>
+                    {subTab === 'dian' && (
+                      <Td><Badge variant="purple">Factura</Badge></Td>
+                    )}
+                    <Td><span className="font-mono text-xs font-semibold whitespace-nowrap">{t.numero_completo}</span></Td>
+                    <Td className="hidden sm:table-cell"><span className="text-xs">{t.cliente_nombre ?? '—'}</span></Td>
+                    <Td><span className="text-xs font-bold tabular-nums whitespace-nowrap">{formatCOP(t.total)}</span></Td>
+                    {subTab === 'dian' && (
+                      <Td className="hidden md:table-cell"><span className="text-xs tabular-nums text-slate-500">{formatCOP(t.valor_iva)}</span></Td>
+                    )}
+                    <Td className="hidden sm:table-cell">
+                      {t.estado === 'EMITIDA'
+                        ? <Badge variant="green" dot>Emitida</Badge>
+                        : <Badge variant="red" dot>Anulada</Badge>}
+                    </Td>
+                    <Td>
+                      <Button size="sm" variant="ghost" icon={<Eye size={12} />} onClick={() => setViewing(t)} />
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
         )}
       </Card>
 

@@ -304,7 +304,7 @@ export default function DashboardPage() {
                   <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {mesActual}</h2>
                 </div>
                 <div className="px-2 pt-3 pb-2">
-                  <ResponsiveContainer width="100%" height={180}>
+                  <ResponsiveContainer width="100%" height={160} minWidth={0}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
@@ -499,7 +499,7 @@ export default function DashboardPage() {
                 {chartData.length === 0 ? (
                   <div className="h-48 flex items-center justify-center text-slate-400 text-sm">Sin datos este mes</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={180} minWidth={0}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis
@@ -530,9 +530,9 @@ export default function DashboardPage() {
                   { label: 'Ganancia',    value: formatCOP(data.ganancia_bruta) },
                   { label: 'Neto',        value: formatCOP(data.ganancia_neta) },
                 ].map((s) => (
-                  <div key={s.label} className="px-3 first:pl-0 last:pr-0 text-center">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wide">{s.label}</p>
-                    <p className="text-sm font-bold text-slate-800 tabular-nums mt-0.5">{s.value}</p>
+                  <div key={s.label} className="px-1 sm:px-3 first:pl-0 last:pr-0 text-center">
+                    <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wide">{s.label}</p>
+                    <p className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums mt-0.5 truncate">{s.value}</p>
                   </div>
                 ))}
               </div>
@@ -549,7 +549,7 @@ export default function DashboardPage() {
                   <div className="py-10 text-center text-slate-400 text-sm">Sin ventas este mes</div>
                 ) : (
                   <>
-                    <ResponsiveContainer width="100%" height={180}>
+                    <ResponsiveContainer width="100%" height={180} minWidth={0}>
                       <PieChart>
                         <Pie
                           data={topChartData}

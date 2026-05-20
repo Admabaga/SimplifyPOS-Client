@@ -708,13 +708,13 @@ interface TabBarProps<T extends string> {
 
 export function TabBar<T extends string>({ tabs, active, onChange, className }: TabBarProps<T>) {
   return (
-    <div className={clsx('flex gap-0.5 p-1 bg-slate-100 rounded-lg', className)}>
+    <div className={clsx('flex gap-0.5 p-1 bg-slate-100 rounded-lg overflow-x-auto scrollbar-none', className)}>
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
           className={clsx(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 whitespace-nowrap',
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 whitespace-nowrap shrink-0',
             active === t.key
               ? 'bg-white text-slate-800 shadow-xs'
               : 'text-slate-500 hover:text-slate-700'
