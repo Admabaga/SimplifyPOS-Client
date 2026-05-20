@@ -1,8 +1,9 @@
 # Render Blueprint — SimplifyPOS Client (frontend React)
 # Static site servido por CDN de Render (gratis, siempre activo, sin cold start).
 services:
-  - type: static
+  - type: web
     name: simplifypos-client
+    runtime: static
     branch: main
     autoDeploy: false             # CI lo controla con deploy hook
 
