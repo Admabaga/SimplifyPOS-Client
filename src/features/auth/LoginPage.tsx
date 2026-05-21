@@ -231,43 +231,62 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* ── Banner izquierdo premium con animaciones ── */}
+      {/* ── Banner izquierdo: hero editorial + dashboard mock flotante ── */}
       <div
-        className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden px-12 py-10"
         style={{ background: 'var(--t-sidebar-bg)' }}
       >
-        {/* Keyframes inline */}
+        {/* Keyframes */}
         <style>{`
           @keyframes float-slow {
-            0%, 100% { transform: translateY(0px) rotate(-2deg); }
-            50% { transform: translateY(-14px) rotate(2deg); }
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(0.5deg); }
           }
           @keyframes pulse-glow {
-            0%, 100% { opacity: 0.4; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.08); }
+            0%, 100% { opacity: 0.45; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.06); }
           }
-          @keyframes drift-1 {
-            0%, 100% { transform: translate(0, 0); }
-            33% { transform: translate(30px, -20px); }
-            66% { transform: translate(-20px, 25px); }
+          @keyframes aurora-1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(40px, -30px) scale(1.1); }
+            66% { transform: translate(-30px, 40px) scale(0.95); }
           }
-          @keyframes drift-2 {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(-35px, -25px); }
+          @keyframes aurora-2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-50px, -40px) scale(1.15); }
+          }
+          @keyframes aurora-3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            40% { transform: translate(30px, 50px) scale(1.05); }
+            80% { transform: translate(-40px, -20px) scale(0.9); }
           }
           @keyframes fade-up {
-            0% { opacity: 0; transform: translateY(16px); }
+            0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
           }
           @keyframes shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
           }
-          .anim-float    { animation: float-slow 6s ease-in-out infinite; }
-          .anim-glow     { animation: pulse-glow 4s ease-in-out infinite; }
-          .anim-drift-1  { animation: drift-1 18s ease-in-out infinite; }
-          .anim-drift-2  { animation: drift-2 22s ease-in-out infinite; }
-          .anim-fade-up  { animation: fade-up 0.7s ease-out both; }
+          @keyframes bar-grow {
+            0% { transform: scaleY(0.3); }
+            100% { transform: scaleY(1); }
+          }
+          @keyframes slide-in {
+            0% { opacity: 0; transform: translateX(-12px); }
+            100% { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes tilt-3d {
+            0%, 100% { transform: perspective(1400px) rotateY(-8deg) rotateX(4deg) translateY(0); }
+            50%      { transform: perspective(1400px) rotateY(-8deg) rotateX(4deg) translateY(-8px); }
+          }
+          .anim-float    { animation: float-slow 7s ease-in-out infinite; }
+          .anim-glow     { animation: pulse-glow 3.5s ease-in-out infinite; }
+          .anim-aurora-1 { animation: aurora-1 22s ease-in-out infinite; }
+          .anim-aurora-2 { animation: aurora-2 26s ease-in-out infinite; }
+          .anim-aurora-3 { animation: aurora-3 28s ease-in-out infinite; }
+          .anim-fade-up  { animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+          .anim-tilt-3d  { animation: tilt-3d 6s ease-in-out infinite; transform-style: preserve-3d; }
           .text-shimmer {
             background: linear-gradient(110deg, #ffffff 0%, #ffffff 35%, var(--t-accent) 50%, #ffffff 65%, #ffffff 100%);
             background-size: 200% 100%;
@@ -276,143 +295,250 @@ export default function LoginPage() {
             -webkit-text-fill-color: transparent;
             animation: shimmer 4.5s linear infinite;
           }
+          .mock-bar { transform-origin: bottom; animation: bar-grow 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+          .mock-row { animation: slide-in 0.5s ease-out both; }
         `}</style>
 
-        {/* Orbs animados de iluminación ambiental */}
-        <div className="absolute -top-40 -left-40 w-[420px] h-[420px] rounded-full blur-3xl anim-drift-1"
-             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-32 -right-32 w-[380px] h-[380px] rounded-full blur-3xl anim-drift-2"
-             style={{ background: 'radial-gradient(circle, var(--t-accent) 0%, transparent 70%)', opacity: 0.18 }} />
-        <div className="absolute top-1/3 right-0 w-72 h-72 rounded-full bg-white/[0.04] blur-2xl anim-drift-1" />
+        {/* Aurora mesh background */}
+        <div className="absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full blur-3xl anim-aurora-1 pointer-events-none"
+             style={{ background: 'radial-gradient(circle, var(--t-accent) 0%, transparent 65%)', opacity: 0.22 }} />
+        <div className="absolute -bottom-40 -right-32 w-[460px] h-[460px] rounded-full blur-3xl anim-aurora-2 pointer-events-none"
+             style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.55) 0%, transparent 70%)', opacity: 0.25 }} />
+        <div className="absolute top-1/3 -right-20 w-[380px] h-[380px] rounded-full blur-3xl anim-aurora-3 pointer-events-none"
+             style={{ background: 'radial-gradient(circle, rgba(236,72,153,0.4) 0%, transparent 70%)', opacity: 0.15 }} />
 
-        {/* Grid pattern */}
+        {/* Grid pattern radial mask */}
         <div
-          className="absolute inset-0 opacity-[0.05]"
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-            maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-            WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+              'linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)',
+            backgroundSize: '44px 44px',
+            maskImage: 'radial-gradient(ellipse at center, black 25%, transparent 80%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, black 25%, transparent 80%)',
           }}
         />
 
-        {/* Partículas flotantes decorativas */}
-        {[
-          { top: '15%', left: '12%', size: 6, delay: '0s' },
-          { top: '22%', right: '18%', size: 4, delay: '1.2s' },
-          { top: '68%', left: '8%', size: 5, delay: '2.4s' },
-          { top: '78%', right: '14%', size: 3, delay: '0.6s' },
-          { top: '40%', left: '6%', size: 4, delay: '1.8s' },
-        ].map((p, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white/30 anim-glow"
-            style={{
-              top: p.top,
-              left: p.left,
-              right: p.right,
-              width: p.size,
-              height: p.size,
-              animationDelay: p.delay,
-            }}
-          />
-        ))}
+        {/* Noise overlay para textura */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
+             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence baseFrequency=%270.9%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")' }} />
 
-        {/* Content */}
-        <div className="relative z-10 text-center px-10 max-w-xl">
-          {/* Live ticker en la parte superior */}
-          <div className="flex justify-center mb-7 anim-fade-up" style={{ animationDelay: '0.1s' }}>
+        {/* ─── Top: brand mark ─── */}
+        <div className="relative z-10 anim-fade-up" style={{ animationDelay: '0.05s' }}>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-xl blur-xl scale-150 anim-glow"
+                   style={{ background: 'var(--t-accent)' }} />
+              <img src={IconChart} alt="" className="relative h-11 w-auto max-w-[3.5rem] object-contain drop-shadow-xl" />
+            </div>
+            <div>
+              <p className="text-white font-extrabold text-xl leading-none tracking-tight">SimplifyPOS</p>
+              <p className="text-[11px] mt-1 font-semibold leading-none" style={{ color: 'var(--t-accent)' }}>
+                Point of Sale · Colombia
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Centro: hero claim + dashboard mock ─── */}
+        <div className="relative z-10 flex flex-col items-start max-w-2xl">
+          {/* Live ticker como "introducción" */}
+          <div className="mb-6 anim-fade-up" style={{ animationDelay: '0.15s' }}>
             <LiveTicker />
           </div>
 
-          {/* Icono con float + glow */}
-          <div className="relative inline-flex mb-6 anim-fade-up" style={{ animationDelay: '0.2s' }}>
-            <div className="absolute inset-0 rounded-3xl blur-2xl scale-150 anim-glow"
-                 style={{ background: 'radial-gradient(circle, var(--t-accent) 0%, transparent 70%)' }} />
-            <img
-              src={IconChart}
-              alt="SimplifyPOS"
-              className="relative h-28 w-auto max-w-[9rem] object-contain drop-shadow-2xl anim-float"
-            />
-          </div>
-
-          {/* Título con shimmer */}
-          <h1 className="text-5xl font-extrabold mb-2 tracking-tight text-shimmer anim-fade-up"
-              style={{ animationDelay: '0.3s' }}>
-            SimplifyPOS
+          {/* Hero claim grande */}
+          <h1 className="text-[44px] xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-4 anim-fade-up"
+              style={{ animationDelay: '0.25s' }}>
+            Vende más. <br />
+            <span className="text-shimmer">Gestiona menos.</span>
           </h1>
 
-          <p className="text-base font-semibold mb-1 anim-fade-up"
-             style={{ color: 'var(--t-accent)', animationDelay: '0.4s' }}>
-            Gestión fácil, rápida y eficiente para tu negocio
-          </p>
-          <p className="text-sm text-white/55 mb-8 anim-fade-up" style={{ animationDelay: '0.5s' }}>
-            El sistema POS que colombianos eligen para vender más
+          <p className="text-base text-white/65 mb-7 max-w-md leading-relaxed anim-fade-up"
+             style={{ animationDelay: '0.35s' }}>
+            El POS que entiende cómo trabajan los comerciantes colombianos.
+            Inventario, ventas, caja y DIAN — en una sola app.
           </p>
 
-          {/* KPIs animados con SVG icons */}
-          <div className="grid grid-cols-3 gap-3 mb-7 anim-fade-up" style={{ animationDelay: '0.6s' }}>
-            {[
-              { label: 'Inventario', icon: Package,   value: 100, suffix: '%', sub: 'Control total',  ring: 'ring-blue-400/30',    iconBg: 'bg-blue-500/15',    iconColor: 'text-blue-300'   },
-              { label: 'Ventas',     icon: Zap,       value: 8,   suffix: 's', sub: 'Por venta',      ring: 'ring-amber-400/30',   iconBg: 'bg-amber-500/15',   iconColor: 'text-amber-300'  },
-              { label: 'Reportes',   icon: BarChart3, value: 24,  suffix: '/7', sub: 'Tiempo real',   ring: 'ring-emerald-400/30', iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-300'},
-            ].map((item) => {
-              const Icon = item.icon
-              return (
-                <div
-                  key={item.label}
-                  className={`group rounded-2xl p-4 text-center border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12] hover:ring-2 ${item.ring}`}
-                  style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-                >
-                  <div className={`w-9 h-9 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform`}>
-                    <Icon size={17} strokeWidth={2.4} />
+          {/* Dashboard mock flotante 3D */}
+          <div className="relative w-full anim-fade-up" style={{ animationDelay: '0.45s' }}>
+            {/* Glow detrás del mock */}
+            <div className="absolute -inset-4 rounded-3xl blur-2xl opacity-50"
+                 style={{ background: 'radial-gradient(circle at 50% 0%, var(--t-accent) 0%, transparent 60%)' }} />
+
+            <div className="relative anim-tilt-3d">
+              <div
+                className="rounded-2xl border border-white/15 shadow-2xl overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+                  backdropFilter: 'blur(16px)',
+                }}
+              >
+                {/* Window chrome */}
+                <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-white/10"
+                     style={{ background: 'rgba(0,0,0,0.25)' }}>
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                   </div>
-                  <p className="text-lg font-extrabold text-white tabular-nums leading-none">
-                    <AnimatedCounter target={item.value} suffix={item.suffix} />
-                  </p>
-                  <p className="text-[11px] font-semibold text-white/85 mt-1">{item.label}</p>
-                  <p className="text-[10px] text-white/45 mt-0.5">{item.sub}</p>
+                  <p className="text-[10px] text-white/40 ml-2 font-mono">simplifypos.app/dashboard</p>
+                </div>
+
+                {/* Mock body */}
+                <div className="p-4 space-y-3">
+                  {/* Greeting row */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-white/40 leading-none">Hola,</p>
+                      <p className="text-sm font-bold text-white mt-1 leading-none">Galaxy Bar 👋</p>
+                    </div>
+                    <span className="text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider"
+                          style={{ background: 'rgba(110,231,183,0.15)', color: 'rgb(110,231,183)' }}>
+                      Caja abierta
+                    </span>
+                  </div>
+
+                  {/* KPIs */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Ventas hoy',  value: '$1.4M',  delta: '+18%', positive: true,  color: 'rgb(110,231,183)' },
+                      { label: 'Ticket prom.', value: '$48k', delta: '+4%',  positive: true,  color: 'rgb(147,197,253)' },
+                      { label: 'Stock bajo',   value: '3',    delta: 'alerta', positive: false, color: 'rgb(252,165,165)' },
+                    ].map((k, i) => (
+                      <div key={i} className="rounded-lg p-2.5 border border-white/10"
+                           style={{ background: 'rgba(255,255,255,0.04)' }}>
+                        <p className="text-[9px] text-white/45 leading-none">{k.label}</p>
+                        <p className="text-base font-extrabold text-white mt-1.5 tabular-nums leading-none">{k.value}</p>
+                        <p className="text-[9px] font-bold mt-1.5 leading-none" style={{ color: k.color }}>
+                          {k.positive ? '↑' : '⚠'} {k.delta}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mini bar chart */}
+                  <div className="rounded-lg p-3 border border-white/10" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] text-white/55 font-semibold">Ventas por día — esta semana</p>
+                      <p className="text-[9px] text-white/30 font-mono">7d</p>
+                    </div>
+                    <div className="flex items-end gap-1 h-14">
+                      {[0.5, 0.7, 0.45, 0.85, 0.6, 0.95, 0.75].map((h, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-sm mock-bar"
+                          style={{
+                            height: `${h * 100}%`,
+                            background: i === 5
+                              ? 'linear-gradient(180deg, var(--t-accent), rgba(16,185,129,0.4))'
+                              : 'linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.15))',
+                            animationDelay: `${0.5 + i * 0.06}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-1.5">
+                      {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+                        <span key={i} className={`text-[9px] ${i === 5 ? 'font-bold' : ''} text-white/40`}>{d}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Activity rows */}
+                  <div className="space-y-1.5">
+                    {[
+                      { icon: '🍺', text: 'Cerveza Águila × 6', time: 'hace 2m', amount: '$18.000', color: 'rgb(110,231,183)' },
+                      { icon: '🥤', text: 'Coca-Cola 1.5L',     time: 'hace 5m', amount: '$8.500',  color: 'rgb(147,197,253)' },
+                      { icon: '🍔', text: 'Hamburguesa doble',  time: 'hace 8m', amount: '$24.000', color: 'rgb(216,180,254)' },
+                    ].map((row, i) => (
+                      <div
+                        key={i}
+                        className="mock-row flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-white/5"
+                        style={{ background: 'rgba(255,255,255,0.03)', animationDelay: `${0.9 + i * 0.12}s` }}
+                      >
+                        <span className="text-base leading-none">{row.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] text-white/85 font-semibold truncate leading-tight">{row.text}</p>
+                          <p className="text-[9px] text-white/35 leading-tight">{row.time}</p>
+                        </div>
+                        <p className="text-[11px] font-bold tabular-nums" style={{ color: row.color }}>{row.amount}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating accent card top-right */}
+              <div
+                className="hidden xl:flex absolute -top-6 -right-6 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.92), rgba(5,150,105,0.92))',
+                  backdropFilter: 'blur(8px)',
+                  animationDelay: '0.6s',
+                }}
+              >
+                <TrendingUp size={14} className="text-white" />
+                <div className="leading-tight">
+                  <p className="text-[9px] text-white/85 font-semibold">Meta del día</p>
+                  <p className="text-xs font-extrabold text-white tabular-nums">87% alcanzada</p>
+                </div>
+              </div>
+
+              {/* Floating accent card bottom-left */}
+              <div
+                className="hidden xl:flex absolute -bottom-5 -left-5 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(241,245,249,0.95))',
+                  animationDelay: '1.2s',
+                }}
+              >
+                <Sparkles size={14} className="text-amber-500" />
+                <p className="text-xs font-bold text-slate-800">+12 nuevas ventas</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Bottom: stats + colombian pride ─── */}
+        <div className="relative z-10 anim-fade-up" style={{ animationDelay: '0.7s' }}>
+          <div className="grid grid-cols-3 gap-4 pb-5 border-b border-white/10">
+            {[
+              { v: <AnimatedCounter target={8} suffix="s" />,    l: 'Por venta',     i: Zap,       c: 'text-amber-300'   },
+              { v: <AnimatedCounter target={100} suffix="%" />,  l: 'Cifras DIAN',   i: Shield,    c: 'text-emerald-300' },
+              { v: <AnimatedCounter target={24} suffix="/7" />,  l: 'En tu negocio', i: BarChart3, c: 'text-blue-300'    },
+            ].map((s, i) => {
+              const Icon = s.i
+              return (
+                <div key={i} className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                       style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <Icon size={14} className={s.c} strokeWidth={2.4} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-extrabold text-white tabular-nums leading-none">{s.v}</p>
+                    <p className="text-[10px] text-white/45 mt-1.5 leading-none">{s.l}</p>
+                  </div>
                 </div>
               )
             })}
           </div>
 
-          {/* Feature badges con micro hover */}
-          <div className="flex flex-wrap gap-1.5 justify-center mb-6 anim-fade-up" style={{ animationDelay: '0.7s' }}>
-            {[
-              { label: 'Facturación DIAN', icon: Receipt },
-              { label: 'Multi-cajero',     icon: Users },
-              { label: 'RBAC',             icon: Shield },
-              { label: 'Audit log',        icon: BarChart3 },
-              { label: 'Caja inteligente', icon: Wallet },
-            ].map((f) => {
-              const Icon = f.icon
-              return (
-                <span
-                  key={f.label}
-                  className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10 text-white/75 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all cursor-default"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
-                >
-                  <Icon size={10} strokeWidth={2.4} />
-                  {f.label}
-                </span>
-              )
-            })}
-          </div>
-
-          {/* Social proof footer */}
-          <div className="flex items-center justify-center gap-2 text-white/40 anim-fade-up" style={{ animationDelay: '0.8s' }}>
-            <Sparkles size={11} />
-            <span className="text-[11px]">
-              Hecho con <span className="text-red-400">♥</span> en Colombia 🇨🇴
-            </span>
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-white/50">
+              <Sparkles size={12} style={{ color: 'var(--t-accent)' }} />
+              <span className="text-[11px] font-medium">
+                Hecho con <span className="text-red-400">♥</span> en Colombia 🇨🇴
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-white/30">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Sistema operativo
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Gradient bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.15), transparent)' }} />
       </div>
 
       {/* ── Formulario derecho ── */}
