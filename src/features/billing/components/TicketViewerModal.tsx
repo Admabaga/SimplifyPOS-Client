@@ -43,24 +43,35 @@ function buildPrintCss(rootId: string) {
     box-shadow: none !important; border-radius: 0 !important;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
+  .pt-brand  { font-size: 13pt !important; font-weight: bold !important; text-align: center !important; letter-spacing: 1px !important; margin-bottom: 0.5mm !important; }
   .pt-title  { font-size: 10.5pt !important; font-weight: bold !important; text-align: center !important; }
+  .pt-doctype{ font-size: 9.5pt !important; font-weight: bold !important; text-align: center !important; letter-spacing: 2px !important; margin: 1mm 0 !important; }
   .pt-sub    { font-size: 8pt !important; text-align: center !important; }
-  .pt-num    { font-size: 11pt !important; font-weight: bold !important; text-align: center !important;
-               border: 1px solid #000 !important; padding: 1.5mm 2mm !important; margin: 2mm 0 !important;
-               letter-spacing: 1px !important; }
+  .pt-num    { font-size: 13pt !important; font-weight: bold !important; text-align: center !important;
+               border: 2px solid #000 !important; padding: 2mm 3mm !important; margin: 2mm auto !important;
+               letter-spacing: 2px !important; display: inline-block !important; min-width: 30mm !important; }
+  .pt-num-wrap { text-align: center !important; }
   .pt-sep    { text-align: center !important; margin: 2mm 0 !important; letter-spacing: 1px !important; }
-  .pt-section{ font-weight: bold !important; text-decoration: underline !important; margin: 2mm 0 1mm !important; }
+  .pt-sep-dbl{ text-align: center !important; margin: 2mm 0 !important; letter-spacing: 0 !important; font-weight: bold !important; }
+  .pt-section{ font-weight: bold !important; text-decoration: underline !important; margin: 2mm 0 1mm !important; font-size: 8.5pt !important; }
   .pt-row    { display: flex !important; justify-content: space-between !important; gap: 4mm !important; margin: 0.4mm 0 !important; }
+  .pt-row-strong { display: flex !important; justify-content: space-between !important; gap: 4mm !important;
+                 font-weight: bold !important; margin: 0.4mm 0 !important; }
   .pt-row-bold { display: flex !important; justify-content: space-between !important; gap: 4mm !important;
-                 font-weight: bold !important; border-top: 1px solid #000 !important;
-                 margin-top: 1mm !important; padding-top: 1mm !important; }
-  .pt-tbl       { width: 100% !important; border-collapse: collapse !important; }
-  .pt-tbl th    { font-weight: bold !important; text-align: left !important; font-size: 8pt !important;
-                  border-bottom: 1px solid #000 !important; padding: 0.5mm 0 !important; }
-  .pt-tbl td    { padding: 0.5mm 0 !important; font-size: 8pt !important; }
-  .pt-tbl .num  { text-align: right !important; }
+                 font-weight: bold !important; font-size: 11pt !important;
+                 border-top: 2px solid #000 !important; border-bottom: 2px solid #000 !important;
+                 margin: 1mm 0 !important; padding: 1.5mm 0 !important; }
+  .pt-item     { margin: 1.5mm 0 !important; }
+  .pt-item-name { font-weight: bold !important; font-size: 8.5pt !important; }
+  .pt-item-line { display: flex !important; justify-content: space-between !important; gap: 2mm !important; font-size: 8pt !important; }
+  .pt-thanks   { text-align: center !important; font-weight: bold !important; font-size: 10pt !important; margin: 3mm 0 1mm !important; letter-spacing: 1px !important; }
   .pt-small  { font-size: 7.5pt !important; }
+  .pt-tiny   { font-size: 7pt !important; }
   .pt-mono   { font-family: 'Courier New', monospace !important; }
+  .pt-center { text-align: center !important; }
+  .pt-anulada{ text-align: center !important; font-weight: bold !important; font-size: 14pt !important;
+               border: 3px solid #000 !important; padding: 3mm !important; margin: 2mm 0 !important;
+               letter-spacing: 3px !important; }
 }
 `
 }
@@ -343,107 +354,218 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 function ThermalContent({ ticket }: { ticket: Ticket }) {
   const SEP = '─'.repeat(32)
+  const SEP_DBL = '═'.repeat(32)
   const tieneCliente = !!ticket.cliente_nombre || !!ticket.cliente_documento
   const tieneResolucion = !!ticket.resolucion_numero
   const esInformal = ticket.tipo_documento === 'INFORMAL'
+
+  // Resumen de unidades e ítems
+  const totalUnidades = ticket.items.reduce((s, it) => s + it.cantidad, 0)
+  const totalItems = ticket.items.length
+
+  // Agrupar IVA por tarifa (DIAN best practice cuando hay múltiples tarifas)
+  const ivaPorTarifa = new Map<number, { base: number; iva: number }>()
+  ticket.items.forEach((it) => {
+    const acc = ivaPorTarifa.get(it.tarifa_iva) ?? { base: 0, iva: 0 }
+    acc.base += it.subtotal_linea
+    acc.iva += it.valor_iva_linea
+    ivaPorTarifa.set(it.tarifa_iva, acc)
+  })
+  const tarifasOrdenadas = Array.from(ivaPorTarifa.entries()).sort((a, b) => a[0] - b[0])
+  const multiplesTarifas = tarifasOrdenadas.length > 1
+
   return (
     <div>
-      <div className="pt-title">{ticket.empresa_razon_social}</div>
-      <div className="pt-sub">NIT: {ticket.empresa_nit}</div>
+      {/* ═══ HEADER EMPRESA ═══ */}
+      <div className="pt-brand">{ticket.empresa_razon_social}</div>
+      <div className="pt-sub">NIT {ticket.empresa_nit}</div>
       {ticket.empresa_direccion && <div className="pt-sub">{ticket.empresa_direccion}</div>}
-      {ticket.empresa_telefono && <div className="pt-sub">Tel: {ticket.empresa_telefono}</div>}
-      <div className="pt-sub">{REGIMEN_LABEL[ticket.empresa_regimen_iva]}</div>
-      <div className="pt-sep">{SEP}</div>
+      {ticket.empresa_telefono && <div className="pt-sub">Tel. {ticket.empresa_telefono}</div>}
+      <div className="pt-sub pt-small">{REGIMEN_LABEL[ticket.empresa_regimen_iva]}</div>
 
-      <div className="pt-title">{TIPO_DOC_TITLE[ticket.tipo_documento]}</div>
-      <div className="pt-num">{ticket.numero_completo}</div>
+      <div className="pt-sep-dbl">{SEP_DBL}</div>
+
+      {/* ═══ TIPO DOCUMENTO + NÚMERO ═══ */}
+      <div className="pt-doctype">{TIPO_DOC_TITLE[ticket.tipo_documento]}</div>
+      <div className="pt-num-wrap"><span className="pt-num">{ticket.numero_completo}</span></div>
       <div className="pt-sub">{formatDateTime(ticket.fecha_emision)}</div>
 
+      {/* ═══ RESOLUCIÓN DIAN ═══ */}
       {tieneResolucion && (
         <>
           <div className="pt-sep">{SEP}</div>
-          <div className="pt-small">Resolución DIAN N° {ticket.resolucion_numero}</div>
-          {ticket.resolucion_fecha && <div className="pt-small">del {formatDate(ticket.resolucion_fecha)}</div>}
+          <div className="pt-section">AUTORIZACIÓN DIAN</div>
+          <div className="pt-small">N° {ticket.resolucion_numero}</div>
+          {ticket.resolucion_fecha && (
+            <div className="pt-small">Fecha: {formatDate(ticket.resolucion_fecha)}</div>
+          )}
           {ticket.resolucion_rango_desde && (
-            <div className="pt-small">Rango: {ticket.resolucion_rango_desde} - {ticket.resolucion_rango_hasta}</div>
+            <div className="pt-small">
+              Rango: {ticket.resolucion_rango_desde} - {ticket.resolucion_rango_hasta}
+            </div>
           )}
           {ticket.resolucion_vigencia_hasta && (
-            <div className="pt-small">Vigente hasta: {formatDate(ticket.resolucion_vigencia_hasta)}</div>
+            <div className="pt-small">Vigencia: {formatDate(ticket.resolucion_vigencia_hasta)}</div>
           )}
         </>
       )}
 
+      {/* ═══ CLIENTE ═══ */}
       {tieneCliente && (
         <>
           <div className="pt-sep">{SEP}</div>
-          <div className="pt-section">CLIENTE</div>
-          <div className="pt-row"><span>Nombre</span><span>{ticket.cliente_nombre}</span></div>
+          <div className="pt-section">ADQUIRENTE</div>
+          {ticket.cliente_nombre && (
+            <div className="pt-row"><span>Nombre</span><span>{ticket.cliente_nombre}</span></div>
+          )}
           {ticket.cliente_documento && (
             <div className="pt-row">
               <span>{TIPO_DOC_CLIENTE_LABEL[ticket.cliente_tipo_doc!] ?? 'Doc'}</span>
               <span>{ticket.cliente_documento}</span>
             </div>
           )}
-          {ticket.cliente_direccion && <div className="pt-row"><span>Dir.</span><span>{ticket.cliente_direccion}</span></div>}
-          {ticket.cliente_telefono && <div className="pt-row"><span>Tel.</span><span>{ticket.cliente_telefono}</span></div>}
+          {ticket.cliente_direccion && (
+            <div className="pt-row"><span>Dirección</span><span>{ticket.cliente_direccion}</span></div>
+          )}
+          {ticket.cliente_telefono && (
+            <div className="pt-row"><span>Teléfono</span><span>{ticket.cliente_telefono}</span></div>
+          )}
+          {ticket.cliente_email && (
+            <div className="pt-row"><span>Email</span><span>{ticket.cliente_email}</span></div>
+          )}
         </>
       )}
 
+      {/* ═══ DETALLE ═══ */}
       <div className="pt-sep">{SEP}</div>
       <div className="pt-section">DETALLE</div>
-      <table className="pt-tbl">
-        <thead>
-          <tr>
-            <th>Descripción</th>
-            <th className="num">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ticket.items.map((it) => (
-            <tr key={it.id}>
-              <td>
-                {it.descripcion}
-                <div className="pt-small">
-                  {it.cantidad} x {formatCOP(it.precio_unitario_con_iva)}
-                  {it.tarifa_iva > 0 && ` (IVA ${it.tarifa_iva}%)`}
-                </div>
-              </td>
-              <td className="num">{formatCOP(it.total_linea)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {ticket.items.map((it) => {
+        const descLinea = it.subtotal_linea > 0 ? (it.subtotal_linea - (it.total_linea - it.valor_iva_linea)) : 0
+        return (
+          <div key={it.id} className="pt-item">
+            <div className="pt-item-name">{it.descripcion}</div>
+            {it.codigo_producto && (
+              <div className="pt-small pt-mono">Cód: {it.codigo_producto}</div>
+            )}
+            <div className="pt-item-line">
+              <span>
+                {it.cantidad} × {formatCOP(it.precio_unitario_con_iva)}
+                {!esInformal && it.tarifa_iva > 0 && ` · IVA ${it.tarifa_iva}%`}
+              </span>
+              <span>{formatCOP(it.total_linea)}</span>
+            </div>
+            {descLinea > 0 && (
+              <div className="pt-item-line pt-small">
+                <span>Descuento aplicado</span>
+                <span>−{formatCOP(descLinea)}</span>
+              </div>
+            )}
+          </div>
+        )
+      })}
 
+      {/* Resumen unidades */}
       <div className="pt-sep">{SEP}</div>
-      <div className="pt-row"><span>Subtotal bruto</span><span>{formatCOP(ticket.subtotal)}</span></div>
+      <div className="pt-row pt-small">
+        <span>Total ítems</span>
+        <span>{totalItems}</span>
+      </div>
+      <div className="pt-row pt-small">
+        <span>Total unidades</span>
+        <span>{totalUnidades}</span>
+      </div>
+
+      {/* ═══ TOTALES ═══ */}
+      <div className="pt-sep">{SEP}</div>
+      <div className="pt-row">
+        <span>Subtotal</span>
+        <span>{formatCOP(ticket.subtotal)}</span>
+      </div>
+
       {ticket.descuento > 0 && (() => {
         const pct = ticket.subtotal > 0 ? (ticket.descuento / ticket.subtotal) * 100 : 0
         return (
           <>
-            <div className="pt-row"><span>Descuento ({pct.toFixed(1)}%)</span><span>-{formatCOP(ticket.descuento)}</span></div>
-            <div className="pt-row"><span>Subtotal c/desc.</span><span>{formatCOP(ticket.subtotal - ticket.descuento)}</span></div>
+            <div className="pt-row-strong">
+              <span>Descuento ({pct.toFixed(1)}%)</span>
+              <span>−{formatCOP(ticket.descuento)}</span>
+            </div>
+            <div className="pt-row pt-small">
+              <span>Subtotal c/desc.</span>
+              <span>{formatCOP(ticket.subtotal - ticket.descuento)}</span>
+            </div>
           </>
         )
       })()}
-      {!esInformal && <div className="pt-row"><span>Base gravable</span><span>{formatCOP(ticket.base_gravable)}</span></div>}
-      {!esInformal && <div className="pt-row"><span>IVA</span><span>{formatCOP(ticket.valor_iva)}</span></div>}
-      <div className="pt-row-bold"><span>TOTAL</span><span>{formatCOP(ticket.total)}</span></div>
-      {ticket.descuento > 0 && (
-        <div className="pt-row pt-small"><span>Te ahorraste</span><span>{formatCOP(ticket.descuento)}</span></div>
-      )}
 
-      {ticket.estado === 'ANULADA' && (
+      {!esInformal && (
         <>
-          <div className="pt-sep">{SEP}</div>
-          <div className="pt-title">*** ANULADA ***</div>
-          <div className="pt-small">{ticket.motivo_anulacion}</div>
+          <div className="pt-row">
+            <span>Base gravable</span>
+            <span>{formatCOP(ticket.base_gravable)}</span>
+          </div>
+          {multiplesTarifas
+            ? tarifasOrdenadas.map(([tar, val]) => (
+                <div className="pt-row pt-small" key={tar}>
+                  <span>{tar === 0 ? 'Excluido IVA' : `IVA ${tar}%`}</span>
+                  <span>{formatCOP(val.iva)}</span>
+                </div>
+              ))
+            : <div className="pt-row"><span>IVA</span><span>{formatCOP(ticket.valor_iva)}</span></div>}
         </>
       )}
 
+      <div className="pt-row-bold">
+        <span>TOTAL A PAGAR</span>
+        <span>{formatCOP(ticket.total)}</span>
+      </div>
+
+      {ticket.descuento > 0 && (
+        <div className="pt-row pt-small pt-center" style={{ justifyContent: 'center' }}>
+          <span>★ Te ahorraste {formatCOP(ticket.descuento)} ★</span>
+        </div>
+      )}
+
+      {/* ═══ NOTAS ═══ */}
+      {ticket.notas && (
+        <>
+          <div className="pt-sep">{SEP}</div>
+          <div className="pt-section">OBSERVACIONES</div>
+          <div className="pt-small">{ticket.notas}</div>
+        </>
+      )}
+
+      {/* ═══ ANULACIÓN ═══ */}
+      {ticket.estado === 'ANULADA' && (
+        <>
+          <div className="pt-sep">{SEP}</div>
+          <div className="pt-anulada">ANULADA</div>
+          {ticket.motivo_anulacion && (
+            <div className="pt-small pt-center">Motivo: {ticket.motivo_anulacion}</div>
+          )}
+          {ticket.fecha_anulacion && (
+            <div className="pt-small pt-center">{formatDateTime(ticket.fecha_anulacion)}</div>
+          )}
+        </>
+      )}
+
+      {/* ═══ GRACIAS ═══ */}
+      {ticket.estado !== 'ANULADA' && (
+        <>
+          <div className="pt-sep-dbl">{SEP_DBL}</div>
+          <div className="pt-thanks">¡GRACIAS POR SU COMPRA!</div>
+          <div className="pt-sub pt-tiny">Conserve este documento como soporte</div>
+        </>
+      )}
+
+      {/* ═══ FOOTER VERIFICACIÓN ═══ */}
       <div className="pt-sep">{SEP}</div>
       <div className="pt-sub pt-mono">Cód: {ticket.codigo_verificacion}</div>
-      <div className="pt-sub pt-mono pt-small">Hash: {ticket.hash_integridad.slice(0, 16)}...</div>
-      <div className="pt-sub">SimplifyPOS · simplifypos.app</div>
+      <div className="pt-sub pt-mono pt-tiny">Hash: {ticket.hash_integridad.slice(0, 24)}...</div>
+      <div className="pt-sub pt-tiny" style={{ marginTop: '2mm' }}>
+        Documento generado por SimplifyPOS
+      </div>
+      <div className="pt-sub pt-tiny">simplifypos.app</div>
     </div>
   )
 }
