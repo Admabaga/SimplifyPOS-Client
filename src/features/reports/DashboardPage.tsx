@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ShoppingCart, TrendingUp, DollarSign, Users, Package, ArrowUpRight,
   ArrowDownRight, Minus, BarChart3, CreditCard, AlertCircle,
-  CheckCircle2, ChevronRight, Store, Wallet,
+  CheckCircle2, ChevronRight, Store, Wallet, X,
 } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                   <TrendingUp size={15} className="t-text" />
                   <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {mesActual}</h2>
                 </div>
-                <div className="px-2 pt-3 pb-2">
+                <div className="px-2 pt-3 pb-2 overflow-hidden">
                   <ResponsiveContainer width="100%" height={160} minWidth={0}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -495,7 +495,7 @@ export default function DashboardPage() {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-300 inline-block" />Ganancia</span>
                 </div>
               </div>
-              <div className="px-2 pt-3 pb-2">
+              <div className="px-2 pt-3 pb-2 overflow-hidden">
                 {chartData.length === 0 ? (
                   <div className="h-48 flex items-center justify-center text-slate-400 text-sm">Sin datos este mes</div>
                 ) : (
@@ -544,7 +544,7 @@ export default function DashboardPage() {
                 <Package size={15} className="t-text" />
                 <h2 className="text-sm font-semibold text-slate-800">Top productos</h2>
               </div>
-              <div className="p-4">
+              <div className="p-4 overflow-hidden">
                 {topChartData.length === 0 ? (
                   <div className="py-10 text-center text-slate-400 text-sm">Sin ventas este mes</div>
                 ) : (
@@ -715,6 +715,10 @@ export function GettingStartedChecklist() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin' || user?.role === 'master'
+  const dismissKey = `checklist_dismissed_${user?.id}`
+  const [dismissed, setDismissed] = React.useState(
+    () => localStorage.getItem(dismissKey) === '1'
+  )
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -741,10 +745,12 @@ export function GettingStartedChecklist() {
     queryKey: ['caja', 'estado'],
     queryFn: () => apiClient.get<{ estado: string } | null>('/caja/estado').then((r) => r.data),
     enabled: isAdmin,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   if (!isAdmin) return null
+  if (dismissed) return null
 
   const steps = [
     {
@@ -790,7 +796,7 @@ export function GettingStartedChecklist() {
         <div className="w-9 h-9 rounded-xl bg-[var(--t-primary)] text-white flex items-center justify-center shrink-0">
           <ChevronRight size={18} />
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-800 text-sm">
             Configura tu negocio — {steps.filter((s) => s.done).length}/{steps.length} pasos
           </h3>
@@ -798,6 +804,13 @@ export function GettingStartedChecklist() {
             Completa estos pasos para empezar a vender.
           </p>
         </div>
+        <button
+          onClick={() => { localStorage.setItem(dismissKey, '1'); setDismissed(true) }}
+          className="shrink-0 text-slate-400 hover:text-slate-600 transition-colors p-0.5 -mt-0.5"
+          title="Ocultar"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       <div className="space-y-2">
