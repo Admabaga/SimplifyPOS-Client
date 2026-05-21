@@ -546,11 +546,7 @@ export default function AccountDetailPage() {
 
       </div>{/* end grid cliente+documentos */}
 
-      {/* ── Ventas + Pagos en grid balanceado ────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-      {/* Ventas — 2/3 del espacio en desktop */}
-      <div className="lg:col-span-2">
+      {/* ── Ventas — full width centrado ──────────────────────────────────── */}
       <Card padding={false}>
         <div className="p-4 border-b border-slate-50">
           <SectionHeader
@@ -683,10 +679,8 @@ export default function AccountDetailPage() {
           </div>
         )}
       </Card>
-      </div>{/* end col ventas */}
 
-      {/* Pagos — 1/3 del espacio en desktop (compacto, sticky) */}
-      <div className="lg:col-span-1 lg:sticky lg:top-4">
+      {/* ── Pagos — full width debajo ──────────────────────────────────────── */}
       <Card padding={false}>
         <div className="p-4 border-b border-slate-50">
           <SectionHeader
@@ -755,9 +749,6 @@ export default function AccountDetailPage() {
           </div>
         )}
       </Card>
-      </div>{/* end col pagos */}
-
-      </div>{/* end grid ventas+pagos */}
 
       {/* ── Modals ────────────────────────────────────────────────────────────── */}
       <AddVentaModal

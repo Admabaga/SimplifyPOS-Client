@@ -1,24 +1,56 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ScrollText, Eye, Receipt, FileText } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ScrollText, Eye, Receipt, FileText, XCircle, AlertTriangle } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import {
-  Card, Spinner, Badge, EmptyState, Table, Th, Td, Button,
+  Card, Spinner, Badge, EmptyState, Table, Th, Td, Button, Modal,
 } from '@/shared/components/ui'
+import Can from '@/shared/components/Can'
 import { billingApi } from '../api'
 import { formatCOP, formatDateTime } from '@/shared/lib/formatters'
+import { apiError } from '@/shared/lib/apiError'
+import { useAuthStore } from '@/stores/auth'
 import TicketViewerModal from './TicketViewerModal'
 import type { Ticket } from '../types'
 
 type SubTab = 'recibos' | 'dian'
 
 export default function TicketsHistorialTab() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  const canAnnul = user?.permissions?.includes('facturacion:annul') ?? false
+
   const [subTab, setSubTab] = useState<SubTab>('recibos')
   const [viewing, setViewing] = useState<Ticket | null>(null)
+  const [annulTarget, setAnnulTarget] = useState<Ticket | null>(null)
+  const [annulMotivo, setAnnulMotivo] = useState('')
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['billing', 'tickets'],
     queryFn: () => billingApi.listTickets(200, 0),
   })
+
+  const annulMutation = useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) =>
+      billingApi.anular(id, motivo),
+    onSuccess: () => {
+      toast.success('Documento anulado correctamente')
+      qc.invalidateQueries({ queryKey: ['billing', 'tickets'] })
+      qc.invalidateQueries({ queryKey: ['cuenta'] })
+      setAnnulTarget(null)
+      setAnnulMotivo('')
+    },
+    onError: (err) => toast.error(apiError(err, 'No se pudo anular el documento')),
+  })
+
+  const handleAnnul = () => {
+    if (!annulTarget) return
+    if (annulMotivo.trim().length < 10) {
+      toast.error('El motivo debe tener al menos 10 caracteres')
+      return
+    }
+    annulMutation.mutate({ id: annulTarget.id, motivo: annulMotivo.trim() })
+  }
 
   const recibos = tickets.filter((t) => t.tipo_documento === 'INFORMAL')
   const dian    = tickets.filter((t) => t.tipo_documento !== 'INFORMAL')
@@ -75,8 +107,16 @@ export default function TicketsHistorialTab() {
               </thead>
               <tbody>
                 {lista.map((t) => (
-                  <tr key={t.id} className="border-b border-slate-100">
-                    <Td><span className="text-[11px] text-slate-500 whitespace-nowrap">{formatDateTime(t.fecha_emision)}</span></Td>
+                  <tr key={t.id} className={`border-b border-slate-100 ${t.estado === 'ANULADA' ? 'opacity-60 bg-red-50/30' : ''}`}>
+                    <Td>
+                      <span className="text-[11px] text-slate-500 whitespace-nowrap">{formatDateTime(t.fecha_emision)}</span>
+                      {/* Estado mobile-only inline */}
+                      <span className="sm:hidden block mt-0.5">
+                        {t.estado === 'EMITIDA'
+                          ? <Badge variant="green" dot>Emitida</Badge>
+                          : <Badge variant="red" dot>Anulada</Badge>}
+                      </span>
+                    </Td>
                     {subTab === 'dian' && (
                       <Td><Badge variant="purple">Factura</Badge></Td>
                     )}
@@ -92,7 +132,20 @@ export default function TicketsHistorialTab() {
                         : <Badge variant="red" dot>Anulada</Badge>}
                     </Td>
                     <Td>
-                      <Button size="sm" variant="ghost" icon={<Eye size={12} />} onClick={() => setViewing(t)} />
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" icon={<Eye size={12} />} onClick={() => setViewing(t)} />
+                        {canAnnul && t.estado === 'EMITIDA' && (
+                          <Can permission="facturacion:annul">
+                            <button
+                              onClick={() => setAnnulTarget(t)}
+                              title="Anular documento"
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          </Can>
+                        )}
+                      </div>
                     </Td>
                   </tr>
                 ))}
@@ -109,6 +162,92 @@ export default function TicketsHistorialTab() {
           ticket={viewing}
         />
       )}
+
+      {/* Modal de anulación con motivo obligatorio */}
+      <Modal
+        open={!!annulTarget}
+        onClose={() => { setAnnulTarget(null); setAnnulMotivo('') }}
+        title="Anular documento"
+        size="md"
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+            <Button variant="outline" onClick={() => { setAnnulTarget(null); setAnnulMotivo('') }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAnnul}
+              disabled={annulMutation.isPending || annulMotivo.trim().length < 10}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              icon={<XCircle size={14} />}
+            >
+              {annulMutation.isPending ? 'Anulando…' : 'Confirmar anulación'}
+            </Button>
+          </div>
+        }
+      >
+        {annulTarget && (
+          <div className="space-y-4">
+            {/* Warning prominente */}
+            <div className="flex items-start gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl">
+              <AlertTriangle size={18} className="text-red-600 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-bold text-red-800 mb-1">Acción irreversible</p>
+                <p className="text-red-700 text-xs leading-relaxed">
+                  La anulación se registra en el audit log con tu usuario, fecha, IP y motivo.
+                  {annulTarget.tipo_documento !== 'INFORMAL' && ' Este documento fiscal quedará registrado como anulado ante la DIAN.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Datos del documento */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Tipo</span>
+                <span className="font-semibold text-slate-800">
+                  {annulTarget.tipo_documento === 'INFORMAL'      ? 'Recibo informal'
+                   : annulTarget.tipo_documento === 'FACTURA_VENTA' ? 'Factura de venta'
+                   : 'Documento POS'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Número</span>
+                <span className="font-mono font-semibold text-slate-800">{annulTarget.numero_completo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total</span>
+                <span className="font-bold text-slate-800 tabular-nums">{formatCOP(annulTarget.total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Emitido</span>
+                <span className="text-slate-700 text-xs">{formatDateTime(annulTarget.fecha_emision)}</span>
+              </div>
+            </div>
+
+            {/* Motivo obligatorio */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Motivo de anulación <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={annulMotivo}
+                onChange={(e) => setAnnulMotivo(e.target.value)}
+                placeholder="Describe el motivo (mín. 10 caracteres)…"
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white resize-none"
+                autoFocus
+              />
+              <div className="flex justify-between mt-1">
+                <p className="text-[11px] text-slate-400">
+                  Este motivo queda registrado en el audit log y será visible en el documento.
+                </p>
+                <p className={`text-[11px] tabular-nums ${annulMotivo.trim().length < 10 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {annulMotivo.trim().length}/10
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   )
 }
