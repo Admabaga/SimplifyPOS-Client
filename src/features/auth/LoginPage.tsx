@@ -21,7 +21,6 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
   const [loading, setLoading] = useState(false)
-  const [loginError, setLoginError] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('simplifypos_remember') === '1')
   const [showPwd, setShowPwd] = useState(false)
 
@@ -33,7 +32,6 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormValues) => {
     setLoading(true)
-    setLoginError(null)
     try {
       const result = await authApi.login(data)
       setUser(
@@ -51,8 +49,7 @@ export default function LoginPage() {
       toast.success(`¡Bienvenido, ${result.nombre}!`)
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      const msg = apiError(err, 'Credenciales incorrectas')
-      setLoginError(msg)
+      toast.error(apiError(err, 'Credenciales incorrectas'))
     } finally {
       setLoading(false)
     }
@@ -155,14 +152,6 @@ export default function LoginPage() {
                 />
                 <span className="text-sm text-gray-600">Recordarme en este dispositivo</span>
               </label>
-
-              {/* Error de login */}
-              {loginError && (
-                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <span className="mt-0.5 shrink-0">⚠️</span>
-                  <span>{loginError}</span>
-                </div>
-              )}
 
               {/* Submit */}
               <button
