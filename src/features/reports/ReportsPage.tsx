@@ -5,6 +5,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, BookOpen,
   Package, Lightbulb, ArrowUpRight, ArrowDownRight, BarChart2,
   Minus, ChevronLeft, ChevronRight, Truck, Wallet, FileText, Receipt,
+  CalendarDays, Percent, CheckCircle2, PieChart as PieChartIcon,
 } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -49,12 +50,91 @@ function TrendBadge({ pct, inverse = false }: { pct: number | null; inverse?: bo
   )
 }
 
-// ── Insight card ────────────────────────────────────────────────────────────
-function InsightCard({ icon, text, color }: { icon: React.ReactNode; text: string; color: string }) {
+// ── Insight card — rich version ──────────────────────────────────────────────
+type InsightSeverity = 'success' | 'warning' | 'danger' | 'info' | 'opportunity'
+
+interface Insight {
+  severity: InsightSeverity
+  icon: React.ReactNode
+  title: string
+  description: string
+  metric?: string             // Valor numérico destacado
+  metricLabel?: string        // Etiqueta del valor
+  action?: string             // CTA opcional
+}
+
+const SEVERITY_STYLES: Record<InsightSeverity, { wrapper: string; iconWrap: string; chip: string; badge: string; metric: string; label: string }> = {
+  success: {
+    wrapper: 'border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-50/30',
+    iconWrap: 'bg-white text-emerald-600',
+    chip: 'bg-emerald-100 text-emerald-700',
+    badge: 'Buena señal',
+    metric: 'text-emerald-700',
+    label: 'text-emerald-600/70',
+  },
+  warning: {
+    wrapper: 'border-amber-100 bg-gradient-to-br from-amber-50 to-amber-50/30',
+    iconWrap: 'bg-white text-amber-600',
+    chip: 'bg-amber-100 text-amber-700',
+    badge: 'Atención',
+    metric: 'text-amber-700',
+    label: 'text-amber-600/70',
+  },
+  danger: {
+    wrapper: 'border-red-100 bg-gradient-to-br from-red-50 to-red-50/30',
+    iconWrap: 'bg-white text-red-600',
+    chip: 'bg-red-100 text-red-700',
+    badge: 'Crítico',
+    metric: 'text-red-700',
+    label: 'text-red-600/70',
+  },
+  info: {
+    wrapper: 'border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30',
+    iconWrap: 'bg-white text-blue-600',
+    chip: 'bg-blue-100 text-blue-700',
+    badge: 'Dato',
+    metric: 'text-blue-700',
+    label: 'text-blue-600/70',
+  },
+  opportunity: {
+    wrapper: 'border-violet-100 bg-gradient-to-br from-violet-50 to-violet-50/30',
+    iconWrap: 'bg-white text-violet-600',
+    chip: 'bg-violet-100 text-violet-700',
+    badge: 'Oportunidad',
+    metric: 'text-violet-700',
+    label: 'text-violet-600/70',
+  },
+}
+
+function InsightCard({ severity, icon, title, description, metric, metricLabel, action }: Insight) {
+  const s = SEVERITY_STYLES[severity]
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-xl border ${color}`}>
-      <div className="mt-0.5 shrink-0">{icon}</div>
-      <p className="text-xs text-slate-700 leading-relaxed">{text}</p>
+    <div className={`relative overflow-hidden rounded-xl border p-4 ${s.wrapper}`}>
+      <div className="flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-lg shadow-sm flex items-center justify-center shrink-0 ${s.iconWrap}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${s.chip}`}>{s.badge}</span>
+            <p className="text-sm font-bold text-slate-800 truncate">{title}</p>
+          </div>
+          <p className="text-xs text-slate-600 leading-relaxed">{description}</p>
+          {(metric || action) && (
+            <div className="mt-2.5 flex items-end justify-between gap-3 flex-wrap">
+              {metric && (
+                <div className="leading-none">
+                  <p className={`text-lg font-bold tabular-nums ${s.metric}`}>{metric}</p>
+                  {metricLabel && <p className={`text-[10px] mt-1 font-medium ${s.label}`}>{metricLabel}</p>}
+                </div>
+              )}
+              {action && (
+                <p className="text-[11px] font-semibold text-slate-500 italic">→ {action}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -175,86 +255,242 @@ export default function ReportsPage() {
       .slice(0, 6)
   }, [gastos])
 
-  // ── Auto-insights ──────────────────────────────────────────────────────────
-  const insights = useMemo(() => {
+  // ── Auto-insights — análisis profundo accionable ──────────────────────────
+  const insights = useMemo<Insight[]>(() => {
     if (!data || !stats) return []
-    const result: { icon: React.ReactNode; text: string; color: string }[] = []
+    const out: Insight[] = []
+    const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
-    // Best day
-    const bestDay = [...data.ventas_por_dia].sort((a, b) => b.total - a.total)[0]
-    if (bestDay) {
-      const fecha = new Date(bestDay.dia + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })
-      result.push({
-        icon: <TrendingUp size={14} className="t-text" />,
-        text: `El día de mayor venta fue el ${fecha} con ${formatCOP(bestDay.total)} en ${bestDay.num_ventas} transacciones.`,
-        color: 't-bg-xlt t-border',
+    // 1) Día de la semana más fuerte (correlación, no solo "mejor día único")
+    const byWeekday = new Map<number, { total: number; count: number; days: number }>()
+    for (const d of data.ventas_por_dia) {
+      const dow = new Date(d.dia + 'T00:00:00').getDay()
+      const prev = byWeekday.get(dow) ?? { total: 0, count: 0, days: 0 }
+      byWeekday.set(dow, { total: prev.total + d.total, count: prev.count + d.num_ventas, days: prev.days + 1 })
+    }
+    const weekdayRanking = Array.from(byWeekday.entries())
+      .map(([dow, v]) => ({ dow, avg: v.days > 0 ? v.total / v.days : 0, total: v.total }))
+      .filter(x => x.avg > 0)
+      .sort((a, b) => b.avg - a.avg)
+
+    if (weekdayRanking.length >= 2) {
+      const best = weekdayRanking[0]!
+      const worst = weekdayRanking[weekdayRanking.length - 1]!
+      const ratio = worst.avg > 0 ? best.avg / worst.avg : 0
+      if (ratio >= 1.5) {
+        out.push({
+          severity: 'opportunity',
+          icon: <CalendarDays size={16} />,
+          title: `Los ${DAY_NAMES[best.dow]}s venden ${ratio.toFixed(1)}× más que los ${DAY_NAMES[worst.dow]}s`,
+          description: `Tu mejor día promedio es ${DAY_NAMES[best.dow]} con ${formatCOP(best.avg)}. Considera reforzar inventario y personal ese día, y promociones en ${DAY_NAMES[worst.dow]} para nivelar.`,
+          metric: formatCOP(best.avg),
+          metricLabel: `Promedio ${DAY_NAMES[best.dow]}`,
+          action: `Refuerza stock los ${DAY_NAMES[best.dow]}s`,
+        })
+      }
+    }
+
+    // 2) Concentración Pareto del producto top
+    if (topProductos[0] && stats.totalVentas > 0) {
+      const topShare = (topProductos[0].total / stats.totalVentas) * 100
+      const top3Share = topProductos.slice(0, 3).reduce((s, p) => s + p.total, 0) / stats.totalVentas * 100
+      if (topShare >= 30) {
+        out.push({
+          severity: 'warning',
+          icon: <Package size={16} />,
+          title: `Dependes mucho de "${topProductos[0].nombre}"`,
+          description: `Este producto solo representa el ${topShare.toFixed(0)}% de tus ventas (${formatCOP(topProductos[0].total)}). Si se agota o sube de costo, te impacta fuerte. Diversifica el catálogo o asegura proveedor backup.`,
+          metric: `${topShare.toFixed(0)}%`,
+          metricLabel: 'del total de ventas',
+          action: 'Diversifica catálogo',
+        })
+      } else if (top3Share >= 60) {
+        out.push({
+          severity: 'info',
+          icon: <Package size={16} />,
+          title: `Tus 3 productos top mueven el ${top3Share.toFixed(0)}% del negocio`,
+          description: `Concentración saludable. "${topProductos[0].nombre}" lidera con ${formatCOP(topProductos[0].total)} (${topProductos[0].unidades} u.). Mantén stock prioritario y vigila márgenes.`,
+          metric: formatCOP(topProductos[0].total),
+          metricLabel: topProductos[0].nombre,
+        })
+      }
+    }
+
+    // 3) Margen — con consejo accionable
+    if (stats.totalVentas > 0) {
+      if (stats.margen < 15) {
+        out.push({
+          severity: 'danger',
+          icon: <TrendingDown size={16} />,
+          title: 'Margen bruto crítico',
+          description: `Estás ganando solo ${stats.margen.toFixed(1)}% sobre cada venta. Después de gastos operativos, podrías estar perdiendo. Revisa precios de venta (sube 5-10%) o renegocia con proveedores los productos de mayor volumen.`,
+          metric: `${stats.margen.toFixed(1)}%`,
+          metricLabel: 'Margen bruto',
+          action: 'Sube precios o renegocia',
+        })
+      } else if (stats.margen < 25) {
+        out.push({
+          severity: 'warning',
+          icon: <Percent size={16} />,
+          title: 'Margen ajustado — hay espacio para crecer',
+          description: `Tu margen bruto es ${stats.margen.toFixed(1)}%. Un POS profesional opera entre 25-40%. Identifica los productos con menor margen y ajusta precio o costo.`,
+          metric: `${stats.margen.toFixed(1)}%`,
+          metricLabel: 'Margen bruto',
+          action: 'Audita productos de bajo margen',
+        })
+      } else {
+        out.push({
+          severity: 'success',
+          icon: <Percent size={16} />,
+          title: 'Margen saludable',
+          description: `${stats.margen.toFixed(1)}% de margen bruto generan ${formatCOP(stats.gananciaB)} sobre ${formatCOP(stats.totalVentas)} en ventas. Mantén pricing y vigila que los costos no suban.`,
+          metric: formatCOP(stats.gananciaB),
+          metricLabel: 'Ganancia bruta',
+        })
+      }
+    }
+
+    // 4) Ticket promedio + recomendación de upsell
+    if (stats.numVentas >= 5) {
+      out.push({
+        severity: 'info',
+        icon: <Receipt size={16} />,
+        title: `Ticket promedio: ${formatCOP(stats.ticketProm)}`,
+        description: `Hiciste ${stats.numVentas} ventas este mes. Subir el ticket un 10% (combos, productos complementarios, presentaciones más grandes) sumaría ${formatCOP(stats.ticketProm * stats.numVentas * 0.1)} sin atraer un solo cliente nuevo.`,
+        metric: formatCOP(stats.ticketProm * stats.numVentas * 0.1),
+        metricLabel: 'Potencial extra con +10% ticket',
+        action: 'Implementa combos / upsell',
       })
     }
 
-    // Top product
-    if (topProductos[0]) {
-      result.push({
-        icon: <Package size={14} className="text-purple-600" />,
-        text: `"${topProductos[0].nombre}" fue el producto más vendido con ${formatCOP(topProductos[0].total)} en ventas (${topProductos[0].unidades} unidades).`,
-        color: 'bg-purple-50 border-purple-200',
-      })
-    }
-
-    // Margin alert
-    if (stats.margen < 20) {
-      result.push({
-        icon: <TrendingDown size={14} className="text-red-500" />,
-        text: `El margen bruto es ${stats.margen.toFixed(1)}%, por debajo del 20% recomendado. Considera revisar precios de venta o costos de compra.`,
-        color: 'bg-red-50 border-red-200',
-      })
-    } else {
-      result.push({
-        icon: <TrendingUp size={14} className="text-blue-600" />,
-        text: `Margen bruto saludable del ${stats.margen.toFixed(1)}%. Ganancia bruta: ${formatCOP(stats.gananciaB)} sobre ventas totales de ${formatCOP(stats.totalVentas)}.`,
-        color: 'bg-blue-50 border-blue-200',
-      })
-    }
-
-    // Gastos vs ganancia
+    // 5) Gastos vs ganancia — alerta inteligente
     if (stats.gananciaB > 0) {
       const gastosRatio = (stats.totalGastos / stats.gananciaB) * 100
-      if (gastosRatio > 50) {
-        result.push({
-          icon: <DollarSign size={14} className="text-orange-600" />,
-          text: `Los gastos operativos (${formatCOP(stats.totalGastos)}) representan el ${gastosRatio.toFixed(0)}% de la ganancia bruta. Ganancia neta: ${formatCOP(stats.gananciaN)}.`,
-          color: 'bg-orange-50 border-orange-200',
+      if (gastosRatio > 80) {
+        out.push({
+          severity: 'danger',
+          icon: <DollarSign size={16} />,
+          title: 'Los gastos se están comiendo la ganancia',
+          description: `Gastas ${formatCOP(stats.totalGastos)} para generar ${formatCOP(stats.gananciaB)} de ganancia bruta (${gastosRatio.toFixed(0)}%). Identifica el rubro más alto en "Gastos" y revisa si es recortable.`,
+          metric: `${gastosRatio.toFixed(0)}%`,
+          metricLabel: 'Gastos / ganancia bruta',
+          action: 'Audita gastos del mes',
+        })
+      } else if (gastosRatio > 50) {
+        out.push({
+          severity: 'warning',
+          icon: <DollarSign size={16} />,
+          title: 'Gastos altos vs ganancia',
+          description: `Gastas el ${gastosRatio.toFixed(0)}% de tu ganancia bruta en operación. Saludable está debajo de 40%. Revisa gastos recurrentes (arriendo, servicios, publicidad).`,
+          metric: formatCOP(stats.totalGastos),
+          metricLabel: 'Total gastos',
+        })
+      } else if (stats.gananciaN > 0) {
+        out.push({
+          severity: 'success',
+          icon: <CheckCircle2 size={16} />,
+          title: 'Ganancia neta positiva',
+          description: `Después de pagar todo, te quedan ${formatCOP(stats.gananciaN)} libres (${stats.margenNeto.toFixed(1)}% margen neto). Excelente control de gastos.`,
+          metric: formatCOP(stats.gananciaN),
+          metricLabel: 'Ganancia neta del mes',
         })
       }
     }
 
-    // Cuentas abiertas
-    if (data.cuentas_abiertas > 0) {
-      result.push({
-        icon: <BookOpen size={14} className="text-yellow-600" />,
-        text: `Hay ${data.cuentas_abiertas} cuenta${data.cuentas_abiertas !== 1 ? 's' : ''} de crédito abierta${data.cuentas_abiertas !== 1 ? 's' : ''} pendientes de pago. ${data.cuentas_pagadas} cuenta${data.cuentas_pagadas !== 1 ? 's' : ''} fueron pagadas este mes.`,
-        color: 'bg-yellow-50 border-yellow-200',
-      })
+    // 6) Categoría de gasto más alta
+    if (gastosAgrupados.length > 0 && stats.totalGastos > 0) {
+      const top = gastosAgrupados[0]!
+      const topShare = (top.total / stats.totalGastos) * 100
+      if (topShare >= 40) {
+        out.push({
+          severity: 'warning',
+          icon: <PieChartIcon size={16} />,
+          title: `"${top.desc}" concentra ${topShare.toFixed(0)}% de tus gastos`,
+          description: `${formatCOP(top.total)} de ${formatCOP(stats.totalGastos)}. Si es un gasto fijo, busca opciones más económicas. Si es variable, evalúa si está bien dimensionado.`,
+          metric: formatCOP(top.total),
+          metricLabel: top.desc,
+        })
+      }
     }
 
-    // vs previous month
+    // 7) Cuentas por cobrar — DSO (Days Sales Outstanding) aproximado
+    if (data.cuentas_abiertas > 0 && stats.totalVentas > 0) {
+      const porCobrar = Number(stats.cuentasPorCobrar) || 0
+      const dso = porCobrar > 0 ? (porCobrar / (stats.totalVentas / 30)) : 0
+      if (porCobrar > stats.totalVentas * 0.2) {
+        out.push({
+          severity: 'warning',
+          icon: <BookOpen size={16} />,
+          title: `${formatCOP(porCobrar)} pendientes de cobro`,
+          description: `${data.cuentas_abiertas} cuenta${data.cuentas_abiertas !== 1 ? 's' : ''} abierta${data.cuentas_abiertas !== 1 ? 's' : ''}. Equivale a ~${dso.toFixed(0)} días de venta sin cobrar. Llama o envía recordatorios — el dinero en la calle no te sirve.`,
+          metric: `${dso.toFixed(0)} días`,
+          metricLabel: 'de ventas sin cobrar',
+          action: 'Activa cobranza',
+        })
+      } else {
+        out.push({
+          severity: 'info',
+          icon: <BookOpen size={16} />,
+          title: `${data.cuentas_abiertas} cuenta${data.cuentas_abiertas !== 1 ? 's' : ''} abierta${data.cuentas_abiertas !== 1 ? 's' : ''}`,
+          description: `Tienes ${formatCOP(porCobrar)} pendientes y ya cobraste ${data.cuentas_pagadas} cuenta${data.cuentas_pagadas !== 1 ? 's' : ''} este mes. Ritmo de cobro sano.`,
+          metric: formatCOP(porCobrar),
+          metricLabel: 'Por cobrar',
+        })
+      }
+    }
+
+    // 8) Comparativo mes anterior — con tendencia
     if (stats.pVentas !== null && prevData) {
-      if (stats.pVentas > 10) {
-        result.push({
-          icon: <ArrowUpRight size={14} className="t-text" />,
-          text: `Comparando con ${MONTHS_ES[prevMon - 1]}: ventas aumentaron ${stats.pVentas.toFixed(1)}% (de ${formatCOP(prevData.total_ventas)} a ${formatCOP(stats.totalVentas)}).`,
-          color: 't-bg-xlt t-border',
+      const delta = stats.totalVentas - prevData.total_ventas
+      if (stats.pVentas > 15) {
+        out.push({
+          severity: 'success',
+          icon: <ArrowUpRight size={16} />,
+          title: `¡Creciste ${stats.pVentas.toFixed(1)}% vs ${MONTHS_ES[prevMon - 1]}!`,
+          description: `${formatCOP(prevData.total_ventas)} → ${formatCOP(stats.totalVentas)}. Identifica qué hiciste distinto este mes (campañas, nuevos productos, días extra) y repítelo.`,
+          metric: `+${formatCOP(delta)}`,
+          metricLabel: 'vs mes anterior',
         })
-      } else if (stats.pVentas < -10) {
-        result.push({
-          icon: <ArrowDownRight size={14} className="text-red-500" />,
-          text: `Comparando con ${MONTHS_ES[prevMon - 1]}: ventas bajaron ${Math.abs(stats.pVentas).toFixed(1)}% (de ${formatCOP(prevData.total_ventas)} a ${formatCOP(stats.totalVentas)}).`,
-          color: 'bg-red-50 border-red-200',
+      } else if (stats.pVentas < -15) {
+        out.push({
+          severity: 'danger',
+          icon: <ArrowDownRight size={16} />,
+          title: `Caída del ${Math.abs(stats.pVentas).toFixed(1)}% vs ${MONTHS_ES[prevMon - 1]}`,
+          description: `${formatCOP(prevData.total_ventas)} → ${formatCOP(stats.totalVentas)}. Revisa: ¿hubo días cerrados? ¿faltó stock? ¿cambió algo en el barrio/zona? Actúa ya: una promo agresiva esta semana.`,
+          metric: formatCOP(Math.abs(delta)),
+          metricLabel: 'Menos que el mes pasado',
+          action: 'Lanza promo de recuperación',
+        })
+      } else if (Math.abs(stats.pVentas) < 5) {
+        out.push({
+          severity: 'info',
+          icon: <Minus size={16} />,
+          title: 'Mes estable vs el anterior',
+          description: `Cambio del ${stats.pVentas.toFixed(1)}% — operación predecible. Para crecer necesitas mover una palanca: más tráfico, ticket más alto, o nuevo canal de venta.`,
+          metric: `${stats.pVentas >= 0 ? '+' : ''}${stats.pVentas.toFixed(1)}%`,
+          metricLabel: 'vs mes anterior',
         })
       }
     }
 
-    return result
-  }, [data, stats, topProductos, prevData])
+    // 9) Flujo de caja vs ventas
+    if (stats.flujoCaja !== undefined && stats.totalVentas > 0) {
+      const flujo = Number(stats.flujoCaja) || 0
+      if (flujo < 0) {
+        out.push({
+          severity: 'danger',
+          icon: <Wallet size={16} />,
+          title: 'Flujo de caja negativo',
+          description: `Saliste ${formatCOP(Math.abs(flujo))} más de lo que entró en caja. Aunque las ventas sean buenas, si sigues así te quedas sin liquidez. Revisa ventas a crédito y gastos pagados con efectivo.`,
+          metric: formatCOP(Math.abs(flujo)),
+          metricLabel: 'Salida neta',
+          action: 'Reduce ventas a crédito',
+        })
+      }
+    }
+
+    return out
+  }, [data, stats, topProductos, gastosAgrupados, prevData, prevMon])
 
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i)
 
@@ -661,12 +897,21 @@ export default function ReportsPage() {
           {/* ── Auto-insights ─────────────────────────────────────────────── */}
           {insights.length > 0 && (
             <Card padding={false}>
-              <div className="p-4 border-b border-slate-50 flex items-center gap-2">
-                <Lightbulb size={15} className="text-yellow-500" />
-                <h2 className="text-sm font-semibold text-slate-800">Insights automáticos</h2>
-                <span className="ml-auto text-[10px] text-slate-400">Generado para {MONTHS_ES[month - 1]} {year}</span>
+              <div className="p-4 border-b border-slate-50 flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-yellow-50 flex items-center justify-center">
+                    <Lightbulb size={15} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800 leading-tight">Análisis inteligente</h2>
+                    <p className="text-[11px] text-slate-500 leading-tight">{insights.length} {insights.length === 1 ? 'hallazgo' : 'hallazgos'} para {MONTHS_ES[month - 1]} {year}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                  Auto-generado
+                </span>
               </div>
-              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {insights.map((insight, i) => (
                   <InsightCard key={i} {...insight} />
                 ))}

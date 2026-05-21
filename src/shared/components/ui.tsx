@@ -21,19 +21,19 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', size = 'md', loading, icon, children, className, disabled, ...props }, ref) => {
-    const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none select-none shrink-0'
+    const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none select-none shrink-0'
     const variants = {
-      primary:   'bg-[var(--t-primary)] hover:bg-[var(--t-primary-dark)] active:opacity-90 text-white focus-visible:ring-[var(--t-primary)] shadow-sm',
+      primary:   'bg-[var(--t-primary)] hover:bg-[var(--t-primary-dark)] active:opacity-90 text-white focus-visible:ring-[var(--t-primary)] shadow-sm hover:shadow-md',
       secondary: 'bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200 focus-visible:ring-slate-400 shadow-xs',
-      danger:    'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white focus-visible:ring-red-500 shadow-sm',
-      ghost:     'hover:bg-slate-100 active:bg-slate-200 text-slate-600 focus-visible:ring-slate-400',
+      danger:    'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white focus-visible:ring-red-500 shadow-sm hover:shadow-md',
+      ghost:     'hover:bg-slate-100 active:bg-slate-200 text-slate-600 focus-visible:ring-slate-400 font-medium',
       outline:   'border border-[var(--t-primary-light)] text-[var(--t-primary-dark)] hover:bg-[var(--t-primary-xlight)] active:bg-[var(--t-primary-light)] focus-visible:ring-[var(--t-primary)]',
     }
     const sizes = {
-      xs: 'text-[11px] px-2 py-1 h-6 gap-1',
-      sm: 'text-xs px-2.5 py-1.5 h-7',
-      md: 'text-sm px-4 py-2 h-9',
-      lg: 'text-sm px-5 py-2.5 h-10',
+      xs: 'text-[11px] px-2 py-1 h-6 gap-1 font-medium',
+      sm: 'text-xs px-3 py-1.5 h-8',
+      md: 'text-sm px-4 py-2.5 h-10',
+      lg: 'text-sm px-5 py-3 h-11',
     }
     return (
       <button
@@ -79,9 +79,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={!!error}
             aria-describedby={error ? `${inputId}-err` : helper ? `${inputId}-help` : undefined}
             className={clsx(
-              'w-full px-3 py-2 rounded-lg border text-sm transition-all duration-150',
+              'w-full px-4 py-2.5 rounded-lg border text-sm transition-all duration-150',
               'placeholder:text-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--t-primary-ring)] focus:border-[var(--t-primary)]',
               error ? 'border-red-400 bg-red-50/50 text-red-900' : 'border-slate-200 bg-white hover:border-slate-300',
               prefix && 'pl-9',
               suffix && 'pr-9',
@@ -153,9 +153,9 @@ export const NumberInput = forwardRef<HTMLInputElement, InputProps>(
             onChange={handleChange}
             onBlur={handleBlur}
             className={clsx(
-              'w-full px-3 py-2 rounded-lg border text-sm transition-all duration-150',
+              'w-full px-4 py-2.5 rounded-lg border text-sm transition-all duration-150',
               'placeholder:text-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--t-primary-ring)] focus:border-[var(--t-primary)]',
               error ? 'border-red-400 bg-red-50/50 text-red-900' : 'border-slate-200 bg-white hover:border-slate-300',
               prefix && 'pl-9',
               suffix && 'pr-9',
@@ -198,8 +198,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           aria-invalid={!!error}
           className={clsx(
-            'w-full px-3 py-2 rounded-lg border text-sm transition-all duration-150 cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 bg-white',
+            'w-full px-4 py-2.5 rounded-lg border text-sm transition-all duration-150 cursor-pointer',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--t-primary-ring)] focus:border-[var(--t-primary)] bg-white',
             error ? 'border-red-400' : 'border-slate-200 hover:border-slate-300',
             className
           )}

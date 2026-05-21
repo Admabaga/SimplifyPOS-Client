@@ -14,36 +14,150 @@ import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
 import IconChart from '@/assets/IconChart.png'
 
-// ─── Ticker de actividad en vivo (fake data — demo) ───────────────────────────
+// ─── Live activity panel — feed dinámico estilo dashboard ────────────────────
 const TICKER_ITEMS = [
-  { icon: Receipt,   text: 'Venta registrada',       value: '$48.500',   color: 'text-emerald-300' },
-  { icon: Package,   text: 'Stock actualizado',      value: '+15 unid.',  color: 'text-blue-300'    },
-  { icon: Wallet,    text: 'Caja abierta',           value: 'Sucursal 1', color: 'text-purple-300'  },
-  { icon: Users,     text: 'Nueva cuenta',           value: 'Mesa 4',     color: 'text-amber-300'   },
-  { icon: TrendingUp,text: 'Meta diaria',            value: '87%',        color: 'text-emerald-300' },
-  { icon: Shield,    text: 'Sesión segura',          value: 'JWT RS256',  color: 'text-cyan-300'    },
+  { icon: Receipt,   text: 'Venta registrada',  value: '$48.500',   color: 'text-emerald-300', barPct: 72 },
+  { icon: Package,   text: 'Stock actualizado', value: '+15 unid.', color: 'text-blue-300',    barPct: 45 },
+  { icon: Wallet,    text: 'Caja abierta',      value: 'Sucursal 1',color: 'text-purple-300',  barPct: 60 },
+  { icon: Users,     text: 'Nueva cuenta',      value: 'Mesa 4',    color: 'text-amber-300',   barPct: 30 },
+  { icon: TrendingUp,text: 'Meta diaria',       value: '87%',       color: 'text-emerald-300', barPct: 87 },
+  { icon: Shield,    text: 'Sesión segura',     value: 'JWT RS256', color: 'text-cyan-300',    barPct: 95 },
 ]
+
+// Mini sparkline animado — datos generados al vuelo
+function MiniSpark({ color = 'rgba(110,231,183,0.9)' }: { color?: string }) {
+  const [data, setData] = useState<number[]>(() =>
+    Array.from({ length: 12 }, () => Math.random() * 0.6 + 0.2)
+  )
+  useEffect(() => {
+    const t = setInterval(() => {
+      setData((d) => [...d.slice(1), Math.random() * 0.7 + 0.2])
+    }, 900)
+    return () => clearInterval(t)
+  }, [])
+
+  const w = 64
+  const h = 22
+  const points = data
+    .map((v, i) => `${(i * w) / (data.length - 1)},${h - v * h}`)
+    .join(' ')
+  const area = `0,${h} ${points} ${w},${h}`
+
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill="url(#sparkFill)" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ transition: 'all 600ms ease' }}
+      />
+    </svg>
+  )
+}
 
 function LiveTicker() {
   const [idx, setIdx] = useState(0)
+  const [counter, setCounter] = useState(2847)
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  // Rotación de items
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % TICKER_ITEMS.length), 2500)
+    const t = setInterval(() => {
+      setIsAnimating(true)
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % TICKER_ITEMS.length)
+        setIsAnimating(false)
+      }, 280)
+    }, 3000)
     return () => clearInterval(t)
   }, [])
+
+  // Contador de ventas que sube
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCounter((c) => c + Math.floor(Math.random() * 3) + 1)
+    }, 1400)
+    return () => clearInterval(t)
+  }, [])
+
   const item = TICKER_ITEMS[idx]!
   const Icon = item.icon
+
   return (
     <div
-      className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-white/10 backdrop-blur-md transition-all duration-500"
-      style={{ background: 'rgba(255,255,255,0.06)' }}
+      className="relative w-[300px] rounded-2xl border border-white/10 overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+        backdropFilter: 'blur(12px)',
+      }}
     >
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-      </span>
-      <Icon size={13} className={item.color} />
-      <span className="text-xs text-white/85 font-medium">{item.text}</span>
-      <span className={`text-xs font-bold tabular-nums ${item.color}`}>{item.value}</span>
+      {/* Header: live indicator + total operaciones */}
+      <div className="flex items-center justify-between px-3.5 py-2 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          <span className="text-[10px] uppercase tracking-wider font-bold text-white/70">En vivo</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-white/50">Operaciones hoy</span>
+          <span className="text-[11px] font-bold tabular-nums text-emerald-300 transition-all">
+            {counter.toLocaleString('es-CO')}
+          </span>
+        </div>
+      </div>
+
+      {/* Cuerpo: item rotativo + sparkline */}
+      <div className="flex items-center gap-3 px-3.5 py-3">
+        <div
+          className={`flex items-center justify-center w-9 h-9 rounded-xl shrink-0 transition-all duration-300 ${
+            isAnimating ? 'scale-90 opacity-0' : 'scale-100 opacity-100'
+          }`}
+          style={{ background: 'rgba(255,255,255,0.08)' }}
+        >
+          <Icon size={15} className={item.color} />
+        </div>
+        <div
+          className={`flex-1 min-w-0 transition-all duration-300 ${
+            isAnimating ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+          }`}
+        >
+          <p className="text-[11px] text-white/55 leading-tight">{item.text}</p>
+          <p className={`text-sm font-bold tabular-nums truncate ${item.color}`}>{item.value}</p>
+          <div className="mt-1.5 h-1 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${item.barPct}%`, background: 'currentColor', color: 'var(--t-accent)' }}
+            />
+          </div>
+        </div>
+        <div className="shrink-0 -mr-1">
+          <MiniSpark color="var(--t-accent)" />
+        </div>
+      </div>
+
+      {/* Dots indicador de posición */}
+      <div className="flex items-center justify-center gap-1 pb-2">
+        {TICKER_ITEMS.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1 rounded-full transition-all duration-300 ${
+              i === idx ? 'w-4 bg-white/70' : 'w-1 bg-white/20'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
