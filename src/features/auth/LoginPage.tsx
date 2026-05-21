@@ -144,17 +144,14 @@ export default function LoginPage() {
             <img src={Logo} alt="SimplifyPOS" className="w-16 h-16" />
           </div>
 
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
-            {/* Header del form */}
-            <div className="mb-7">
-              <h2 className="text-2xl font-extrabold text-slate-900 mb-1 tracking-tight">Bienvenido de nuevo</h2>
-              <p className="text-slate-500 text-sm">Ingresa tus credenciales para acceder al sistema</p>
-            </div>
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-1">Iniciar sesión</h2>
+            <p className="text-gray-500 text-sm mb-6">Ingresa tus credenciales para continuar</p>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Email */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Correo electrónico
                 </label>
                 <input
@@ -162,7 +159,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   {...register('email')}
                   placeholder="usuario@empresa.com"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 placeholder:text-slate-400"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm transition"
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
@@ -171,7 +168,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contraseña
                 </label>
                 <div className="relative">
@@ -180,12 +177,12 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     {...register('password')}
                     placeholder="••••••••"
-                    className="w-full px-4 pr-11 py-3 rounded-xl border border-slate-200 text-sm transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-slate-50 placeholder:text-slate-400"
+                    className="w-full px-4 pr-11 py-2.5 rounded-lg border border-gray-300 text-sm transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -201,21 +198,19 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded accent-brand-600"
+                  className="w-4 h-4 rounded"
                 />
-                <span className="text-sm text-slate-600">Recordarme en este dispositivo</span>
+                <span className="text-sm text-gray-600">Recordarme en este dispositivo</span>
               </label>
 
               {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] shadow-md hover:shadow-lg"
+                className="w-full flex items-center justify-center gap-2 text-white font-semibold py-2.5 rounded-lg transition-all"
                 style={{
-                  background: loading
-                    ? 'var(--t-primary-dark)'
-                    : 'linear-gradient(135deg, var(--t-primary), var(--t-primary-dark))',
-                  opacity: loading ? 0.75 : 1,
+                  background: loading ? 'var(--t-primary-dark)' : 'var(--t-primary)',
+                  opacity: loading ? 0.7 : 1,
                 }}
               >
                 {loading ? (
@@ -223,19 +218,13 @@ export default function LoginPage() {
                 ) : (
                   <LogIn className="w-4 h-4" />
                 )}
-                {loading ? 'Verificando...' : 'Acceder al sistema'}
+                {loading ? 'Ingresando...' : 'Ingresar'}
               </button>
             </form>
-
-            {/* Security badge */}
-            <div className="mt-5 flex items-center justify-center gap-1.5 text-slate-400">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span className="text-[11px]">Conexión cifrada · JWT RS256 · 2FA disponible</span>
-            </div>
           </div>
 
-          <p className="text-center text-xs text-slate-400 mt-5">
-            SimplifyPOS v1.0 · {new Date().getFullYear()} · Colombia 🇨🇴
+          <p className="text-center text-xs text-gray-400 mt-6">
+            SimplifyPOS v1.0 · {new Date().getFullYear()}
           </p>
         </div>
       </div>
