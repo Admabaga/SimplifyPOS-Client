@@ -8,7 +8,6 @@ import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react'
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
-import Logo from '@/assets/Icon.png'
 import IconChart from '@/assets/IconChart.png'
 
 const schema = z.object({
@@ -144,7 +143,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Logo mobile */}
           <div className="flex justify-center mb-8 lg:hidden">
-            <img src={Logo} alt="SimplifyPOS" className="w-16 h-16" />
+            <img src={IconChart} alt="SimplifyPOS" className="w-16 h-16" />
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg p-8">

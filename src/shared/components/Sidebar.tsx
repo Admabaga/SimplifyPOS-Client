@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 import { useMasterStore } from '@/stores/master'
 import { authApi } from '@/features/auth/api'
-import Logo from '@/assets/Logo.png'
+import Logo from '@/assets/IconChart.png'
 import { useQuery } from '@tanstack/react-query'
 import { notificationsApi } from '@/features/notifications/api'
 

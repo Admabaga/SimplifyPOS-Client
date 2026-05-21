@@ -4,7 +4,7 @@ import { Lock, LogIn, Loader2, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { authApi } from '@/features/auth/api'
 import { useAuthStore } from '@/stores/auth'
-import Logo from '@/assets/Icon.png'
+import Logo from '@/assets/IconChart.png'
 
 export default function SessionExpiredModal() {
   const [visible, setVisible] = useState(false)
