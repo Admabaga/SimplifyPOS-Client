@@ -34,18 +34,18 @@ import type { Ticket } from '@/features/billing/types'
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const ventaSchema = z.object({
-  producto_id:       z.coerce.number().min(1, 'Requerido'),
+  producto_id: z.coerce.number().min(1, 'Requerido'),
   producto_precio_id: z.coerce.number().min(1, 'Requerido'),
-  cantidad:          z.coerce.number().min(1, 'Mínimo 1'),
+  cantidad: z.coerce.number().min(1, 'Mínimo 1'),
 })
 
 const pagoSchema = z.object({
   medio_pago_id: z.coerce.number().min(1, 'Requerido'),
-  descripcion:   z.string().optional(),
+  descripcion: z.string().optional(),
 })
 
 type VentaForm = z.infer<typeof ventaSchema>
-type PagoForm  = z.infer<typeof pagoSchema>
+type PagoForm = z.infer<typeof pagoSchema>
 
 // ─── Hook formateo de monto (evita bug NumberInput+RHF con separadores de miles) ─
 
@@ -76,13 +76,13 @@ function useMontoInput(initialValue = 0) {
 // ─── Ventas agrupadas ────────────────────────────────────────────────────────
 
 interface VentaAgrupada {
-  producto_id:       number
-  producto_nombre:   string
-  totalCantidad:     number
-  totalPrecio:       number
-  totalGanancia:     number
-  ventas:            Venta[]
-  expandido:         boolean
+  producto_id: number
+  producto_nombre: string
+  totalCantidad: number
+  totalPrecio: number
+  totalGanancia: number
+  ventas: Venta[]
+  expandido: boolean
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -95,15 +95,15 @@ export default function AccountDetailPage() {
   const { requireCaja } = useCajaGuard()
 
   const [showAddVenta, setShowAddVenta] = useState(false)
-  const [showAddPago,  setShowAddPago]  = useState(false)
-  const [showTicket,   setShowTicket]   = useState(false)
+  const [showAddPago, setShowAddPago] = useState(false)
+  const [showTicket, setShowTicket] = useState(false)
   const [deleteVentaId, setDeleteVentaId] = useState<number | null>(null)
-  const [deletePagoId,  setDeletePagoId]  = useState<number | null>(null)
+  const [deletePagoId, setDeletePagoId] = useState<number | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set())
   const [barcodeProductId, setBarcodeProductId] = useState<number | null>(null)
   const [showClienteModal, setShowClienteModal] = useState(false)
-  const [autoTicket, setAutoTicket]             = useState<Ticket | null>(null)  // ticket generado automáticamente
-  const [viewTicket, setViewTicket]             = useState<Ticket | null>(null)  // ticket existente que se está viendo
+  const [autoTicket, setAutoTicket] = useState<Ticket | null>(null)  // ticket generado automáticamente
+  const [viewTicket, setViewTicket] = useState<Ticket | null>(null)  // ticket existente que se está viendo
 
   const { data: cuenta, isLoading } = useQuery({
     queryKey: ['accounts', cuentaId],
@@ -191,12 +191,12 @@ export default function AccountDetailPage() {
     }
 
     const clienteData = {
-      tipo_doc:  (c.cliente_tipo_doc as ClienteForm['tipo_doc']) ?? 'CC',
+      tipo_doc: (c.cliente_tipo_doc as ClienteForm['tipo_doc']) ?? 'CC',
       documento: c.cliente_documento,
-      nombre:    c.cliente_nombre_fiscal,
+      nombre: c.cliente_nombre_fiscal,
       direccion: c.cliente_direccion ?? undefined,
-      telefono:  c.cliente_telefono ?? undefined,
-      email:     c.cliente_email ?? undefined,
+      telefono: c.cliente_telefono ?? undefined,
+      email: c.cliente_email ?? undefined,
     }
 
     let ticket
@@ -258,19 +258,19 @@ export default function AccountDetailPage() {
       const nombre = prod?.nombre ?? `Producto #${v.producto_id}`
       if (!map.has(v.producto_id)) {
         map.set(v.producto_id, {
-          producto_id:     v.producto_id,
+          producto_id: v.producto_id,
           producto_nombre: nombre,
-          totalCantidad:   0,
-          totalPrecio:     0,
-          totalGanancia:   0,
-          ventas:          [],
-          expandido:       false,
+          totalCantidad: 0,
+          totalPrecio: 0,
+          totalGanancia: 0,
+          ventas: [],
+          expandido: false,
         })
       }
       const g = map.get(v.producto_id)!
-      g.totalCantidad  += v.cantidad_unidades
-      g.totalPrecio    += v.precio_venta
-      g.totalGanancia  += v.ganancia
+      g.totalCantidad += v.cantidad_unidades
+      g.totalPrecio += v.precio_venta
+      g.totalGanancia += v.ganancia
       g.ventas.push(v)
     }
     return Array.from(map.values()).sort((a, b) => b.totalPrecio - a.totalPrecio)
@@ -280,16 +280,16 @@ export default function AccountDetailPage() {
     setExpandedProducts((prev) => {
       const next = new Set(prev)
       if (next.has(productId)) next.delete(productId)
-      else                      next.add(productId)
+      else next.add(productId)
       return next
     })
   }
 
   if (isLoading) return <div className="flex justify-center py-24"><Spinner size={36} /></div>
-  if (!cuenta)  return <EmptyState title="Cuenta no encontrada" />
+  if (!cuenta) return <EmptyState title="Cuenta no encontrada" />
 
   const pagadoTotal = cuenta.total - (cuenta.valor_pendiente ?? 0)
-  const pctPagado   = cuenta.total > 0 ? (pagadoTotal / cuenta.total) * 100 : 0
+  const pctPagado = cuenta.total > 0 ? (pagadoTotal / cuenta.total) * 100 : 0
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -397,293 +397,294 @@ export default function AccountDetailPage() {
       {/* ── Cliente fiscal + Documentos emitidos — 2 columnas en desktop ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
-      {/* Cliente fiscal */}
-      <Card className="h-full">
-        <SectionHeader
-          title="Cliente fiscal"
-          icon={<Receipt size={15} />}
-          actions={
-            !cuenta.esta_pagada && (
-              <Can permission="cuentas:create">
-                <Button size="sm" variant="outline" icon={<Plus size={14} />} onClick={() => setShowClienteModal(true)}>
-                  {cuenta.cliente_documento ? 'Editar' : 'Asignar'}
-                </Button>
-              </Can>
-            )
-          }
-        />
-        {cuenta.cliente_documento ? (
-          <div className="mt-3 space-y-1.5 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 w-20 shrink-0">Nombre</span>
-              <span className="font-semibold text-slate-800 truncate">{cuenta.cliente_nombre_fiscal}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 w-20 shrink-0">{cuenta.cliente_tipo_doc}</span>
-              <span className="font-medium text-slate-700">{cuenta.cliente_documento}</span>
-            </div>
-            {cuenta.cliente_direccion && (
-              <div className="flex items-start gap-2">
-                <span className="text-slate-400 w-20 shrink-0">Dirección</span>
-                <span className="text-slate-600">{cuenta.cliente_direccion}</span>
-              </div>
-            )}
-            {(cuenta.cliente_telefono || cuenta.cliente_email) && (
-              <div className="flex items-center gap-2">
-                {cuenta.cliente_telefono && <span className="text-slate-500 text-xs">{cuenta.cliente_telefono}</span>}
-                {cuenta.cliente_email && <span className="text-slate-500 text-xs truncate">{cuenta.cliente_email}</span>}
-              </div>
-            )}
-            <div className="pt-1">
-              <span className="inline-flex items-center gap-1.5 text-[10px] bg-purple-50 text-purple-700 border border-purple-200 rounded-full px-2 py-0.5">
-                <CheckCircle2 size={10} /> Factura automática al pagar
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-3 flex flex-col items-center text-center py-5 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <Receipt size={20} className="text-slate-300 mb-2" />
-            <p className="text-xs text-slate-500 font-medium mb-0.5">Sin cliente fiscal</p>
-            <p className="text-[11px] text-slate-400">La factura se emite manualmente.</p>
-          </div>
-        )}
-      </Card>
-
-      {/* Documentos emitidos */}
-      <Card className="h-full">
-        <SectionHeader
-          title="Documentos emitidos"
-          icon={<FileText size={15} />}
-          actions={
-            cuenta.ventas.length > 0 && ticketsCuenta.length === 0 && (
-              <Can permission="cuentas:create">
-                <Button size="sm" variant="outline" icon={<Receipt size={14} />} onClick={() => setShowTicket(true)}>
-                  Emitir ahora
-                </Button>
-              </Can>
-            )
-          }
-        />
-
-        {ticketsCuenta.length === 0 ? (
-          <div className="mt-3 flex flex-col items-center text-center py-6 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center mb-3">
-              <FileText size={20} className="text-slate-300" />
-            </div>
-            <p className="text-sm font-semibold text-slate-600 mb-1">
-              Aún no hay documentos para esta cuenta
-            </p>
-            <p className="text-xs text-slate-400 max-w-sm">
-              {cuenta.ventas.length === 0
-                ? 'Agrega ventas y luego podrás emitir un recibo o factura.'
-                : cuenta.cliente_documento
-                  ? 'Se generará automáticamente al pagar la cuenta. O puedes emitirlo manualmente con "Emitir documento".'
-                  : 'Usa el botón "Emitir documento" arriba para generar un recibo o factura.'}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {ticketsCuenta.map((t) => {
-              const isAnulada = t.estado === 'ANULADA'
-              const tipoLabel =
-                t.tipo_documento === 'FACTURA_VENTA' ? 'Factura de venta' :
-                t.tipo_documento === 'POS'           ? 'Documento POS'    :
-                                                       'Recibo informal'
-              const tipoColor =
-                t.tipo_documento === 'FACTURA_VENTA' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                t.tipo_documento === 'POS'           ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                                       'bg-slate-100 text-slate-700 border-slate-200'
-              const iconColor =
-                t.tipo_documento === 'FACTURA_VENTA' ? 'text-purple-600 bg-purple-50' :
-                t.tipo_documento === 'POS'           ? 'text-blue-600 bg-blue-50' :
-                                                       'text-slate-600 bg-slate-50'
-
-              return (
-                <div
-                  key={t.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                    isAnulada
-                      ? 'bg-red-50/40 border-red-100 opacity-70'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconColor}`}>
-                    <FileText size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${tipoColor}`}>
-                        {tipoLabel}
-                      </span>
-                      {isAnulada && (
-                        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">
-                          Anulada
-                        </span>
-                      )}
-                    </div>
-                    <p className="font-semibold text-slate-800 text-sm tabular-nums mt-0.5 flex items-center gap-1.5">
-                      <Hash size={11} className="text-slate-400" />
-                      {t.numero_completo}
-                    </p>
-                    <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Calendar size={10} />
-                      {formatDateTime(t.fecha_emision ?? '')}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(t.total ?? 0)}</p>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon={<Eye size={13} />}
-                      onClick={() => setViewTicket(t)}
-                      className="mt-1"
-                    >
-                      Ver
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-
-      </div>{/* end grid cliente+documentos */}
-
-      {/* ── Ventas — full width centrado ──────────────────────────────────── */}
-      <Card padding={false}>
-        <div className="p-4 border-b border-slate-50">
+        {/* Cliente fiscal */}
+        <Card className="h-full">
           <SectionHeader
-            title="Ventas"
-            icon={<ShoppingCart size={15} />}
+            title="Cliente fiscal"
+            icon={<Receipt size={15} />}
             actions={
               !cuenta.esta_pagada && (
-                <Can permission="ventas:create">
-                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
-                    Agregar venta
+                <Can permission="cuentas:create">
+                  <Button size="sm" variant="outline" icon={<Plus size={14} />} onClick={() => setShowClienteModal(true)}>
+                    {cuenta.cliente_documento ? 'Editar' : 'Asignar'}
                   </Button>
                 </Can>
               )
             }
           />
-        </div>
+          {cuenta.cliente_documento ? (
+            <div className="mt-3 space-y-1.5 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 w-20 shrink-0">Nombre</span>
+                <span className="font-semibold text-slate-800 truncate">{cuenta.cliente_nombre_fiscal}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 w-20 shrink-0">{cuenta.cliente_tipo_doc}</span>
+                <span className="font-medium text-slate-700">{cuenta.cliente_documento}</span>
+              </div>
+              {cuenta.cliente_direccion && (
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400 w-20 shrink-0">Dirección</span>
+                  <span className="text-slate-600">{cuenta.cliente_direccion}</span>
+                </div>
+              )}
+              {(cuenta.cliente_telefono || cuenta.cliente_email) && (
+                <div className="flex items-center gap-2">
+                  {cuenta.cliente_telefono && <span className="text-slate-500 text-xs">{cuenta.cliente_telefono}</span>}
+                  {cuenta.cliente_email && <span className="text-slate-500 text-xs truncate">{cuenta.cliente_email}</span>}
+                </div>
+              )}
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1.5 text-[10px] bg-purple-50 text-purple-700 border border-purple-200 rounded-full px-2 py-0.5">
+                  <CheckCircle2 size={10} /> Factura automática al pagar
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-col items-center text-center py-5 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <Receipt size={20} className="text-slate-300 mb-2" />
+              <p className="text-xs text-slate-500 font-medium mb-0.5">Sin cliente fiscal</p>
+              <p className="text-[11px] text-slate-400">La factura se emite manualmente.</p>
+            </div>
+          )}
+        </Card>
+        
+        {/* ── Ventas — full width centrado ──────────────────────────────────── */}
+        <Card padding={false}>
+          <div className="p-4 border-b border-slate-50">
+            <SectionHeader
+              title="Ventas"
+              icon={<ShoppingCart size={15} />}
+              actions={
+                !cuenta.esta_pagada && (
+                  <Can permission="ventas:create">
+                    <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                      Agregar venta
+                    </Button>
+                  </Can>
+                )
+              }
+            />
+          </div>
 
-        {cuenta.ventas.length === 0 ? (
-          <EmptyState
-            icon={<ShoppingCart size={32} />}
-            title="Sin ventas"
-            description="Agrega productos vendidos a esta cuenta"
-            action={
-              !cuenta.esta_pagada && (
-                <Can permission="ventas:create">
-                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
-                    Primera venta
+          {cuenta.ventas.length === 0 ? (
+            <EmptyState
+              icon={<ShoppingCart size={32} />}
+              title="Sin ventas"
+              description="Agrega productos vendidos a esta cuenta"
+              action={
+                !cuenta.esta_pagada && (
+                  <Can permission="ventas:create">
+                    <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                      Primera venta
+                    </Button>
+                  </Can>
+                )
+              }
+            />
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {ventasAgrupadas.map((g) => {
+                const isExpanded = expandedProducts.has(g.producto_id)
+                const hasMultiple = g.ventas.length > 1
+
+                return (
+                  <div key={g.producto_id}>
+                    {/* Fila agrupada */}
+                    <div
+                      className={`flex items-center gap-3 px-4 py-3 ${hasMultiple ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
+                      onClick={() => hasMultiple && toggleProduct(g.producto_id)}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                        <Package size={14} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{g.producto_nombre}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {g.ventas.length} venta{g.ventas.length !== 1 ? 's' : ''} · {g.totalCantidad} unidades
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(g.totalPrecio)}</p>
+                      </div>
+                      {hasMultiple && (
+                        <div className="text-slate-400 ml-1">
+                          {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </div>
+                      )}
+                      {!cuenta.esta_pagada && (
+                        <Can permission="ventas:delete">
+                          {g.ventas.length === 1 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
+                              className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </Can>
+                      )}
+                    </div>
+
+                    {/* Detalle expandido */}
+                    {isExpanded && (
+                      <div className="bg-slate-50/80 border-t border-slate-100 px-4 py-2">
+                        {g.ventas.map((v) => (
+                          <div key={v.id} className="flex items-start gap-3 py-2 text-xs border-b border-slate-100 last:border-0">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-300 ml-2 mt-1 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-slate-600">{v.cantidad_unidades} u.</span>
+                                <span className="text-slate-400">{formatDateTime(v.fecha_venta)}</span>
+                              </div>
+                              {/* Trazabilidad cajero/caja */}
+                              {(v.nombre_cajero || v.sesion_caja_id) && (
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  {v.nombre_cajero && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
+                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+                                      {v.nombre_cajero}
+                                    </span>
+                                  )}
+                                  {v.sesion_caja_id && (
+                                    <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">
+                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2" /></svg>
+                                      Caja #{v.sesion_caja_id}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-semibold text-slate-700 tabular-nums">{formatCOP(v.precio_venta)}</span>
+                            {!cuenta.esta_pagada && (
+                              <Can permission="ventas:delete">
+                                <button
+                                  onClick={() => setDeleteVentaId(v.id)}
+                                  className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </Can>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Footer total ventas */}
+              <div className="px-4 py-3 bg-slate-50 flex justify-between items-center">
+                <span className="text-xs text-slate-500 font-medium">Total ventas</span>
+                <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(cuenta.total)}</span>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Documentos emitidos */}
+        <Card className="h-full">
+          <SectionHeader
+            title="Documentos emitidos"
+            icon={<FileText size={15} />}
+            actions={
+              cuenta.ventas.length > 0 && ticketsCuenta.length === 0 && (
+                <Can permission="cuentas:create">
+                  <Button size="sm" variant="outline" icon={<Receipt size={14} />} onClick={() => setShowTicket(true)}>
+                    Emitir ahora
                   </Button>
                 </Can>
               )
             }
           />
-        ) : (
-          <div className="divide-y divide-slate-50">
-            {ventasAgrupadas.map((g) => {
-              const isExpanded = expandedProducts.has(g.producto_id)
-              const hasMultiple = g.ventas.length > 1
 
-              return (
-                <div key={g.producto_id}>
-                  {/* Fila agrupada */}
+          {ticketsCuenta.length === 0 ? (
+            <div className="mt-3 flex flex-col items-center text-center py-6 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center mb-3">
+                <FileText size={20} className="text-slate-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-600 mb-1">
+                Aún no hay documentos para esta cuenta
+              </p>
+              <p className="text-xs text-slate-400 max-w-sm">
+                {cuenta.ventas.length === 0
+                  ? 'Agrega ventas y luego podrás emitir un recibo o factura.'
+                  : cuenta.cliente_documento
+                    ? 'Se generará automáticamente al pagar la cuenta. O puedes emitirlo manualmente con "Emitir documento".'
+                    : 'Usa el botón "Emitir documento" arriba para generar un recibo o factura.'}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {ticketsCuenta.map((t) => {
+                const isAnulada = t.estado === 'ANULADA'
+                const tipoLabel =
+                  t.tipo_documento === 'FACTURA_VENTA' ? 'Factura de venta' :
+                    t.tipo_documento === 'POS' ? 'Documento POS' :
+                      'Recibo informal'
+                const tipoColor =
+                  t.tipo_documento === 'FACTURA_VENTA' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                    t.tipo_documento === 'POS' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                      'bg-slate-100 text-slate-700 border-slate-200'
+                const iconColor =
+                  t.tipo_documento === 'FACTURA_VENTA' ? 'text-purple-600 bg-purple-50' :
+                    t.tipo_documento === 'POS' ? 'text-blue-600 bg-blue-50' :
+                      'text-slate-600 bg-slate-50'
+
+                return (
                   <div
-                    className={`flex items-center gap-3 px-4 py-3 ${hasMultiple ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
-                    onClick={() => hasMultiple && toggleProduct(g.producto_id)}
+                    key={t.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isAnulada
+                        ? 'bg-red-50/40 border-red-100 opacity-70'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                      }`}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                      <Package size={14} className="text-blue-600" />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconColor}`}>
+                      <FileText size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{g.producto_nombre}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {g.ventas.length} venta{g.ventas.length !== 1 ? 's' : ''} · {g.totalCantidad} unidades
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${tipoColor}`}>
+                          {tipoLabel}
+                        </span>
+                        {isAnulada && (
+                          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-200">
+                            Anulada
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-slate-800 text-sm tabular-nums mt-0.5 flex items-center gap-1.5">
+                        <Hash size={11} className="text-slate-400" />
+                        {t.numero_completo}
+                      </p>
+                      <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                        <Calendar size={10} />
+                        {formatDateTime(t.fecha_emision ?? '')}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(g.totalPrecio)}</p>
+                      <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(t.total ?? 0)}</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<Eye size={13} />}
+                        onClick={() => setViewTicket(t)}
+                        className="mt-1"
+                      >
+                        Ver
+                      </Button>
                     </div>
-                    {hasMultiple && (
-                      <div className="text-slate-400 ml-1">
-                        {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                      </div>
-                    )}
-                    {!cuenta.esta_pagada && (
-                      <Can permission="ventas:delete">
-                        {g.ventas.length === 1 && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
-                            className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </Can>
-                    )}
                   </div>
-
-                  {/* Detalle expandido */}
-                  {isExpanded && (
-                    <div className="bg-slate-50/80 border-t border-slate-100 px-4 py-2">
-                      {g.ventas.map((v) => (
-                        <div key={v.id} className="flex items-start gap-3 py-2 text-xs border-b border-slate-100 last:border-0">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-300 ml-2 mt-1 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-slate-600">{v.cantidad_unidades} u.</span>
-                              <span className="text-slate-400">{formatDateTime(v.fecha_venta)}</span>
-                            </div>
-                            {/* Trazabilidad cajero/caja */}
-                            {(v.nombre_cajero || v.sesion_caja_id) && (
-                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                {v.nombre_cajero && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                                    {v.nombre_cajero}
-                                  </span>
-                                )}
-                                {v.sesion_caja_id && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/></svg>
-                                    Caja #{v.sesion_caja_id}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <span className="font-semibold text-slate-700 tabular-nums">{formatCOP(v.precio_venta)}</span>
-                          {!cuenta.esta_pagada && (
-                            <Can permission="ventas:delete">
-                              <button
-                                onClick={() => setDeleteVentaId(v.id)}
-                                className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </Can>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-
-            {/* Footer total ventas */}
-            <div className="px-4 py-3 bg-slate-50 flex justify-between items-center">
-              <span className="text-xs text-slate-500 font-medium">Total ventas</span>
-              <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(cuenta.total)}</span>
+                )
+              })}
             </div>
-          </div>
-        )}
-      </Card>
+          )}
+        </Card>
+
+      </div>{/* end grid cliente+documentos */}
+
+
 
       {/* ── Pagos — full width debajo ──────────────────────────────────────── */}
       <Card padding={false}>
@@ -830,13 +831,13 @@ export default function AccountDetailPage() {
         initialValues={
           cuenta.cliente_documento
             ? {
-                tipo_doc: (cuenta.cliente_tipo_doc as ClienteForm['tipo_doc']) ?? 'CC',
-                documento: cuenta.cliente_documento,
-                nombre: cuenta.cliente_nombre_fiscal ?? '',
-                direccion: cuenta.cliente_direccion ?? undefined,
-                telefono: cuenta.cliente_telefono ?? undefined,
-                email: cuenta.cliente_email ?? undefined,
-              }
+              tipo_doc: (cuenta.cliente_tipo_doc as ClienteForm['tipo_doc']) ?? 'CC',
+              documento: cuenta.cliente_documento,
+              nombre: cuenta.cliente_nombre_fiscal ?? '',
+              direccion: cuenta.cliente_direccion ?? undefined,
+              telefono: cuenta.cliente_telefono ?? undefined,
+              email: cuenta.cliente_email ?? undefined,
+            }
             : undefined
         }
         onAssigned={(updated) => {
@@ -861,15 +862,15 @@ interface AddVentaModalProps {
 }
 
 function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProductId }: AddVentaModalProps) {
-  const [search, setSearch]               = useState('')
-  const [selectedProdId, setSelectedProdId]     = useState<number | null>(null)
+  const [search, setSearch] = useState('')
+  const [selectedProdId, setSelectedProdId] = useState<number | null>(null)
   const [selectedPrecioId, setSelectedPrecioId] = useState<number | null>(null)
-  const [cantidad, setCantidad]           = useState(1)
+  const [cantidad, setCantidad] = useState(1)
   // Descuento rápido
   const [showDescuento, setShowDescuento] = useState(false)
-  const [descTipo, setDescTipo]           = useState<'pct' | 'monto'>('pct')
-  const descInput                         = useMontoInput(0)
-  const [descPct, setDescPct]             = useState('')
+  const [descTipo, setDescTipo] = useState<'pct' | 'monto'>('pct')
+  const descInput = useMontoInput(0)
+  const [descPct, setDescPct] = useState('')
 
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -902,12 +903,12 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
     }
   }, [filtered])
 
-  const selectedProduct       = products.find((p) => p.id === selectedProdId)
-  const selectedPrecio        = selectedProduct?.precios.find((pr) => pr.id === selectedPrecioId)
-  const precioActivos         = selectedProduct?.precios.filter((pr: any) => pr.nombre !== 'Perdida') ?? []
-  const stockDisponible       = selectedProduct?.stock_total ?? 0
+  const selectedProduct = products.find((p) => p.id === selectedProdId)
+  const selectedPrecio = selectedProduct?.precios.find((pr) => pr.id === selectedPrecioId)
+  const precioActivos = selectedProduct?.precios.filter((pr: any) => pr.nombre !== 'Perdida') ?? []
+  const stockDisponible = selectedProduct?.stock_total ?? 0
   const stockEnPresentaciones = Math.floor(stockDisponible / ((selectedPrecio as any)?.cantidad ?? 1))
-  const precioLista           = (selectedPrecio?.precio ?? 0) * cantidad
+  const precioLista = (selectedPrecio?.precio ?? 0) * cantidad
 
   // Calcular precio con descuento
   const precioConDescuento = useMemo(() => {
@@ -920,9 +921,9 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
     return Math.max(0, precioLista - monto)
   }, [showDescuento, descTipo, descPct, descInput, precioLista])
 
-  const hayDescuento   = showDescuento && precioConDescuento < precioLista && precioLista > 0
+  const hayDescuento = showDescuento && precioConDescuento < precioLista && precioLista > 0
   const montoDescuento = precioLista - precioConDescuento
-  const canSubmit      = selectedProdId && selectedPrecioId && cantidad >= 1 && cantidad <= stockEnPresentaciones
+  const canSubmit = selectedProdId && selectedPrecioId && cantidad >= 1 && cantidad <= stockEnPresentaciones
 
   const handleSubmit = () => {
     if (!canSubmit) return
@@ -1030,11 +1031,10 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                   <button
                     key={pr.id}
                     onClick={() => setSelectedPrecioId(pr.id)}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left ${
-                      selectedPrecioId === pr.id
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left ${selectedPrecioId === pr.id
                         ? 't-border t-bg-xlt ring-1 ring-[var(--t-primary-ring)]'
                         : 'border-slate-200 hover:t-border hover:t-bg-xlt'
-                    }`}
+                      }`}
                   >
                     <div>
                       <p className="text-sm font-medium text-slate-800">{pr.nombre}</p>
@@ -1138,22 +1138,20 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                         <button
                           type="button"
                           onClick={() => setDescTipo('pct')}
-                          className={`py-2 rounded-md text-xs font-bold transition-all ${
-                            descTipo === 'pct'
+                          className={`py-2 rounded-md text-xs font-bold transition-all ${descTipo === 'pct'
                               ? 'bg-orange-500 text-white shadow-sm'
                               : 'text-slate-500 hover:text-orange-600'
-                          }`}
+                            }`}
                         >
                           % Porcentaje
                         </button>
                         <button
                           type="button"
                           onClick={() => setDescTipo('monto')}
-                          className={`py-2 rounded-md text-xs font-bold transition-all ${
-                            descTipo === 'monto'
+                          className={`py-2 rounded-md text-xs font-bold transition-all ${descTipo === 'monto'
                               ? 'bg-orange-500 text-white shadow-sm'
                               : 'text-slate-500 hover:text-orange-600'
-                          }`}
+                            }`}
                         >
                           $ Monto fijo
                         </button>
@@ -1168,11 +1166,10 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                                 key={p}
                                 type="button"
                                 onClick={() => setDescPct(String(p))}
-                                className={`py-2 rounded-lg text-sm font-bold border-2 transition-all ${
-                                  descPct === String(p)
+                                className={`py-2 rounded-lg text-sm font-bold border-2 transition-all ${descPct === String(p)
                                     ? 'bg-orange-500 text-white border-orange-500 shadow-md scale-105'
                                     : 'bg-white text-slate-700 border-orange-100 hover:border-orange-400 hover:bg-orange-50'
-                                }`}
+                                  }`}
                               >
                                 {p}%
                               </button>
@@ -1266,13 +1263,13 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
     resolver: zodResolver(pagoSchema) as unknown as Resolver<any>,
   })
 
-  const medioId           = watch('medio_pago_id')
+  const medioId = watch('medio_pago_id')
   const medioSeleccionado = mediosPago.find((m) => m.id === Number(medioId))
-  const subTotal          = montoInput.numericValue()
-  const comision          = medioSeleccionado ? (subTotal * (Number(medioSeleccionado.comision_porcentaje) / 100)) : 0
-  const totalNeto         = subTotal - comision
-  const cambio            = subTotal > pendiente ? subTotal - pendiente : 0
-  const canPay            = !!medioId && subTotal >= 1
+  const subTotal = montoInput.numericValue()
+  const comision = medioSeleccionado ? (subTotal * (Number(medioSeleccionado.comision_porcentaje) / 100)) : 0
+  const totalNeto = subTotal - comision
+  const cambio = subTotal > pendiente ? subTotal - pendiente : 0
+  const canPay = !!medioId && subTotal >= 1
 
   useEffect(() => {
     if (open) montoInput.setFromNumber(pendiente > 0 ? pendiente : 0)
@@ -1321,9 +1318,8 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
               {mediosPago.map((m) => (
                 <label
                   key={m.id}
-                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                    Number(medioId) === m.id ? 't-border t-bg-xlt ring-1 ring-[var(--t-primary-ring)]' : 'border-slate-200 hover:t-border'
-                  }`}
+                  className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${Number(medioId) === m.id ? 't-border t-bg-xlt ring-1 ring-[var(--t-primary-ring)]' : 'border-slate-200 hover:t-border'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <input type="radio" {...register('medio_pago_id')} value={m.id} />
@@ -1453,7 +1449,7 @@ function AsignarClienteModal({ open, onClose, cuentaId, initialValues, onAssigne
         email: initialValues?.email ?? '',
       })
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const mutation = useMutation({
