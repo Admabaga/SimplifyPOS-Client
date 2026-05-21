@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, BookOpen,
@@ -69,6 +70,7 @@ function pct(a: number, b: number): number | null {
 // ── Main component ───────────────────────────────────────────────────────────
 export default function ReportsPage() {
   const now   = new Date()
+  const isDesktop = useIsDesktop()
   const [year,  setYear]  = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
 
@@ -472,10 +474,8 @@ export default function ReportsPage() {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-300 inline-block" />Ganancia</span>
                 </div>
               </div>
-              <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
-                Gráfico disponible en pantallas más grandes
-              </div>
-              <div className="hidden sm:block px-2 pt-4 pb-3">
+              {isDesktop ? (
+              <div className="px-2 pt-4 pb-3">
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }} barGap={2}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -497,6 +497,9 @@ export default function ReportsPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              ) : (
+                <div className="px-4 py-5 text-center text-xs text-slate-400">Gráfico disponible en pantallas más grandes</div>
+              )}
             </Card>
           )}
 
@@ -513,7 +516,8 @@ export default function ReportsPage() {
               ) : (
                 <div className="flex flex-col sm:flex-row gap-0">
                   {/* Donut */}
-                  <div className="hidden sm:flex items-center justify-center p-4 sm:w-[220px] shrink-0">
+                  {isDesktop && (
+                  <div className="flex items-center justify-center p-4 sm:w-[220px] shrink-0">
                     <ResponsiveContainer width={180} height={180}>
                       <PieChart>
                         <Pie
@@ -549,6 +553,7 @@ export default function ReportsPage() {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+                  )}
                   {/* Lista */}
                   <div className="flex-1 px-4 pb-4 pt-2 sm:pt-4 space-y-2.5 border-t sm:border-t-0 sm:border-l border-slate-50">
                     {topProductos.map((p, i) => {

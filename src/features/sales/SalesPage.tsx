@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -33,6 +34,7 @@ function ChartTooltip({ active, payload, label }: any) {
 
 export default function SalesPage() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const today     = new Date().toISOString().slice(0, 10)
   const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
 
@@ -153,26 +155,27 @@ export default function SalesPage() {
               <TrendingUp size={15} className="t-text" />
               <h2 className="text-sm font-semibold text-slate-800">Ventas en el período</h2>
             </div>
-            <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
-              Gráfico disponible en pantallas más grandes
-            </div>
-            <div className="hidden sm:block px-2 pt-3 pb-2">
-              <ResponsiveContainer width="100%" height={180} minWidth={0}>
-                <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--t-primary)" stopOpacity={0.15} />
-                      <stop offset="100%" stopColor="var(--t-primary)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(chartData.length / 8) - 1)} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={44} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area type="monotone" dataKey="ventas" name="Ventas" stroke="var(--t-primary)" strokeWidth={2} fill="url(#gSales)" dot={false} activeDot={{ r: 4, fill: 'var(--t-primary)' }} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {isDesktop ? (
+              <div className="px-2 pt-3 pb-2">
+                <ResponsiveContainer width="100%" height={180} minWidth={0}>
+                  <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--t-primary)" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="var(--t-primary)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(chartData.length / 8) - 1)} />
+                    <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={44} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Area type="monotone" dataKey="ventas" name="Ventas" stroke="var(--t-primary)" strokeWidth={2} fill="url(#gSales)" dot={false} activeDot={{ r: 4, fill: 'var(--t-primary)' }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="px-4 py-5 text-center text-xs text-slate-400">Gráfico disponible en pantallas más grandes</div>
+            )}
           </Card>
 
           {/* Top productos período */}

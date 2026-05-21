@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import {
   ShoppingCart, TrendingUp, DollarSign, Users, Package, ArrowUpRight,
@@ -102,6 +103,7 @@ function getYesterday() {
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
+  const isDesktop = useIsDesktop()
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const now = new Date()
   const year  = now.getFullYear()
@@ -303,22 +305,23 @@ export default function DashboardPage() {
                   <TrendingUp size={15} className="t-text" />
                   <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {mesActual}</h2>
                 </div>
-                <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
-                  Gráfico disponible en pantallas más grandes
-                </div>
-                <div className="hidden sm:block px-2 pt-3 pb-2 overflow-hidden">
-                  <ResponsiveContainer width="100%" height={160} minWidth={0}>
-                    <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                        interval={Math.max(0, Math.floor(chartData.length / 6) - 1)} />
-                      <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                        tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
-                      <Tooltip content={<BarTooltip />} />
-                      <Bar dataKey="ventas" name="Ventas" fill="var(--t-primary)" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {isDesktop ? (
+                  <div className="px-2 pt-3 pb-2 overflow-hidden">
+                    <ResponsiveContainer width="100%" height={160} minWidth={0}>
+                      <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                          interval={Math.max(0, Math.floor(chartData.length / 6) - 1)} />
+                        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
+                        <Tooltip content={<BarTooltip />} />
+                        <Bar dataKey="ventas" name="Ventas" fill="var(--t-primary)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="px-4 py-5 text-center text-xs text-slate-400">Gráfico disponible en pantallas más grandes</div>
+                )}
                 <div className="px-4 py-3 border-t border-slate-50 text-center">
                   <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total {mesActual}</p>
                   <p className="text-base font-bold t-text-dk tabular-nums mt-0.5">{formatCOP(data.total_ventas)}</p>
@@ -498,37 +501,38 @@ export default function DashboardPage() {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-300 inline-block" />Ganancia</span>
                 </div>
               </div>
-              <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
-                Gráfico disponible en pantallas más grandes
-              </div>
-              <div className="hidden sm:block px-2 pt-3 pb-2 overflow-hidden">
-                {chartData.length === 0 ? (
-                  <div className="h-48 flex items-center justify-center text-slate-400 text-sm">Sin datos este mes</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={180} minWidth={0}>
-                    <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis
-                        dataKey="dia"
-                        tick={{ fontSize: 10, fill: '#94a3b8' }}
-                        axisLine={false}
-                        tickLine={false}
-                        interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: '#94a3b8' }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                        width={44}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="ventas"   name="Ventas"   fill="var(--t-primary)" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                      <Bar dataKey="ganancia" name="Ganancia" fill="#93c5fd" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+              {isDesktop ? (
+                <div className="px-2 pt-3 pb-2 overflow-hidden">
+                  {chartData.length === 0 ? (
+                    <div className="h-48 flex items-center justify-center text-slate-400 text-sm">Sin datos este mes</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={180} minWidth={0}>
+                      <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis
+                          dataKey="dia"
+                          tick={{ fontSize: 10, fill: '#94a3b8' }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: '#94a3b8' }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                          width={44}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Bar dataKey="ventas"   name="Ventas"   fill="var(--t-primary)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                        <Bar dataKey="ganancia" name="Ganancia" fill="#93c5fd" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              ) : (
+                <div className="px-4 py-5 text-center text-xs text-slate-400">Gráfico disponible en pantallas más grandes</div>
+              )}
               {/* Footer resumen */}
               <div className="px-4 py-3 border-t border-slate-50 grid grid-cols-3 divide-x divide-slate-100 overflow-hidden">
                 {[
@@ -555,40 +559,42 @@ export default function DashboardPage() {
                   <div className="py-10 text-center text-slate-400 text-sm">Sin ventas este mes</div>
                 ) : (
                   <>
-                    <ResponsiveContainer width="100%" height={180} minWidth={0} className="hidden sm:block">
-                      <PieChart>
-                        <Pie
-                          data={topChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={55}
-                          outerRadius={82}
-                          paddingAngle={3}
-                          dataKey="total"
-                          startAngle={90}
-                          endAngle={-270}
-                        >
-                          {topChartData.map((_: any, i: number) => (
-                            <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="white" strokeWidth={2} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const item = payload[0]
-                            const total = topChartData.reduce((s: number, d: any) => s + d.total, 0)
-                            const pct = total > 0 ? ((item?.value as number ?? 0) / total * 100).toFixed(1) : '0'
-                            return (
-                              <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs max-w-[180px]">
-                                <p className="font-semibold text-slate-700 mb-1 truncate">{item?.name}</p>
-                                <p className="text-slate-500">Total: <span className="font-bold text-slate-800">{formatCOP(item?.value as number ?? 0)}</span></p>
-                                <p className="text-slate-400">{pct}% del período</p>
-                              </div>
-                            )
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {isDesktop && (
+                      <ResponsiveContainer width="100%" height={180} minWidth={0}>
+                        <PieChart>
+                          <Pie
+                            data={topChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={82}
+                            paddingAngle={3}
+                            dataKey="total"
+                            startAngle={90}
+                            endAngle={-270}
+                          >
+                            {topChartData.map((_: any, i: number) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="white" strokeWidth={2} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null
+                              const item = payload[0]
+                              const total = topChartData.reduce((s: number, d: any) => s + d.total, 0)
+                              const pct = total > 0 ? ((item?.value as number ?? 0) / total * 100).toFixed(1) : '0'
+                              return (
+                                <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs max-w-[180px]">
+                                  <p className="font-semibold text-slate-700 mb-1 truncate">{item?.name}</p>
+                                  <p className="text-slate-500">Total: <span className="font-bold text-slate-800">{formatCOP(item?.value as number ?? 0)}</span></p>
+                                  <p className="text-slate-400">{pct}% del período</p>
+                                </div>
+                              )
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
                     {/* Leyenda */}
                     <div className="space-y-1.5 mt-1">
                       {topChartData.map((p: any, i: number) => {
