@@ -2,13 +2,73 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
-import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react'
+import {
+  Loader2, LogIn, Eye, EyeOff,
+  Package, Zap, BarChart3, Shield, Receipt, Users, Wallet,
+  TrendingUp, Sparkles,
+} from 'lucide-react'
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
 import IconChart from '@/assets/IconChart.png'
+
+// ─── Ticker de actividad en vivo (fake data — demo) ───────────────────────────
+const TICKER_ITEMS = [
+  { icon: Receipt,   text: 'Venta registrada',       value: '$48.500',   color: 'text-emerald-300' },
+  { icon: Package,   text: 'Stock actualizado',      value: '+15 unid.',  color: 'text-blue-300'    },
+  { icon: Wallet,    text: 'Caja abierta',           value: 'Sucursal 1', color: 'text-purple-300'  },
+  { icon: Users,     text: 'Nueva cuenta',           value: 'Mesa 4',     color: 'text-amber-300'   },
+  { icon: TrendingUp,text: 'Meta diaria',            value: '87%',        color: 'text-emerald-300' },
+  { icon: Shield,    text: 'Sesión segura',          value: 'JWT RS256',  color: 'text-cyan-300'    },
+]
+
+function LiveTicker() {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % TICKER_ITEMS.length), 2500)
+    return () => clearInterval(t)
+  }, [])
+  const item = TICKER_ITEMS[idx]!
+  const Icon = item.icon
+  return (
+    <div
+      className="flex items-center gap-2.5 px-3.5 py-2 rounded-full border border-white/10 backdrop-blur-md transition-all duration-500"
+      style={{ background: 'rgba(255,255,255,0.06)' }}
+    >
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+      </span>
+      <Icon size={13} className={item.color} />
+      <span className="text-xs text-white/85 font-medium">{item.text}</span>
+      <span className={`text-xs font-bold tabular-nums ${item.color}`}>{item.value}</span>
+    </div>
+  )
+}
+
+// ─── Contador animado ─────────────────────────────────────────────────────────
+function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    const duration = 1400
+    const steps = 40
+    const stepValue = target / steps
+    let current = 0
+    const t = setInterval(() => {
+      current += 1
+      if (current >= steps) {
+        setValue(target)
+        clearInterval(t)
+      } else {
+        setValue(Math.floor(stepValue * current))
+      }
+    }, duration / steps)
+    return () => clearInterval(t)
+  }, [target])
+  return <>{value.toLocaleString('es-CO')}{suffix}</>
+}
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -57,82 +117,188 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* ── Banner izquierdo premium ── */}
+      {/* ── Banner izquierdo premium con animaciones ── */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
         style={{ background: 'var(--t-sidebar-bg)' }}
       >
-        {/* Orbs de iluminación ambiental */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-64 h-64 rounded-full bg-white/3 blur-2xl" />
+        {/* Keyframes inline */}
+        <style>{`
+          @keyframes float-slow {
+            0%, 100% { transform: translateY(0px) rotate(-2deg); }
+            50% { transform: translateY(-14px) rotate(2deg); }
+          }
+          @keyframes pulse-glow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.08); }
+          }
+          @keyframes drift-1 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(30px, -20px); }
+            66% { transform: translate(-20px, 25px); }
+          }
+          @keyframes drift-2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-35px, -25px); }
+          }
+          @keyframes fade-up {
+            0% { opacity: 0; transform: translateY(16px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .anim-float    { animation: float-slow 6s ease-in-out infinite; }
+          .anim-glow     { animation: pulse-glow 4s ease-in-out infinite; }
+          .anim-drift-1  { animation: drift-1 18s ease-in-out infinite; }
+          .anim-drift-2  { animation: drift-2 22s ease-in-out infinite; }
+          .anim-fade-up  { animation: fade-up 0.7s ease-out both; }
+          .text-shimmer {
+            background: linear-gradient(110deg, #ffffff 0%, #ffffff 35%, var(--t-accent) 50%, #ffffff 65%, #ffffff 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 4.5s linear infinite;
+          }
+        `}</style>
 
-        {/* Grid pattern sutil */}
+        {/* Orbs animados de iluminación ambiental */}
+        <div className="absolute -top-40 -left-40 w-[420px] h-[420px] rounded-full blur-3xl anim-drift-1"
+             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-32 -right-32 w-[380px] h-[380px] rounded-full blur-3xl anim-drift-2"
+             style={{ background: 'radial-gradient(circle, var(--t-accent) 0%, transparent 70%)', opacity: 0.18 }} />
+        <div className="absolute top-1/3 right-0 w-72 h-72 rounded-full bg-white/[0.04] blur-2xl anim-drift-1" />
+
+        {/* Grid pattern */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
               'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
+            backgroundSize: '40px 40px',
+            maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
           }}
         />
 
-        <div className="relative z-10 text-center px-12 max-w-lg">
-          {/* Icono principal con glow */}
-          <div className="relative inline-flex mb-6">
-            <div className="absolute inset-0 rounded-3xl bg-white/15 blur-2xl scale-125" />
+        {/* Partículas flotantes decorativas */}
+        {[
+          { top: '15%', left: '12%', size: 6, delay: '0s' },
+          { top: '22%', right: '18%', size: 4, delay: '1.2s' },
+          { top: '68%', left: '8%', size: 5, delay: '2.4s' },
+          { top: '78%', right: '14%', size: 3, delay: '0.6s' },
+          { top: '40%', left: '6%', size: 4, delay: '1.8s' },
+        ].map((p, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white/30 anim-glow"
+            style={{
+              top: p.top,
+              left: p.left,
+              right: p.right,
+              width: p.size,
+              height: p.size,
+              animationDelay: p.delay,
+            }}
+          />
+        ))}
+
+        {/* Content */}
+        <div className="relative z-10 text-center px-10 max-w-xl">
+          {/* Live ticker en la parte superior */}
+          <div className="flex justify-center mb-7 anim-fade-up" style={{ animationDelay: '0.1s' }}>
+            <LiveTicker />
+          </div>
+
+          {/* Icono con float + glow */}
+          <div className="relative inline-flex mb-6 anim-fade-up" style={{ animationDelay: '0.2s' }}>
+            <div className="absolute inset-0 rounded-3xl blur-2xl scale-150 anim-glow"
+                 style={{ background: 'radial-gradient(circle, var(--t-accent) 0%, transparent 70%)' }} />
             <img
               src={IconChart}
               alt="SimplifyPOS"
-              className="relative w-28 h-28 drop-shadow-2xl"
+              className="relative w-24 h-24 drop-shadow-2xl anim-float"
             />
           </div>
 
-          <h1 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
+          {/* Título con shimmer */}
+          <h1 className="text-5xl font-extrabold mb-2 tracking-tight text-shimmer anim-fade-up"
+              style={{ animationDelay: '0.3s' }}>
             SimplifyPOS
           </h1>
-          <p className="text-base font-medium mb-1" style={{ color: 'var(--t-accent)' }}>
+
+          <p className="text-base font-semibold mb-1 anim-fade-up"
+             style={{ color: 'var(--t-accent)', animationDelay: '0.4s' }}>
             Gestión fácil, rápida y eficiente para tu negocio
           </p>
-          <p className="text-sm opacity-50 text-white mb-10">
+          <p className="text-sm text-white/55 mb-8 anim-fade-up" style={{ animationDelay: '0.5s' }}>
             El sistema POS que colombianos eligen para vender más
           </p>
 
-          {/* Métricas visuales glassmorphism */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          {/* KPIs animados con SVG icons */}
+          <div className="grid grid-cols-3 gap-3 mb-7 anim-fade-up" style={{ animationDelay: '0.6s' }}>
             {[
-              { label: 'Inventario', icon: '📦', sub: 'Control total' },
-              { label: 'Ventas', icon: '⚡', sub: 'En segundos' },
-              { label: 'Reportes', icon: '📊', sub: 'Tiempo real' },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-2xl p-4 text-center border border-white/10"
-                style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}
-              >
-                <span className="text-2xl block mb-1">{item.icon}</span>
-                <p className="text-xs font-bold text-white">{item.label}</p>
-                <p className="text-[10px] mt-0.5 opacity-60 text-white">{item.sub}</p>
-              </div>
-            ))}
+              { label: 'Inventario', icon: Package,   value: 100, suffix: '%', sub: 'Control total',  ring: 'ring-blue-400/30',    iconBg: 'bg-blue-500/15',    iconColor: 'text-blue-300'   },
+              { label: 'Ventas',     icon: Zap,       value: 8,   suffix: 's', sub: 'Por venta',      ring: 'ring-amber-400/30',   iconBg: 'bg-amber-500/15',   iconColor: 'text-amber-300'  },
+              { label: 'Reportes',   icon: BarChart3, value: 24,  suffix: '/7', sub: 'Tiempo real',   ring: 'ring-emerald-400/30', iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-300'},
+            ].map((item) => {
+              const Icon = item.icon
+              return (
+                <div
+                  key={item.label}
+                  className={`group rounded-2xl p-4 text-center border border-white/10 transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.12] hover:ring-2 ${item.ring}`}
+                  style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                >
+                  <div className={`w-9 h-9 rounded-xl ${item.iconBg} ${item.iconColor} flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform`}>
+                    <Icon size={17} strokeWidth={2.4} />
+                  </div>
+                  <p className="text-lg font-extrabold text-white tabular-nums leading-none">
+                    <AnimatedCounter target={item.value} suffix={item.suffix} />
+                  </p>
+                  <p className="text-[11px] font-semibold text-white/85 mt-1">{item.label}</p>
+                  <p className="text-[10px] text-white/45 mt-0.5">{item.sub}</p>
+                </div>
+              )
+            })}
           </div>
 
-          {/* Feature badges */}
-          <div className="flex flex-wrap gap-2 justify-center">
-            {['Facturación DIAN', 'Multi-cajero', 'RBAC', 'Audit log', 'Caja inteligente'].map((f) => (
-              <span
-                key={f}
-                className="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/15 text-white/70"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
-              >
-                {f}
-              </span>
-            ))}
+          {/* Feature badges con micro hover */}
+          <div className="flex flex-wrap gap-1.5 justify-center mb-6 anim-fade-up" style={{ animationDelay: '0.7s' }}>
+            {[
+              { label: 'Facturación DIAN', icon: Receipt },
+              { label: 'Multi-cajero',     icon: Users },
+              { label: 'RBAC',             icon: Shield },
+              { label: 'Audit log',        icon: BarChart3 },
+              { label: 'Caja inteligente', icon: Wallet },
+            ].map((f) => {
+              const Icon = f.icon
+              return (
+                <span
+                  key={f.label}
+                  className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/10 text-white/75 hover:text-white hover:border-white/30 hover:bg-white/10 transition-all cursor-default"
+                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
+                  <Icon size={10} strokeWidth={2.4} />
+                  {f.label}
+                </span>
+              )
+            })}
+          </div>
+
+          {/* Social proof footer */}
+          <div className="flex items-center justify-center gap-2 text-white/40 anim-fade-up" style={{ animationDelay: '0.8s' }}>
+            <Sparkles size={11} />
+            <span className="text-[11px]">
+              Hecho con <span className="text-red-400">♥</span> en Colombia 🇨🇴
+            </span>
           </div>
         </div>
 
-        {/* Subtle bottom gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/10 to-transparent" />
+        {/* Gradient bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.15), transparent)' }} />
       </div>
 
       {/* ── Formulario derecho ── */}
