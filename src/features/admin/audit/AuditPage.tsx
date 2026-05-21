@@ -79,28 +79,28 @@ export default function AuditPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <StatCard
               label="Hoy"
-              value={stats.totals.today}
+              value={String(stats.totals.today)}
               icon={<Clock size={18} />}
               iconBg="bg-blue-100"
               accent="blue"
             />
             <StatCard
               label="Esta semana"
-              value={stats.totals.week}
+              value={String(stats.totals.week)}
               icon={<Activity size={18} />}
               iconBg="bg-green-100"
               accent="green"
             />
             <StatCard
               label="Este mes"
-              value={stats.totals.month}
+              value={String(stats.totals.month)}
               icon={<ClipboardList size={18} />}
               iconBg="bg-purple-100"
               accent="green"
             />
             <StatCard
               label="Anomalías altas"
-              value={highAnomalies.length}
+              value={String(highAnomalies.length)}
               icon={<AlertTriangle size={18} />}
               iconBg={highAnomalies.length > 0 ? 'bg-red-100' : 'bg-gray-100'}
               accent="green"
