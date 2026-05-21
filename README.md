@@ -24,6 +24,7 @@ Interfaz web para el sistema POS SimplifyPOS. Construida con React 19 + TypeScri
 | Notificaciones | React Hot Toast |
 | Linting | ESLint + TypeScript strict |
 | Deploy | Render (auto-deploy desde main) |
+| AI Advisor | Claude Haiku 4.5 (via Anthropic API) |
 
 ---
 
@@ -69,7 +70,7 @@ src/
 
 | Módulo | Ruta | Descripción |
 |---|---|---|
-| Dashboard | `/` | KPIs del día, ventas, saldo de caja |
+| Dashboard | `/` | KPIs del día, ventas, saldo de caja + **Asesor de negocio (IA)** |
 | Cuentas | `/accounts` | Cuentas crédito — lista y detalle |
 | Detalle cuenta | `/accounts/:id` | Agregar ventas, registrar pagos, emitir ticket |
 | Productos | `/products` | CRUD de productos y precios |
@@ -79,8 +80,12 @@ src/
 | Clientes | `/clients` | Directorio fiscal |
 | Gastos | `/expenses` | Registro de egresos |
 | Medios de pago | `/payment-methods` | Configurar métodos aceptados |
+| Notificaciones | `/notifications` | Alertas de stock bajo (análisis de velocidad de ventas) |
 | Roles | `/roles` | RBAC — gestionar roles y permisos |
 | Usuarios | `/users` | Gestión de usuarios del tenant |
+| **Master: Analytics** | `/master/analytics` | KPIs cross-tenant, GMV, engagement, audit + **Estrategia de Marketing (IA)** |
+| **Master: Salud Técnica** | `/master/infra` | Métricas DB, carga por tenant, proyecciones de escala + **Análisis de infraestructura (IA)** |
+| **Master: Negocios** | `/master` | Gestión de tenants — activos/inactivos |
 
 ---
 
@@ -184,6 +189,38 @@ Al primer inicio de sesión de un admin, el sistema muestra un wizard de configu
 5. **Caja** — instrucciones para abrir la primera sesión
 
 El wizard no vuelve a aparecer una vez completado o descartado (persiste en `localStorage` por usuario).
+
+---
+
+## 🤖 Asesor IA — Claude Haiku
+
+SimplifyPOS incluye paneles de asesoría inteligente impulsados por Claude Haiku 4.5:
+
+### Dashboard: "Asesor de negocio"
+Analiza tus datos mensuales (ventas, cuentas, stock, gastos) y retorna:
+- Diagnóstico del negocio: cómo estás vs mes anterior
+- Top 3 acciones para esta semana
+- Alerta principal (si hay stock crítico, deuda alta, etc.)
+- Consejo del mes para mejorar rentabilidad
+
+### Master: "Estrategia de Marketing"
+Solo para master. Analiza métricas cross-tenant (tenants activos, GMV, engagement, geografía) y retorna:
+- Diagnóstico de crecimiento
+- 3 movimientos de marketing concretos
+- Estrategia geográfica (dónde concentrar esfuerzos)
+- Tácticas de retención para tenants inactivos
+- Oportunidades de upsell
+- Meta a 60 días
+
+### Master: "Análisis de infraestructura"
+En `/master/infra`. Analiza tamaño de DB, filas por tabla, crecimiento mensual, carga por tenant y retorna:
+- Diagnóstico ejecutivo (qué tan urgente actuar)
+- Cuándo escalar: proyecciones a 500MB, 2GB, 5M filas
+- Top 3 acciones inmediatas
+- Plan de escala a 6 meses
+- Señales de alarma a monitorear
+
+**Requisito:** Agrega `ANTHROPIC_API_KEY=sk-ant-...` en el `.env` del servidor backend.
 
 ---
 
