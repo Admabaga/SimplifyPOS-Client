@@ -303,7 +303,10 @@ export default function DashboardPage() {
                   <TrendingUp size={15} className="t-text" />
                   <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {mesActual}</h2>
                 </div>
-                <div className="px-2 pt-3 pb-2 overflow-hidden">
+                <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
+                  Gráfico disponible en pantallas más grandes
+                </div>
+                <div className="hidden sm:block px-2 pt-3 pb-2 overflow-hidden">
                   <ResponsiveContainer width="100%" height={160} minWidth={0}>
                     <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -495,7 +498,10 @@ export default function DashboardPage() {
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-300 inline-block" />Ganancia</span>
                 </div>
               </div>
-              <div className="px-2 pt-3 pb-2 overflow-hidden">
+              <div className="sm:hidden px-4 py-6 text-center text-xs text-slate-400">
+                Gráfico disponible en pantallas más grandes
+              </div>
+              <div className="hidden sm:block px-2 pt-3 pb-2 overflow-hidden">
                 {chartData.length === 0 ? (
                   <div className="h-48 flex items-center justify-center text-slate-400 text-sm">Sin datos este mes</div>
                 ) : (
@@ -549,7 +555,7 @@ export default function DashboardPage() {
                   <div className="py-10 text-center text-slate-400 text-sm">Sin ventas este mes</div>
                 ) : (
                   <>
-                    <ResponsiveContainer width="100%" height={180} minWidth={0}>
+                    <ResponsiveContainer width="100%" height={180} minWidth={0} className="hidden sm:block">
                       <PieChart>
                         <Pie
                           data={topChartData}
