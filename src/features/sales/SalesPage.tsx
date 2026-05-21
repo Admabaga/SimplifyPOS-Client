@@ -6,7 +6,7 @@ import {
   Receipt, TrendingUp, DollarSign, ShoppingCart, ArrowRight, Package,
 } from 'lucide-react'
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from 'recharts'
 import {
   PageHeader, Card, Table, Th, Td, Spinner, EmptyState, Button,
@@ -149,32 +149,52 @@ export default function SalesPage() {
       {/* ── Charts (si hay datos suficientes) ─────────────────────────────── */}
       {chartData.length > 1 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          {/* Área chart */}
+          {/* Barras diarias — fácil de leer para el comerciante */}
           <Card padding={false} className="lg:col-span-2">
-            <div className="p-4 border-b border-slate-50 flex items-center gap-2">
-              <TrendingUp size={15} className="t-text" />
-              <h2 className="text-sm font-semibold text-slate-800">Ventas en el período</h2>
+            <div className="p-4 border-b border-slate-50 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={15} className="t-text" />
+                <h2 className="text-sm font-semibold text-slate-800">Ventas por día</h2>
+              </div>
+              {(() => {
+                const bestDay = chartData.reduce((a, b) => (b.ventas > a.ventas ? b : a), chartData[0]!)
+                return bestDay && bestDay.ventas > 0 ? (
+                  <span className="text-[11px] text-slate-500">
+                    Mejor día: <span className="font-semibold text-slate-700">{bestDay.dia}</span> · <span className="font-semibold t-text tabular-nums">{formatCOP(bestDay.ventas)}</span>
+                  </span>
+                ) : null
+              })()}
             </div>
             {isDesktop ? (
               <div className="px-2 pt-3 pb-2">
-                <ResponsiveContainer width="100%" height={180} minWidth={0}>
-                  <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="gSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--t-primary)" stopOpacity={0.15} />
-                        <stop offset="100%" stopColor="var(--t-primary)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
+                <ResponsiveContainer width="100%" height={200} minWidth={0}>
+                  <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                     <XAxis dataKey="dia" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(chartData.length / 8) - 1)} />
                     <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={44} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="ventas" name="Ventas" stroke="var(--t-primary)" strokeWidth={2} fill="url(#gSales)" dot={false} activeDot={{ r: 4, fill: 'var(--t-primary)' }} />
-                  </AreaChart>
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+                    <Bar dataKey="ventas" name="Ventas" fill="var(--t-primary)" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="px-4 py-5 text-center text-xs text-slate-400">Gráfico disponible en pantallas más grandes</div>
+              /* Mobile: mini barras horizontales — sin Recharts, fáciles de leer */
+              <div className="px-4 py-3 space-y-2 max-h-[260px] overflow-y-auto">
+                {(() => {
+                  const max = Math.max(...chartData.map((d) => d.ventas), 1)
+                  return chartData.slice(-10).reverse().map((d, i) => (
+                    <div key={i}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[11px] text-slate-500">{d.dia}</span>
+                        <span className="text-xs font-semibold text-slate-800 tabular-nums">{formatCOP(d.ventas)}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full t-bg rounded-full" style={{ width: `${(d.ventas / max) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
             )}
           </Card>
 

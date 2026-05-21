@@ -8,7 +8,7 @@ import { Pencil, Trash2, Plus, Receipt, DollarSign, TrendingDown, Search, Tag } 
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Table, Th, Td, Spinner, EmptyState,
-  Modal, ConfirmDialog, Card,
+  Modal, ConfirmDialog, Card, StatCard,
 } from '@/shared/components/ui'
 import Can from '@/shared/components/Can'
 import { apiError } from '@/shared/lib/apiError'
@@ -130,42 +130,30 @@ export default function ExpensesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <Card className="flex items-center gap-3 py-3 px-4">
-            <div className="p-2 rounded-lg bg-red-50 shrink-0">
-              <TrendingDown size={16} className="text-red-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-slate-500 font-medium">Este mes</p>
-              <p className="text-base font-bold text-slate-800 truncate">{formatCOP(stats.totalMes)}</p>
-            </div>
-          </Card>
-          <Card className="flex items-center gap-3 py-3 px-4">
-            <div className="p-2 rounded-lg bg-orange-50 shrink-0">
-              <DollarSign size={16} className="text-orange-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-slate-500 font-medium">Total histórico</p>
-              <p className="text-base font-bold text-slate-800 truncate">{formatCOP(stats.total)}</p>
-            </div>
-          </Card>
-          <Card className="flex items-center gap-3 py-3 px-4">
-            <div className="p-2 rounded-lg bg-blue-50 shrink-0">
-              <Receipt size={16} className="text-blue-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-slate-500 font-medium">Registros</p>
-              <p className="text-base font-bold text-slate-800">{stats.count}</p>
-            </div>
-          </Card>
-          <Card className="flex items-center gap-3 py-3 px-4">
-            <div className="p-2 rounded-lg bg-purple-50 shrink-0">
-              <Tag size={16} className="text-purple-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-slate-500 font-medium">Categorías</p>
-              <p className="text-base font-bold text-slate-800">{categorias.length - 1}</p>
-            </div>
-          </Card>
+          <StatCard
+            label="Este mes"
+            value={formatCOP(stats.totalMes)}
+            icon={<TrendingDown size={16} />}
+            accent="red"
+          />
+          <StatCard
+            label="Total histórico"
+            value={formatCOP(stats.total)}
+            icon={<DollarSign size={16} />}
+            accent="orange"
+          />
+          <StatCard
+            label="Registros"
+            value={String(stats.count)}
+            icon={<Receipt size={16} />}
+            accent="blue"
+          />
+          <StatCard
+            label="Categorías"
+            value={String(categorias.length - 1)}
+            icon={<Tag size={16} />}
+            accent="purple"
+          />
         </div>
 
         {/* Filters */}
