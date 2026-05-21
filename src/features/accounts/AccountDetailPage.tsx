@@ -389,8 +389,11 @@ export default function AccountDetailPage() {
         />
       </div>
 
-      {/* ── Cliente fiscal ──────────────────────────────────────────────────── */}
-      <Card>
+      {/* ── Cliente fiscal + Documentos emitidos — 2 columnas en desktop ──────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+
+      {/* Cliente fiscal */}
+      <Card className="h-full">
         <SectionHeader
           title="Cliente fiscal"
           icon={<Receipt size={15} />}
@@ -398,35 +401,51 @@ export default function AccountDetailPage() {
             !cuenta.esta_pagada && (
               <Can permission="cuentas:create">
                 <Button size="sm" variant="outline" icon={<Plus size={14} />} onClick={() => setShowClienteModal(true)}>
-                  {cuenta.cliente_documento ? 'Editar cliente' : 'Asignar cliente'}
+                  {cuenta.cliente_documento ? 'Editar' : 'Asignar'}
                 </Button>
               </Can>
             )
           }
         />
         {cuenta.cliente_documento ? (
-          <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-            <div><span className="text-slate-400">Tipo doc:</span> <span className="font-medium">{cuenta.cliente_tipo_doc}</span></div>
-            <div><span className="text-slate-400">Documento:</span> <span className="font-medium">{cuenta.cliente_documento}</span></div>
-            <div className="col-span-2"><span className="text-slate-400">Nombre:</span> <span className="font-medium">{cuenta.cliente_nombre_fiscal}</span></div>
-            {cuenta.cliente_direccion && <div className="col-span-2"><span className="text-slate-400">Dirección:</span> {cuenta.cliente_direccion}</div>}
-            {cuenta.cliente_telefono && <div><span className="text-slate-400">Teléfono:</span> {cuenta.cliente_telefono}</div>}
-            {cuenta.cliente_email && <div><span className="text-slate-400">Email:</span> {cuenta.cliente_email}</div>}
-            <div className="col-span-2 mt-1">
-              <span className="inline-flex items-center gap-1.5 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-full px-2.5 py-0.5">
-                <CheckCircle2 size={11} /> Factura se generará automáticamente al pagar
+          <div className="mt-3 space-y-1.5 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 w-20 shrink-0">Nombre</span>
+              <span className="font-semibold text-slate-800 truncate">{cuenta.cliente_nombre_fiscal}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 w-20 shrink-0">{cuenta.cliente_tipo_doc}</span>
+              <span className="font-medium text-slate-700">{cuenta.cliente_documento}</span>
+            </div>
+            {cuenta.cliente_direccion && (
+              <div className="flex items-start gap-2">
+                <span className="text-slate-400 w-20 shrink-0">Dirección</span>
+                <span className="text-slate-600">{cuenta.cliente_direccion}</span>
+              </div>
+            )}
+            {(cuenta.cliente_telefono || cuenta.cliente_email) && (
+              <div className="flex items-center gap-2">
+                {cuenta.cliente_telefono && <span className="text-slate-500 text-xs">{cuenta.cliente_telefono}</span>}
+                {cuenta.cliente_email && <span className="text-slate-500 text-xs truncate">{cuenta.cliente_email}</span>}
+              </div>
+            )}
+            <div className="pt-1">
+              <span className="inline-flex items-center gap-1.5 text-[10px] bg-purple-50 text-purple-700 border border-purple-200 rounded-full px-2 py-0.5">
+                <CheckCircle2 size={10} /> Factura automática al pagar
               </span>
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-slate-400">
-            Sin cliente asignado — la factura se genera manualmente con "Emitir documento".
-          </p>
+          <div className="mt-3 flex flex-col items-center text-center py-5 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <Receipt size={20} className="text-slate-300 mb-2" />
+            <p className="text-xs text-slate-500 font-medium mb-0.5">Sin cliente fiscal</p>
+            <p className="text-[11px] text-slate-400">La factura se emite manualmente.</p>
+          </div>
         )}
       </Card>
 
-      {/* ── Documentos emitidos ──────────────────────────────────────────────── */}
-      <Card>
+      {/* Documentos emitidos */}
+      <Card className="h-full">
         <SectionHeader
           title="Documentos emitidos"
           icon={<FileText size={15} />}
@@ -524,6 +543,8 @@ export default function AccountDetailPage() {
           </div>
         )}
       </Card>
+
+      </div>{/* end grid cliente+documentos */}
 
       {/* ── Ventas agrupadas ────────────────────────────────────────────────── */}
       <Card padding={false}>
@@ -1028,24 +1049,40 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
             {selectedPrecioId && (
               <div>
                 <p className="text-sm font-medium text-slate-700 mb-2">Cantidad</p>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCantidad((v) => Math.max(1, v - 1))}
-                    className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors text-lg font-medium"
+                    className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors text-lg font-medium shrink-0"
                   >
                     −
                   </button>
-                  <span className="text-xl font-bold tabular-nums min-w-[40px] text-center">{cantidad}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={stockEnPresentaciones || 9999}
+                    value={cantidad}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10)
+                      if (isNaN(v) || v < 1) { setCantidad(1); return }
+                      setCantidad(Math.min(v, stockEnPresentaciones || 9999))
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur()
+                    }}
+                    className="w-16 text-center text-xl font-bold tabular-nums border border-slate-200 rounded-xl py-1 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  />
                   <button
                     onClick={() => setCantidad((v) => Math.min(stockEnPresentaciones, v + 1))}
                     disabled={cantidad >= stockEnPresentaciones}
-                    className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors text-lg font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors text-lg font-medium disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   >
                     +
                   </button>
                   <div className="flex-1" />
                   {cantidad === stockEnPresentaciones && stockEnPresentaciones > 0 && (
-                    <span className="text-xs text-orange-500 font-medium">Máximo disponible</span>
+                    <span className="text-xs text-orange-500 font-medium">Máximo</span>
                   )}
                   {selectedPrecio && !hayDescuento && (
                     <div className="text-right">

@@ -225,10 +225,38 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
 
           {/* Totales */}
           <div className="flex justify-end">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1 w-full sm:min-w-[260px] sm:w-auto">
-              {!esInformal && <Row label="Subtotal (base gravable)" value={formatCOP(ticket.base_gravable)} />}
-              {!esInformal && <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />}
-              <div className={!esInformal ? 'border-t border-slate-300 pt-2 mt-2' : ''}>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5 w-full sm:min-w-[280px] sm:w-auto">
+              {/* Subtotal original */}
+              <Row label="Subtotal" value={formatCOP(ticket.subtotal)} />
+
+              {/* Descuento — solo si aplica */}
+              {ticket.descuento > 0 && (
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+                    Descuento aplicado
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-600 tabular-nums">
+                    −{formatCOP(ticket.descuento)}
+                  </span>
+                </div>
+              )}
+
+              {/* Base gravable + IVA (solo facturas formales) */}
+              {!esInformal && ticket.descuento > 0 && (
+                <div className="border-t border-slate-200 pt-1.5 mt-1 space-y-1">
+                  <Row label="Base gravable" value={formatCOP(ticket.base_gravable)} />
+                  <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />
+                </div>
+              )}
+              {!esInformal && ticket.descuento === 0 && (
+                <>
+                  <Row label="Base gravable" value={formatCOP(ticket.base_gravable)} />
+                  <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />
+                </>
+              )}
+
+              <div className="border-t-2 border-slate-300 pt-2 mt-1">
                 <Row label="TOTAL" value={formatCOP(ticket.total)} bold />
               </div>
             </div>
@@ -340,6 +368,10 @@ function ThermalContent({ ticket }: { ticket: Ticket }) {
       </table>
 
       <div className="pt-sep">{SEP}</div>
+      <div className="pt-row"><span>Subtotal</span><span>{formatCOP(ticket.subtotal)}</span></div>
+      {ticket.descuento > 0 && (
+        <div className="pt-row"><span>Descuento</span><span>-{formatCOP(ticket.descuento)}</span></div>
+      )}
       {!esInformal && <div className="pt-row"><span>Base gravable</span><span>{formatCOP(ticket.base_gravable)}</span></div>}
       {!esInformal && <div className="pt-row"><span>IVA</span><span>{formatCOP(ticket.valor_iva)}</span></div>}
       <div className="pt-row-bold"><span>TOTAL</span><span>{formatCOP(ticket.total)}</span></div>

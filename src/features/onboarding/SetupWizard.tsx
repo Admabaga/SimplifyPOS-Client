@@ -57,22 +57,44 @@ export function useSetupWizard() {
 
   const [open, setOpen] = useState(false)
 
-  const { data: products = [], isSuccess } = useQuery({
+  const { data: products = [], isSuccess: productsSuccess } = useQuery({
     queryKey: ['products'],
     queryFn: () => productsApi.getAll(),
     enabled: isAdmin,
     staleTime: 60_000,
   })
 
+  // Si el negocio ya tiene historial de caja, el onboarding está completo
+  const { data: cajaHistorial = [], isSuccess: cajaSuccess } = useQuery({
+    queryKey: ['caja', 'historial-wizard'],
+    queryFn: () =>
+      apiClient
+        .get<unknown[]>('/caja/historial?limit=1&offset=0')
+        .then((r) => r.data)
+        .catch(() => []),
+    enabled: isAdmin,
+    staleTime: 300_000,
+  })
+
+  const isReady = productsSuccess && cajaSuccess
+
   useEffect(() => {
-    if (!isAdmin || !isSuccess) return
+    if (!isAdmin || !isReady) return
+
     const done = localStorage.getItem(storageKey)
-    if (!done) {
-      // Pequeño delay para que el UI cargue antes de abrir el modal
-      const t = setTimeout(() => setOpen(true), 600)
-      return () => clearTimeout(t)
+    if (done) return
+
+    // Si ya tiene productos O historial de caja → negocio activo, auto-completar wizard
+    const hasActivity = products.length > 0 || cajaHistorial.length > 0
+
+    if (hasActivity) {
+      localStorage.setItem(storageKey, '1')
+      return
     }
-  }, [isAdmin, isSuccess, storageKey])
+
+    const t = setTimeout(() => setOpen(true), 600)
+    return () => clearTimeout(t)
+  }, [isAdmin, isReady, products.length, cajaHistorial.length, storageKey])
 
   const dismiss = () => {
     localStorage.setItem(storageKey, '1')
