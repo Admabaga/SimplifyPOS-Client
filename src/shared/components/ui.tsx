@@ -557,7 +557,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="presentation">
       {/* Backdrop — fixed propio para cubrir siempre el 100% del viewport */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-black/55" onClick={onClose} aria-hidden="true" />
       {/* Panel — z-index relativo para estar encima del backdrop */}
       <div
         ref={panelRef}

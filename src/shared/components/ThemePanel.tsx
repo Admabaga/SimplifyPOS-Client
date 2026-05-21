@@ -46,7 +46,7 @@ export default function ThemePanel({ open, onClose }: ThemePanelProps) {
   return (
     <>
       {/* Overlay sutil */}
-      <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" />
+      <div className="fixed inset-0 z-40 bg-black/15" />
 
       {/* Panel */}
       <div

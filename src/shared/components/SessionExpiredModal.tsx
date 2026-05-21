@@ -80,7 +80,7 @@ export default function SessionExpiredModal() {
   if (!visible) return null
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-8 text-center" style={{ background: 'var(--t-sidebar-bg)' }}>
