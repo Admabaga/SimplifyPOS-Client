@@ -38,6 +38,7 @@ export default function TicketsHistorialTab() {
       qc.invalidateQueries({ queryKey: ['billing', 'tickets'] })
       qc.invalidateQueries({ queryKey: ['cuenta'] })
       qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
       setAnnulTarget(null)
       setAnnulMotivo('')
     },
