@@ -26,6 +26,7 @@ const CajaPage  = lazy(() => import('@/features/caja/CajaPage'))
 const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'))
 const ClientesPage = lazy(() => import('@/features/clients/ClientesPage'))
 const MasterPage = lazy(() => import('@/features/master/MasterPage'))
+const MasterAnalyticsPage = lazy(() => import('@/features/master/MasterAnalyticsPage'))
 
 function Loading() {
   return (
@@ -119,6 +120,7 @@ export default function AppRoutes() {
             </Route>
             <Route element={<ProtectedRoute permission="users:manage" />}>
               <Route path="/master" element={<MasterPage />} />
+              <Route path="/master/analytics" element={<MasterAnalyticsPage />} />
             </Route>
           </Route>
         </Route>

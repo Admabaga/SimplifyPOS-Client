@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
-  ScrollText, Building2, XCircle,
+  ScrollText, Building2, XCircle, BarChart3,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -126,30 +126,37 @@ function NavContent({ collapsed, onNavigate, can, role }: {
             </p>
           )}
           {collapsed && <div className="h-px bg-white/10 my-2 mx-1" />}
-          <NavLink
-            to="/master"
-            title="Panel de negocios"
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              clsx(
-                'relative flex items-center gap-3 py-2 rounded-lg transition-all duration-100 text-sm select-none',
-                collapsed ? 'justify-center px-2' : 'px-3',
-                isActive
-                  ? 'bg-white/15 text-white font-medium'
-                  : 'text-white/75 hover:bg-white/10 hover:text-white'
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && !collapsed && (
-                  <span style={{ background: 'var(--t-accent)' }} className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" />
-                )}
-                <span className="shrink-0"><Building2 size={17} /></span>
-                {!collapsed && <span className="truncate">Negocios</span>}
-              </>
-            )}
-          </NavLink>
+          {[
+            { to: '/master/analytics', label: 'Analytics', icon: <BarChart3 size={17} />, title: 'Métricas cross-tenant del ecosistema' },
+            { to: '/master',           label: 'Negocios',  icon: <Building2 size={17} />, title: 'Gestión de tenants' },
+          ].map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end
+              title={item.title}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                clsx(
+                  'relative flex items-center gap-3 py-2 rounded-lg transition-all duration-100 text-sm select-none',
+                  collapsed ? 'justify-center px-2' : 'px-3',
+                  isActive
+                    ? 'bg-white/15 text-white font-medium'
+                    : 'text-white/75 hover:bg-white/10 hover:text-white'
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && !collapsed && (
+                    <span style={{ background: 'var(--t-accent)' }} className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" />
+                  )}
+                  <span className="shrink-0">{item.icon}</span>
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       )}
 
