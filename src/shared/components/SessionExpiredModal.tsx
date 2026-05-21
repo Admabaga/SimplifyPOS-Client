@@ -20,29 +20,88 @@ export default function SessionExpiredModal() {
     return () => window.removeEventListener('simplifypos:session-expired', handler)
   }, [])
 
-  // Al montar el Layout, si hay usuario guardado pero sin token → refrescar silencioso
+  // Bloquear navegación back/forward y atajos mientras está visible
   useEffect(() => {
-    const tryAutoRefresh = async () => {
-      const { getStoredToken } = await import('@/stores/auth')
-      if (!getStoredToken() && user) {
-        try {
-          const { data } = await import('@/shared/api/client').then(m => {
-            return import('axios').then(ax =>
-              ax.default.post<{ access_token: string }>(
-                `${import.meta.env.VITE_API_URL ?? '/api/v1'}/auth/refresh`,
-                {},
-                { withCredentials: true }
-              )
-            )
-          })
-          setUser(user, data.access_token)
-        } catch {
-          // Cookie expirada — mostrar modal en lugar de borrar todo
-          setVisible(true)
-        }
+    if (!visible) return
+
+    // Insertar un estado fantasma para atrapar el botón "atrás"
+    const trapState = { __sessionExpired: true }
+    window.history.pushState(trapState, '')
+
+    const onPopState = () => {
+      // Cada vez que intenten ir atrás, volvemos a empujar el estado
+      window.history.pushState(trapState, '')
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Bloquear F5, Cmd/Ctrl+R, Cmd/Ctrl+W, atajos de back
+      if (e.key === 'F5') e.preventDefault()
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'r' || e.key === 'R' || e.key === 'w' || e.key === 'W')) {
+        e.preventDefault()
+      }
+      if ((e.metaKey || e.altKey) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault()
       }
     }
-    tryAutoRefresh()
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('popstate', onPopState)
+    window.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('beforeunload', onBeforeUnload)
+
+    // Bloquear scroll del body para que se sienta como un modal "duro"
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [visible])
+
+  // Al montar el Layout, si hay usuario guardado pero sin token → refrescar silencioso
+  // También escucha cambios en localStorage para sincronizar token entre pestañas
+  useEffect(() => {
+    let cancelled = false
+
+    const tryAutoRefresh = async () => {
+      const { getStoredToken } = await import('@/stores/auth')
+      if (cancelled || getStoredToken() || !user) return
+      try {
+        const ax = await import('axios')
+        const { data } = await ax.default.post<{ access_token: string }>(
+          `${import.meta.env.VITE_API_URL ?? '/api/v1'}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+        if (!cancelled) setUser(user, data.access_token)
+      } catch {
+        // Solo mostrar el modal si realmente no podemos recuperar la sesión
+        if (!cancelled) setVisible(true)
+      }
+    }
+
+    // Pequeño delay para evitar flash del modal cuando otra pestaña ya está
+    // refrescando o cuando localStorage acaba de sincronizar el token.
+    const t = setTimeout(tryAutoRefresh, 400)
+
+    // Sincronizar entre pestañas: si otra tab guarda un token, no expirar aquí.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && (e.key.includes('access_token') || e.key.includes('auth'))) {
+        if (e.newValue) setVisible(false)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+      window.removeEventListener('storage', onStorage)
+    }
   }, [])
 
   const handleRelogin = async () => {
@@ -80,7 +139,11 @@ export default function SessionExpiredModal() {
   if (!visible) return null
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70">
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 animate-fade-in"
+      style={{ backdropFilter: 'blur(10px) saturate(120%)', WebkitBackdropFilter: 'blur(10px) saturate(120%)' }}
+      onClick={(e) => e.stopPropagation()}
+    >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-8 text-center" style={{ background: 'var(--t-sidebar-bg)' }}>
