@@ -247,3 +247,29 @@ input[type="radio"] {
 .t-border-lt     { border-color: var(--t-primary-light) !important; }
 .hover\:t-bg:hover { background-color: var(--t-primary-dark) !important; }
 .t-gradient      { background: linear-gradient(135deg, var(--t-primary), var(--t-primary-dark)) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE — bloqueo defensivo de Recharts
+   Aunque los componentes ya están condicionados a isDesktop,
+   esto garantiza que ningún SVG de Recharts pueda renderizarse
+   y desbordarse en viewports pequeños.
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+  .recharts-wrapper,
+  .recharts-responsive-container,
+  .recharts-surface {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Fuerza compositing layer limpio entre páginas (bug Chrome Android
+     que deja framebuffer "fantasma" de la página anterior). */
+  main {
+    isolation: isolate;
+    transform: translateZ(0);
+  }
+}
+
