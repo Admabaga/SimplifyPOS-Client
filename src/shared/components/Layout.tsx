@@ -1,5 +1,4 @@
 import { Outlet } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import Sidebar from './Sidebar'
@@ -68,25 +67,6 @@ export default function Layout() {
       </div>
       <SessionExpiredModal />
       <SetupWizard open={wizardOpen} onDismiss={wizardDismiss} />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 2800,
-          style: {
-            borderRadius: '10px',
-            fontSize: '13px',
-            boxShadow: '0 4px 12px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.04)',
-          },
-          success: {
-            iconTheme: { primary: 'var(--t-primary)', secondary: '#f0fdf4' },
-            style: { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' },
-          },
-          error: {
-            iconTheme: { primary: '#dc2626', secondary: '#fef2f2' },
-            style: { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' },
-          },
-        }}
-      />
     </div>
   )
 }
