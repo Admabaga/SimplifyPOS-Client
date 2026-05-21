@@ -223,41 +223,88 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
             </table>
           </div>
 
-          {/* Totales */}
+          {/* ── Descuentos por línea (si aplican) ───────────────────────────── */}
+          {(() => {
+            const lineasConDesc = ticket.items.filter((it) => it.subtotal_linea > it.total_linea)
+            if (lineasConDesc.length === 0) return null
+            return (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg>
+                  </div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                    Descuentos aplicados ({lineasConDesc.length} {lineasConDesc.length === 1 ? 'ítem' : 'ítems'})
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  {lineasConDesc.map((it) => {
+                    const desc = it.subtotal_linea - it.total_linea
+                    const pct = it.subtotal_linea > 0 ? (desc / it.subtotal_linea) * 100 : 0
+                    return (
+                      <div key={it.id} className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-700 truncate flex-1 pr-2">{it.descripcion}</span>
+                        <span className="text-slate-500 tabular-nums mr-2">{formatCOP(it.subtotal_linea)}</span>
+                        <span className="font-bold text-emerald-700 tabular-nums">−{formatCOP(desc)} ({pct.toFixed(1)}%)</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ── Totales con desglose claro ──────────────────────────────────── */}
           <div className="flex justify-end">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5 w-full sm:min-w-[280px] sm:w-auto">
-              {/* Subtotal original */}
-              <Row label="Subtotal" value={formatCOP(ticket.subtotal)} />
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 w-full sm:min-w-[320px] sm:w-auto">
+              {/* Subtotal original (sin descuento) */}
+              <Row label="Subtotal bruto" value={formatCOP(ticket.subtotal)} />
 
-              {/* Descuento — solo si aplica */}
+              {/* Descuento global con % calculado */}
+              {ticket.descuento > 0 && (() => {
+                const pct = ticket.subtotal > 0 ? (ticket.descuento / ticket.subtotal) * 100 : 0
+                return (
+                  <div className="flex justify-between gap-3 items-center bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg border border-emerald-100">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Descuento
+                      </span>
+                      <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                        {pct.toFixed(1)}%
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-extrabold text-emerald-700 tabular-nums">
+                      −{formatCOP(ticket.descuento)}
+                    </span>
+                  </div>
+                )
+              })()}
+
+              {/* Subtotal después de descuento */}
               {ticket.descuento > 0 && (
-                <div className="flex justify-between gap-3 items-center">
-                  <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-                    Descuento aplicado
-                  </span>
-                  <span className="text-[11px] font-bold text-emerald-600 tabular-nums">
-                    −{formatCOP(ticket.descuento)}
-                  </span>
-                </div>
+                <Row label="Subtotal con descuento" value={formatCOP(ticket.subtotal - ticket.descuento)} />
               )}
 
-              {/* Base gravable + IVA (solo facturas formales) */}
-              {!esInformal && ticket.descuento > 0 && (
-                <div className="border-t border-slate-200 pt-1.5 mt-1 space-y-1">
+              {/* Base + IVA (solo formales) */}
+              {!esInformal && (
+                <div className={ticket.descuento > 0 ? 'border-t border-slate-200 pt-2 mt-1 space-y-1' : 'space-y-1'}>
                   <Row label="Base gravable" value={formatCOP(ticket.base_gravable)} />
                   <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />
                 </div>
               )}
-              {!esInformal && ticket.descuento === 0 && (
-                <>
-                  <Row label="Base gravable" value={formatCOP(ticket.base_gravable)} />
-                  <Row label="IVA total" value={formatCOP(ticket.valor_iva)} />
-                </>
-              )}
 
+              {/* Total final destacado */}
               <div className="border-t-2 border-slate-300 pt-2 mt-1">
-                <Row label="TOTAL" value={formatCOP(ticket.total)} bold />
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-[12px] font-extrabold text-slate-900 uppercase tracking-wide">Total a pagar</span>
+                  <span className="text-[16px] font-extrabold text-slate-900 tabular-nums">{formatCOP(ticket.total)}</span>
+                </div>
+                {ticket.descuento > 0 && (
+                  <p className="text-[10px] text-emerald-600 text-right mt-1 font-semibold">
+                    🎉 Ahorro: {formatCOP(ticket.descuento)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -368,13 +415,22 @@ function ThermalContent({ ticket }: { ticket: Ticket }) {
       </table>
 
       <div className="pt-sep">{SEP}</div>
-      <div className="pt-row"><span>Subtotal</span><span>{formatCOP(ticket.subtotal)}</span></div>
-      {ticket.descuento > 0 && (
-        <div className="pt-row"><span>Descuento</span><span>-{formatCOP(ticket.descuento)}</span></div>
-      )}
+      <div className="pt-row"><span>Subtotal bruto</span><span>{formatCOP(ticket.subtotal)}</span></div>
+      {ticket.descuento > 0 && (() => {
+        const pct = ticket.subtotal > 0 ? (ticket.descuento / ticket.subtotal) * 100 : 0
+        return (
+          <>
+            <div className="pt-row"><span>Descuento ({pct.toFixed(1)}%)</span><span>-{formatCOP(ticket.descuento)}</span></div>
+            <div className="pt-row"><span>Subtotal c/desc.</span><span>{formatCOP(ticket.subtotal - ticket.descuento)}</span></div>
+          </>
+        )
+      })()}
       {!esInformal && <div className="pt-row"><span>Base gravable</span><span>{formatCOP(ticket.base_gravable)}</span></div>}
       {!esInformal && <div className="pt-row"><span>IVA</span><span>{formatCOP(ticket.valor_iva)}</span></div>}
       <div className="pt-row-bold"><span>TOTAL</span><span>{formatCOP(ticket.total)}</span></div>
+      {ticket.descuento > 0 && (
+        <div className="pt-row pt-small"><span>Te ahorraste</span><span>{formatCOP(ticket.descuento)}</span></div>
+      )}
 
       {ticket.estado === 'ANULADA' && (
         <>
