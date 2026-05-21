@@ -393,6 +393,139 @@ export default function AccountDetailPage() {
           accent="green"
         />
       </div>
+      {/* ── Ventas — full width centrado ──────────────────────────────────── */}
+      <Card padding={false}>
+        <div className="p-4 border-b border-slate-50">
+          <SectionHeader
+            title="Ventas"
+            icon={<ShoppingCart size={15} />}
+            actions={
+              !cuenta.esta_pagada && (
+                <Can permission="ventas:create">
+                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                    Agregar venta
+                  </Button>
+                </Can>
+              )
+            }
+          />
+        </div>
+
+        {cuenta.ventas.length === 0 ? (
+          <EmptyState
+            icon={<ShoppingCart size={32} />}
+            title="Sin ventas"
+            description="Agrega productos vendidos a esta cuenta"
+            action={
+              !cuenta.esta_pagada && (
+                <Can permission="ventas:create">
+                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                    Primera venta
+                  </Button>
+                </Can>
+              )
+            }
+          />
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {ventasAgrupadas.map((g) => {
+              const isExpanded = expandedProducts.has(g.producto_id)
+              const hasMultiple = g.ventas.length > 1
+
+              return (
+                <div key={g.producto_id}>
+                  {/* Fila agrupada */}
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 ${hasMultiple ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
+                    onClick={() => hasMultiple && toggleProduct(g.producto_id)}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                      <Package size={14} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{g.producto_nombre}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {g.ventas.length} venta{g.ventas.length !== 1 ? 's' : ''} · {g.totalCantidad} unidades
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(g.totalPrecio)}</p>
+                    </div>
+                    {hasMultiple && (
+                      <div className="text-slate-400 ml-1">
+                        {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      </div>
+                    )}
+                    {!cuenta.esta_pagada && (
+                      <Can permission="ventas:delete">
+                        {g.ventas.length === 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
+                            className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </Can>
+                    )}
+                  </div>
+
+                  {/* Detalle expandido */}
+                  {isExpanded && (
+                    <div className="bg-slate-50/80 border-t border-slate-100 px-4 py-2">
+                      {g.ventas.map((v) => (
+                        <div key={v.id} className="flex items-start gap-3 py-2 text-xs border-b border-slate-100 last:border-0">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-300 ml-2 mt-1 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-slate-600">{v.cantidad_unidades} u.</span>
+                              <span className="text-slate-400">{formatDateTime(v.fecha_venta)}</span>
+                            </div>
+                            {/* Trazabilidad cajero/caja */}
+                            {(v.nombre_cajero || v.sesion_caja_id) && (
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                {v.nombre_cajero && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+                                    {v.nombre_cajero}
+                                  </span>
+                                )}
+                                {v.sesion_caja_id && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2" /></svg>
+                                    Caja #{v.sesion_caja_id}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-semibold text-slate-700 tabular-nums">{formatCOP(v.precio_venta)}</span>
+                          {!cuenta.esta_pagada && (
+                            <Can permission="ventas:delete">
+                              <button
+                                onClick={() => setDeleteVentaId(v.id)}
+                                className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </Can>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Footer total ventas */}
+            <div className="px-4 py-3 bg-slate-50 flex justify-between items-center">
+              <span className="text-xs text-slate-500 font-medium">Total ventas</span>
+              <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(cuenta.total)}</span>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* ── Cliente fiscal + Documentos emitidos — 2 columnas en desktop ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
@@ -445,140 +578,6 @@ export default function AccountDetailPage() {
               <Receipt size={20} className="text-slate-300 mb-2" />
               <p className="text-xs text-slate-500 font-medium mb-0.5">Sin cliente fiscal</p>
               <p className="text-[11px] text-slate-400">La factura se emite manualmente.</p>
-            </div>
-          )}
-        </Card>
-        
-        {/* ── Ventas — full width centrado ──────────────────────────────────── */}
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader
-              title="Ventas"
-              icon={<ShoppingCart size={15} />}
-              actions={
-                !cuenta.esta_pagada && (
-                  <Can permission="ventas:create">
-                    <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
-                      Agregar venta
-                    </Button>
-                  </Can>
-                )
-              }
-            />
-          </div>
-
-          {cuenta.ventas.length === 0 ? (
-            <EmptyState
-              icon={<ShoppingCart size={32} />}
-              title="Sin ventas"
-              description="Agrega productos vendidos a esta cuenta"
-              action={
-                !cuenta.esta_pagada && (
-                  <Can permission="ventas:create">
-                    <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
-                      Primera venta
-                    </Button>
-                  </Can>
-                )
-              }
-            />
-          ) : (
-            <div className="divide-y divide-slate-50">
-              {ventasAgrupadas.map((g) => {
-                const isExpanded = expandedProducts.has(g.producto_id)
-                const hasMultiple = g.ventas.length > 1
-
-                return (
-                  <div key={g.producto_id}>
-                    {/* Fila agrupada */}
-                    <div
-                      className={`flex items-center gap-3 px-4 py-3 ${hasMultiple ? 'cursor-pointer hover:bg-slate-50 transition-colors' : ''}`}
-                      onClick={() => hasMultiple && toggleProduct(g.producto_id)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                        <Package size={14} className="text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{g.producto_nombre}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {g.ventas.length} venta{g.ventas.length !== 1 ? 's' : ''} · {g.totalCantidad} unidades
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(g.totalPrecio)}</p>
-                      </div>
-                      {hasMultiple && (
-                        <div className="text-slate-400 ml-1">
-                          {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                        </div>
-                      )}
-                      {!cuenta.esta_pagada && (
-                        <Can permission="ventas:delete">
-                          {g.ventas.length === 1 && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
-                              className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
-                        </Can>
-                      )}
-                    </div>
-
-                    {/* Detalle expandido */}
-                    {isExpanded && (
-                      <div className="bg-slate-50/80 border-t border-slate-100 px-4 py-2">
-                        {g.ventas.map((v) => (
-                          <div key={v.id} className="flex items-start gap-3 py-2 text-xs border-b border-slate-100 last:border-0">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-300 ml-2 mt-1 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-slate-600">{v.cantidad_unidades} u.</span>
-                                <span className="text-slate-400">{formatDateTime(v.fecha_venta)}</span>
-                              </div>
-                              {/* Trazabilidad cajero/caja */}
-                              {(v.nombre_cajero || v.sesion_caja_id) && (
-                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                  {v.nombre_cajero && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
-                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
-                                      {v.nombre_cajero}
-                                    </span>
-                                  )}
-                                  {v.sesion_caja_id && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] bg-slate-100 text-slate-500 rounded-full px-2 py-0.5">
-                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2" /></svg>
-                                      Caja #{v.sesion_caja_id}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <span className="font-semibold text-slate-700 tabular-nums">{formatCOP(v.precio_venta)}</span>
-                            {!cuenta.esta_pagada && (
-                              <Can permission="ventas:delete">
-                                <button
-                                  onClick={() => setDeleteVentaId(v.id)}
-                                  className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </Can>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {/* Footer total ventas */}
-              <div className="px-4 py-3 bg-slate-50 flex justify-between items-center">
-                <span className="text-xs text-slate-500 font-medium">Total ventas</span>
-                <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(cuenta.total)}</span>
-              </div>
             </div>
           )}
         </Card>
@@ -636,8 +635,8 @@ export default function AccountDetailPage() {
                   <div
                     key={t.id}
                     className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isAnulada
-                        ? 'bg-red-50/40 border-red-100 opacity-70'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                      ? 'bg-red-50/40 border-red-100 opacity-70'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
                       }`}
                   >
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconColor}`}>
@@ -1032,8 +1031,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                     key={pr.id}
                     onClick={() => setSelectedPrecioId(pr.id)}
                     className={`flex items-center justify-between p-3 rounded-xl border transition-all text-left ${selectedPrecioId === pr.id
-                        ? 't-border t-bg-xlt ring-1 ring-[var(--t-primary-ring)]'
-                        : 'border-slate-200 hover:t-border hover:t-bg-xlt'
+                      ? 't-border t-bg-xlt ring-1 ring-[var(--t-primary-ring)]'
+                      : 'border-slate-200 hover:t-border hover:t-bg-xlt'
                       }`}
                   >
                     <div>
@@ -1139,8 +1138,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                           type="button"
                           onClick={() => setDescTipo('pct')}
                           className={`py-2 rounded-md text-xs font-bold transition-all ${descTipo === 'pct'
-                              ? 'bg-orange-500 text-white shadow-sm'
-                              : 'text-slate-500 hover:text-orange-600'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-orange-600'
                             }`}
                         >
                           % Porcentaje
@@ -1149,8 +1148,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                           type="button"
                           onClick={() => setDescTipo('monto')}
                           className={`py-2 rounded-md text-xs font-bold transition-all ${descTipo === 'monto'
-                              ? 'bg-orange-500 text-white shadow-sm'
-                              : 'text-slate-500 hover:text-orange-600'
+                            ? 'bg-orange-500 text-white shadow-sm'
+                            : 'text-slate-500 hover:text-orange-600'
                             }`}
                         >
                           $ Monto fijo
@@ -1167,8 +1166,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                                 type="button"
                                 onClick={() => setDescPct(String(p))}
                                 className={`py-2 rounded-lg text-sm font-bold border-2 transition-all ${descPct === String(p)
-                                    ? 'bg-orange-500 text-white border-orange-500 shadow-md scale-105'
-                                    : 'bg-white text-slate-700 border-orange-100 hover:border-orange-400 hover:bg-orange-50'
+                                  ? 'bg-orange-500 text-white border-orange-500 shadow-md scale-105'
+                                  : 'bg-white text-slate-700 border-orange-100 hover:border-orange-400 hover:bg-orange-50'
                                   }`}
                               >
                                 {p}%
