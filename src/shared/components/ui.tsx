@@ -3,7 +3,8 @@
  * Modern, accessible, responsive
  */
 import React, {
-  type ButtonHTMLAttributes, type ReactNode, forwardRef, useEffect, useId, useRef, useState,
+  type ButtonHTMLAttributes, type ReactNode, type ReactElement,
+  forwardRef, useEffect, useId, useRef, useState, isValidElement, cloneElement,
 } from 'react'
 import { clsx } from 'clsx'
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, Calendar, X } from 'lucide-react'
@@ -259,57 +260,68 @@ interface StatCardProps {
 }
 
 const accentMap = {
-  green:  { icon: 'bg-green-100',  text: 'text-green-700',  ring: 'ring-green-600/20' },
-  blue:   { icon: 'bg-blue-100',   text: 'text-blue-700',   ring: 'ring-blue-600/20' },
-  red:    { icon: 'bg-red-100',    text: 'text-red-700',    ring: 'ring-red-600/20' },
-  yellow: { icon: 'bg-yellow-100', text: 'text-yellow-700', ring: 'ring-yellow-600/20' },
-  purple: { icon: 'bg-purple-100', text: 'text-purple-700', ring: 'ring-purple-600/20' },
-  orange: { icon: 'bg-orange-100', text: 'text-orange-700', ring: 'ring-orange-600/20' },
-  slate:  { icon: 'bg-slate-100',  text: 'text-slate-700',  ring: 'ring-slate-600/20' },
+  green:  { gradient: 'from-green-50 to-green-50/30',   border: 'border-green-100',  iconColor: 'text-green-600' },
+  blue:   { gradient: 'from-blue-50 to-blue-50/30',     border: 'border-blue-100',   iconColor: 'text-blue-600' },
+  red:    { gradient: 'from-red-50 to-red-50/30',       border: 'border-red-100',    iconColor: 'text-red-600' },
+  yellow: { gradient: 'from-yellow-50 to-yellow-50/30', border: 'border-yellow-100', iconColor: 'text-yellow-600' },
+  purple: { gradient: 'from-purple-50 to-purple-50/30', border: 'border-purple-100', iconColor: 'text-purple-600' },
+  orange: { gradient: 'from-orange-50 to-orange-50/30', border: 'border-orange-100', iconColor: 'text-orange-600' },
+  slate:  { gradient: 'from-slate-50 to-white',         border: 'border-slate-200',  iconColor: 'text-slate-600' },
 }
 
-export function StatCard({ label, value, subValue, icon, iconBg, trend, trendLabel, accent = 'green', onClick, className }: StatCardProps) {
+export function StatCard({ label, value, subValue, icon, iconBg: _iconBg, trend, trendLabel, accent = 'green', onClick, className }: StatCardProps) {
   const ac = accentMap[accent]
   const trendUp   = trend !== undefined && trend > 0
   const trendDown = trend !== undefined && trend < 0
   const trendFlat = trend !== undefined && trend === 0
 
+  // Tintar el icono con el color del accent (preservando className previo)
+  const tintedIcon = isValidElement(icon)
+    ? cloneElement(icon as ReactElement<{ className?: string }>, {
+        className: clsx((icon.props as { className?: string }).className, ac.iconColor),
+      })
+    : icon
+
   return (
-    <Card
+    <div
       onClick={onClick}
-      hover={!!onClick}
-      className={clsx('group', className)}
-      padding={false}
+      className={clsx(
+        'relative overflow-hidden rounded-xl border bg-gradient-to-br p-3 sm:p-4 flex flex-col justify-between min-h-[100px] sm:min-h-[110px] transition-all',
+        ac.border,
+        ac.gradient,
+        onClick && 'cursor-pointer hover:shadow-md hover:-translate-y-0.5',
+        className,
+      )}
     >
-      <div className="p-3 sm:p-4 flex items-start gap-3">
-        {icon && (
-          <div className={clsx('hidden sm:flex p-2.5 rounded-xl shrink-0 mt-0.5', iconBg ?? ac.icon)}>
-            {icon}
+      {icon && (
+        <div className="flex items-start justify-between">
+          <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0">
+            {tintedIcon}
+          </div>
+        </div>
+      )}
+      <div className={clsx(icon && 'mt-3')}>
+        <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums leading-none truncate">{value}</p>
+        <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1.5 leading-tight">{label}</p>
+        {subValue && <p className="text-[10px] text-slate-400 mt-1 leading-tight">{subValue}</p>}
+        {trend !== undefined && (
+          <div className="flex items-center gap-1 mt-1.5">
+            {trendUp   && <TrendingUp   size={11} className="text-green-600" />}
+            {trendDown && <TrendingDown size={11} className="text-red-500" />}
+            {trendFlat && <Minus        size={11} className="text-slate-400" />}
+            <span className={clsx(
+              'text-[11px] font-semibold',
+              trendUp   && 'text-green-600',
+              trendDown && 'text-red-500',
+              trendFlat && 'text-slate-400',
+            )}>
+              {trendUp ? '+' : ''}{trend.toFixed(1)}%
+            </span>
+            {trendLabel && <span className="text-[10px] text-slate-400">{trendLabel}</span>}
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-slate-500 leading-tight">{label}</p>
-          <p className="text-base sm:text-xl font-bold text-slate-900 mt-1 tabular-nums leading-none truncate">{value}</p>
-          {subValue && <p className="text-xs text-slate-400 mt-1">{subValue}</p>}
-          {trend !== undefined && (
-            <div className="flex items-center gap-1 mt-2">
-              {trendUp   && <TrendingUp  size={11} className="text-green-600" />}
-              {trendDown && <TrendingDown size={11} className="text-red-500" />}
-              {trendFlat && <Minus        size={11} className="text-slate-400" />}
-              <span className={clsx(
-                'text-[11px] font-semibold',
-                trendUp   && 'text-green-600',
-                trendDown && 'text-red-500',
-                trendFlat && 'text-slate-400',
-              )}>
-                {trendUp ? '+' : ''}{trend.toFixed(1)}%
-              </span>
-              {trendLabel && <span className="text-[11px] text-slate-400">{trendLabel}</span>}
-            </div>
-          )}
-        </div>
       </div>
-    </Card>
+    </div>
   )
 }
 
