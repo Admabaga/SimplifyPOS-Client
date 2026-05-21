@@ -111,7 +111,9 @@ apiClient.interceptors.response.use(
     }
 
     // ── Token refresh en 401 ────────────────────────────────────────────────
-    if (error.response?.status === 401 && !original._retry) {
+    // No intentar refresh si el error viene del propio endpoint de login
+    const isAuthEndpoint = original.url?.includes('/auth/login') || original.url?.includes('/auth/refresh')
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({ resolve, reject })
