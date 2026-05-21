@@ -340,7 +340,7 @@ export default function DashboardPage() {
     return (
       <div className="space-y-4">
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-slate-900">¡Hola, {user?.nombre ?? 'usuario'}! 👋</h1>
+          <h1 className="text-xl font-bold text-slate-900">¡Hola, {user?.nombre ?? 'usuario'}! </h1>
           <p className="text-sm text-slate-500 mt-1">
             <Badge variant={user?.role === 'master' ? 'purple' : user?.role === 'admin' ? 'blue' : 'green'}>
               {user?.role}

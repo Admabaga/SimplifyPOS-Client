@@ -242,7 +242,7 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600"><path d="M20 12V22H4V12" /><path d="M22 7H2v5h20V7z" /><path d="M12 22V7" /></svg>
                   </div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-800">
                     Descuentos aplicados ({lineasConDesc.length} {lineasConDesc.length === 1 ? 'ítem' : 'ítems'})
@@ -278,7 +278,7 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
                   <div className="flex justify-between gap-3 items-center bg-emerald-50 -mx-2 px-2 py-1.5 rounded-lg border border-emerald-100">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
                         Descuento
                       </span>
                       <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
@@ -313,7 +313,7 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
                 </div>
                 {ticket.descuento > 0 && (
                   <p className="text-[10px] text-emerald-600 text-right mt-1 font-semibold">
-                    🎉 Ahorro: {formatCOP(ticket.descuento)}
+                    Ahorro: {formatCOP(ticket.descuento)}
                   </p>
                 )}
               </div>
@@ -506,11 +506,11 @@ function ThermalContent({ ticket }: { ticket: Ticket }) {
           </div>
           {multiplesTarifas
             ? tarifasOrdenadas.map(([tar, val]) => (
-                <div className="pt-row pt-small" key={tar}>
-                  <span>{tar === 0 ? 'Excluido IVA' : `IVA ${tar}%`}</span>
-                  <span>{formatCOP(val.iva)}</span>
-                </div>
-              ))
+              <div className="pt-row pt-small" key={tar}>
+                <span>{tar === 0 ? 'Excluido IVA' : `IVA ${tar}%`}</span>
+                <span>{formatCOP(val.iva)}</span>
+              </div>
+            ))
             : <div className="pt-row"><span>IVA</span><span>{formatCOP(ticket.valor_iva)}</span></div>}
         </>
       )}
