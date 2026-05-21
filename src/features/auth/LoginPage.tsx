@@ -229,11 +229,16 @@ export default function LoginPage() {
     }
   }
 
+  const scrollToLogin = () => {
+    const el = document.getElementById('login-form')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <div className="min-h-screen flex bg-white">
-      {/* ── Banner izquierdo: hero editorial + dashboard mock flotante ── */}
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
+      {/* ── Banner: hero editorial + dashboard mock flotante (mobile + desktop) ── */}
       <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden px-8 xl:px-10 py-6 xl:py-8 h-screen sticky top-0"
+        className="w-full lg:w-1/2 flex flex-col justify-between relative overflow-hidden px-5 sm:px-8 xl:px-10 py-6 xl:py-8 min-h-screen lg:h-screen lg:sticky lg:top-0"
         style={{ background: 'var(--t-sidebar-bg)' }}
       >
         {/* Keyframes */}
@@ -286,7 +291,9 @@ export default function LoginPage() {
           .anim-aurora-2 { animation: aurora-2 26s ease-in-out infinite; }
           .anim-aurora-3 { animation: aurora-3 28s ease-in-out infinite; }
           .anim-fade-up  { animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
-          .anim-tilt-3d  { animation: tilt-3d 6s ease-in-out infinite; transform-style: preserve-3d; }
+          @media (min-width: 1024px) {
+            .anim-tilt-3d  { animation: tilt-3d 6s ease-in-out infinite; transform-style: preserve-3d; }
+          }
           .text-shimmer {
             background: linear-gradient(110deg, #ffffff 0%, #ffffff 35%, var(--t-accent) 50%, #ffffff 65%, #ffffff 100%);
             background-size: 200% 100%;
@@ -341,14 +348,14 @@ export default function LoginPage() {
         </div>
 
         {/* ─── Centro: hero claim + dashboard mock ─── */}
-        <div className="relative z-10 flex flex-col items-start max-w-2xl flex-1 justify-center min-h-0 py-3">
+        <div className="relative z-10 flex flex-col items-start max-w-2xl w-full flex-1 justify-center min-h-0 py-4">
           {/* Live ticker como "introducción" */}
-          <div className="mb-4 anim-fade-up" style={{ animationDelay: '0.15s' }}>
+          <div className="mb-4 anim-fade-up self-center sm:self-start max-w-full" style={{ animationDelay: '0.15s' }}>
             <LiveTicker />
           </div>
 
           {/* Hero claim grande */}
-          <h1 className="text-[34px] xl:text-[42px] 2xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-3 anim-fade-up"
+          <h1 className="text-[30px] sm:text-[38px] xl:text-[42px] 2xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-3 anim-fade-up"
               style={{ animationDelay: '0.25s' }}>
             Vende más. <br />
             <span className="text-shimmer">Gestiona menos.</span>
@@ -359,6 +366,22 @@ export default function LoginPage() {
             El POS que entiende cómo trabajan los comerciantes colombianos.
             Inventario, ventas, caja y DIAN — en una sola app.
           </p>
+
+          {/* CTA mobile — scroll al login (oculto en desktop) */}
+          <button
+            type="button"
+            onClick={scrollToLogin}
+            className="lg:hidden anim-fade-up w-full sm:w-auto inline-flex items-center justify-center gap-2 font-bold text-sm px-6 py-3.5 rounded-xl mb-6 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, var(--t-accent), var(--t-primary))',
+              color: 'var(--t-sidebar-bg)',
+              animationDelay: '0.4s',
+            }}
+          >
+            <LogIn size={16} />
+            Iniciar sesión
+            <span className="ml-1 opacity-70">↓</span>
+          </button>
 
           {/* Dashboard mock flotante 3D */}
           <div className="relative w-full anim-fade-up" style={{ animationDelay: '0.45s' }}>
@@ -540,16 +563,12 @@ export default function LoginPage() {
 
       {/* ── Formulario derecho ── */}
       <div
-        className="flex-1 flex items-center justify-center px-6 py-12"
+        id="login-form"
+        className="flex-1 flex items-center justify-center px-5 sm:px-6 py-10 sm:py-12 lg:min-h-screen scroll-mt-4"
         style={{ background: 'var(--t-primary-xlight)' }}
       >
         <div className="w-full max-w-md">
-          {/* Logo mobile */}
-          <div className="flex justify-center mb-8 lg:hidden">
-            <img src={IconChart} alt="SimplifyPOS" className="h-20 w-auto max-w-[6rem] object-contain" />
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-1">Iniciar sesión</h2>
             <p className="text-gray-500 text-sm mb-6">Ingresa tus credenciales para continuar</p>
 
