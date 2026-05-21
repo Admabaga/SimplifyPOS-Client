@@ -145,6 +145,7 @@ export default function AccountDetailPage() {
       })
       qc.invalidateQueries({ queryKey: ['accounts'] })
       qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Venta añadida')
       setShowAddVenta(false)
     },
@@ -166,7 +167,11 @@ export default function AccountDetailPage() {
       qc.setQueryData(['accounts', cuentaId], ctx?.prev)
       toast.error(apiError(err))
     },
-    onSuccess: () => { toast.success('Venta eliminada'); setDeleteVentaId(null) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Venta eliminada')
+      setDeleteVentaId(null)
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ['accounts', cuentaId] }),
   })
 

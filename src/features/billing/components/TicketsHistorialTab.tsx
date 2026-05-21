@@ -37,6 +37,7 @@ export default function TicketsHistorialTab() {
       toast.success('Documento anulado correctamente')
       qc.invalidateQueries({ queryKey: ['billing', 'tickets'] })
       qc.invalidateQueries({ queryKey: ['cuenta'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
       setAnnulTarget(null)
       setAnnulMotivo('')
     },
