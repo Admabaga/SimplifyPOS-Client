@@ -67,12 +67,12 @@ export function useSetupWizard() {
   useEffect(() => {
     if (!isAdmin || !isSuccess) return
     const done = localStorage.getItem(storageKey)
-    if (!done && products.length === 0) {
+    if (!done) {
       // Pequeño delay para que el UI cargue antes de abrir el modal
       const t = setTimeout(() => setOpen(true), 600)
       return () => clearTimeout(t)
     }
-  }, [isAdmin, isSuccess, products.length, storageKey])
+  }, [isAdmin, isSuccess, storageKey])
 
   const dismiss = () => {
     localStorage.setItem(storageKey, '1')

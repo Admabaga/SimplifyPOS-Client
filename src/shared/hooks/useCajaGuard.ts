@@ -15,10 +15,14 @@ export function useCajaGuard() {
 
   const cajaAbierta = sesion?.estado === 'abierta'
 
-  /** Llama esto antes de abrir un modal de creación.
-   *  Devuelve true si la caja está abierta, false (+ toast) si no. */
+  /** Llama esto antes de acciones que requieren caja abierta (pagos, cierres).
+   *  Devuelve true si la caja está abierta, false (+ toast) si no.
+   *  Si isLoading, muestra toast de espera en vez de bloquear silenciosamente. */
   function requireCaja(accion = 'realizar esta acción'): boolean {
-    if (isLoading) return false
+    if (isLoading) {
+      toast.loading('Verificando estado de caja...', { id: 'caja-loading', duration: 1500 })
+      return false
+    }
     if (!cajaAbierta) {
       toast.error(`Debes abrir la caja antes de ${accion}`, { id: 'caja-cerrada' })
       return false

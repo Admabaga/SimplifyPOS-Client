@@ -119,12 +119,12 @@ export default function AccountsPage() {
               <Button
                 variant="secondary"
                 icon={<Zap size={15} className="text-yellow-500" />}
-                onClick={() => requireCaja('hacer una venta rápida') && setShowQuickSale(true)}
+                onClick={() => setShowQuickSale(true)}
               >
                 Venta rápida
               </Button>
               <Can permission="cuentas:create">
-                <Button icon={<Plus size={16} />} onClick={() => requireCaja('crear una cuenta') && setShowCreate(true)}>
+                <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
                   Nueva cuenta
                 </Button>
               </Can>
@@ -199,7 +199,7 @@ export default function AccountsPage() {
           action={
             !search && (
               <Can permission="cuentas:create">
-                <Button icon={<Plus size={14} />} onClick={() => requireCaja('crear una cuenta') && setShowCreate(true)}>Nueva cuenta</Button>
+                <Button icon={<Plus size={14} />} onClick={() => setShowCreate(true)}>Nueva cuenta</Button>
               </Can>
             )
           }

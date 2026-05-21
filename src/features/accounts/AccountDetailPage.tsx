@@ -534,7 +534,7 @@ export default function AccountDetailPage() {
             actions={
               !cuenta.esta_pagada && (
                 <Can permission="ventas:create">
-                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                  <Button size="sm" icon={<Plus size={14} />} onClick={() => setShowAddVenta(true)}>
                     Agregar venta
                   </Button>
                 </Can>
@@ -551,7 +551,7 @@ export default function AccountDetailPage() {
             action={
               !cuenta.esta_pagada && (
                 <Can permission="ventas:create">
-                  <Button size="sm" icon={<Plus size={14} />} onClick={() => requireCaja('agregar una venta') && setShowAddVenta(true)}>
+                  <Button size="sm" icon={<Plus size={14} />} onClick={() => setShowAddVenta(true)}>
                     Primera venta
                   </Button>
                 </Can>

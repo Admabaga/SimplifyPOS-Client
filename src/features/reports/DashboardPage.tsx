@@ -738,8 +738,8 @@ export function GettingStartedChecklist() {
   })
 
   const { data: cajaStatus } = useQuery({
-    queryKey: ['caja', 'status'],
-    queryFn: () => apiClient.get<{ sesion_abierta: boolean } | null>('/caja/status').then((r) => r.data),
+    queryKey: ['caja', 'estado'],
+    queryFn: () => apiClient.get<{ estado: string } | null>('/caja/estado').then((r) => r.data),
     enabled: isAdmin,
     staleTime: 30_000,
   })
@@ -774,7 +774,7 @@ export function GettingStartedChecklist() {
     {
       label:     'Abre la caja para empezar a vender',
       desc:      'Requerida antes de registrar cualquier pago',
-      done:      !!cajaStatus?.sesion_abierta,
+      done:      cajaStatus?.estado === 'abierta',
       icon:      <Wallet size={16} />,
       action:    () => navigate('/caja'),
       actionLabel: 'Ir a Caja',
