@@ -59,53 +59,53 @@
    Usadas vía Tailwind arbitrary: bg-[var(--t-primary)] etc.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Esmeralda (default) ────────────────────────────────────── */
+/* ── Esmeralda — verde corporativo Stripe-style ──────────────── */
 :root,
 [data-theme="esmeralda"] {
-  --t-primary:         #16a34a;
-  --t-primary-dark:    #15803d;
-  --t-primary-light:   #dcfce7;
-  --t-primary-xlight:  #f0fdf4;
-  --t-primary-ring:    rgba(22,163,74,0.28);
-  --t-sidebar-bg:      #14532d;
-  --t-accent:          #4ade80;
-  --t-accent-muted:    rgba(74,222,128,0.45);
-  --t-badge-bg:        #dcfce7;
-  --t-badge-text:      #15803d;
-  --t-tag-primary:     #bbf7d0;
-  --t-tag-text:        #14532d;
+  --t-primary:         #047857;
+  --t-primary-dark:    #065f46;
+  --t-primary-light:   #d1fae5;
+  --t-primary-xlight:  #ecfdf5;
+  --t-primary-ring:    rgba(4,120,87,0.28);
+  --t-sidebar-bg:      #022c22;
+  --t-accent:          #6ee7b7;
+  --t-accent-muted:    rgba(110,231,183,0.45);
+  --t-badge-bg:        #d1fae5;
+  --t-badge-text:      #065f46;
+  --t-tag-primary:     #a7f3d0;
+  --t-tag-text:        #064e3b;
 }
 
-/* ── Océano ─────────────────────────────────────────────────── */
+/* ── Océano — azul corporativo Linear-style ─────────────────── */
 [data-theme="ocean"] {
-  --t-primary:         #1a56db;
-  --t-primary-dark:    #1239a8;
-  --t-primary-light:   #c7d9fb;
-  --t-primary-xlight:  #e8f0fe;
-  --t-primary-ring:    rgba(26,86,219,0.28);
-  --t-sidebar-bg:      #0f2167;
-  --t-accent:          #6ea8f7;
-  --t-accent-muted:    rgba(110,168,247,0.45);
-  --t-badge-bg:        #c7d9fb;
-  --t-badge-text:      #1239a8;
-  --t-tag-primary:     #a8c4f9;
-  --t-tag-text:        #0f2167;
+  --t-primary:         #1e40af;
+  --t-primary-dark:    #1e3a8a;
+  --t-primary-light:   #dbeafe;
+  --t-primary-xlight:  #eff6ff;
+  --t-primary-ring:    rgba(30,64,175,0.28);
+  --t-sidebar-bg:      #172554;
+  --t-accent:          #93c5fd;
+  --t-accent-muted:    rgba(147,197,253,0.45);
+  --t-badge-bg:        #dbeafe;
+  --t-badge-text:      #1e3a8a;
+  --t-tag-primary:     #bfdbfe;
+  --t-tag-text:        #1e3a8a;
 }
 
-/* ── Obsidiana ──────────────────────────────────────────────── */
+/* ── Obsidiana — dark premium con índigo refinado (sin morado) ─ */
 [data-theme="obsidiana"] {
-  --t-primary:         #8b5cf6;
-  --t-primary-dark:    #7c3aed;
-  --t-primary-light:   #ede9fe;
-  --t-primary-xlight:  #f5f3ff;
-  --t-primary-ring:    rgba(139,92,246,0.28);
-  --t-sidebar-bg:      #09090b;
-  --t-accent:          #c4b5fd;
-  --t-accent-muted:    rgba(196,181,253,0.45);
-  --t-badge-bg:        #ede9fe;
-  --t-badge-text:      #7c3aed;
-  --t-tag-primary:     #ddd6fe;
-  --t-tag-text:        #4c1d95;
+  --t-primary:         #4338ca;
+  --t-primary-dark:    #3730a3;
+  --t-primary-light:   #e0e7ff;
+  --t-primary-xlight:  #eef2ff;
+  --t-primary-ring:    rgba(67,56,202,0.28);
+  --t-sidebar-bg:      #18181b;
+  --t-accent:          #a5b4fc;
+  --t-accent-muted:    rgba(165,180,252,0.45);
+  --t-badge-bg:        #e0e7ff;
+  --t-badge-text:      #3730a3;
+  --t-tag-primary:     #c7d2fe;
+  --t-tag-text:        #312e81;
 }
 
 /* ── Ámbar ──────────────────────────────────────────────────── */
