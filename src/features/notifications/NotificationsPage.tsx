@@ -144,7 +144,8 @@ export default function NotificationsPage() {
     queryKey: ['notifications', 'stock'],
     queryFn: () => notificationsApi.getStockAlerts(),
     refetchInterval: 60 * 60 * 1000,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 

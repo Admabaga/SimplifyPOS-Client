@@ -135,7 +135,8 @@ function NotificationBell() {
     // refetchOnWindowFocus: true → al volver a la app tras registrar una venta,
     // la campana se actualiza automáticamente si el caché cambió.
     refetchInterval: 60 * 60 * 1000,
-    staleTime: 5 * 60 * 1000,  // 5 min → considera fresco para no saltar en cada click
+    staleTime: 0,               // siempre refetch desde server al montar/volver
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 
