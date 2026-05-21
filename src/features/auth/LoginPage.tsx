@@ -9,6 +9,7 @@ import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
 import Logo from '@/assets/Icon.png'
+import IconChart from '@/assets/IconChart.png'
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -78,12 +79,14 @@ export default function LoginPage() {
         />
 
         <div className="relative z-10 text-center px-12 max-w-lg">
-          {/* Logo con glow */}
-          <div className="relative inline-flex mb-8">
-            <div className="absolute inset-0 rounded-3xl bg-white/20 blur-xl scale-110" />
-            <div className="relative w-20 h-20 rounded-3xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-2xl">
-              <img src={Logo} alt="SimplifyPOS" className="w-12 h-12 drop-shadow-xl" />
-            </div>
+          {/* Icono principal con glow */}
+          <div className="relative inline-flex mb-6">
+            <div className="absolute inset-0 rounded-3xl bg-white/15 blur-2xl scale-125" />
+            <img
+              src={IconChart}
+              alt="SimplifyPOS"
+              className="relative w-28 h-28 drop-shadow-2xl"
+            />
           </div>
 
           <h1 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
