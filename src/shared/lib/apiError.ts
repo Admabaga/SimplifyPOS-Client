@@ -1,6 +1,3 @@
-import type { AxiosError } from 'axios'
-import { httpErrorMessage } from '@/shared/api/client'
-
 /**
  * Función única para extraer mensajes de error de la API.
  * Prioridad:
@@ -34,22 +31,4 @@ export function apiError(err: unknown, fallback = 'Error inesperado'): string {
   if (typeof e?.message === 'string' && e.message.trim()) return e.message
 
   return fallback
-}
-
-/**
- * @deprecated Usa `apiError` — esta función queda solo por compatibilidad.
- * getApiErrorMessage usa httpErrorMessage que puede sobreescribir el mensaje real del backend.
- */
-export function getApiErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'userMessage' in error) {
-    return (error as { userMessage: string }).userMessage
-  }
-  if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as AxiosError
-    const status = axiosError.response?.status
-    const detail = (axiosError.response?.data as Record<string, unknown> | undefined)?.detail
-    return httpErrorMessage(status, typeof detail === 'string' ? detail : undefined)
-  }
-  if (error instanceof Error) return error.message
-  return 'Ocurrió un error inesperado.'
 }

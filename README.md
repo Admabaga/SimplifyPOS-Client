@@ -198,4 +198,3 @@ Desde el módulo de **Detalle de cuenta** se puede emitir un ticket en tres moda
 | Factura de venta | Factura electrónica completa (Art. 617 ET) |
 
 El ticket incluye desglose de IVA por categoría, datos de la empresa y hash de integridad.
-# Wed May 20 20:21:45 -05 2026

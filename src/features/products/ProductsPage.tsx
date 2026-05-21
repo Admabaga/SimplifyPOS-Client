@@ -15,7 +15,7 @@ import {
 } from '@/shared/components/ui'
 import Can from '@/shared/components/Can'
 import { formatCOP } from '@/shared/lib/formatters'
-import { apiError, getApiErrorMessage } from '@/shared/lib/apiError'
+import { apiError } from '@/shared/lib/apiError'
 import type { Producto, ProductoPrecio } from '@/shared/types'
 import { productsApi } from './api'
 import type { CreateProductoDto, CreateProductoPrecioDto } from './api'
