@@ -295,12 +295,13 @@ export default function ReportsPage() {
         }
       />
 
+      <div className="reports-content min-h-[500px]">
       {isLoading ? (
-        <div className="flex justify-center py-20"><Spinner size={32} /></div>
+        <div className="flex justify-center py-20" key="loading"><Spinner size={32} /></div>
       ) : !data ? (
         <EmptyState icon={<TrendingUp size={48} />} title="Sin datos para este período" description="Ajusta el mes y año para ver el reporte" />
       ) : (
-        <div className="space-y-5">
+        <div key={`${year}-${month}`} className="space-y-5">
 
           {/* ── KPI Row 1 ───────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -736,6 +737,7 @@ export default function ReportsPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }

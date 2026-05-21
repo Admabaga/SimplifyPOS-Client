@@ -277,5 +277,15 @@ input[type="radio"] {
   main > * {
     isolation: isolate;
   }
+
+  /* Containment para zonas con cambios grandes de altura (spinner → contenido).
+     Sin esto Chrome Android deja un fantasma del estado anterior pegado encima. */
+  .reports-content {
+    contain: layout paint;
+    isolation: isolate;
+    background: var(--color-bg, #f8fafc);
+    position: relative;
+    z-index: 1;
+  }
 }
 
