@@ -255,21 +255,27 @@ input[type="radio"] {
    y desbordarse en viewports pequeños.
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 639px) {
+  /* Esconde cualquier SVG/canvas de Recharts si llega a montarse */
   .recharts-wrapper,
   .recharts-responsive-container,
-  .recharts-surface {
+  .recharts-surface,
+  svg.recharts-surface {
     display: none !important;
     visibility: hidden !important;
     width: 0 !important;
     height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
     overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    pointer-events: none !important;
   }
 
-  /* Fuerza compositing layer limpio entre páginas (bug Chrome Android
-     que deja framebuffer "fantasma" de la página anterior). */
-  main {
+  /* Aísla cada página para que el GPU layer no arrastre framebuffer
+     de la página anterior (bug Chrome Android al navegar). */
+  main > * {
     isolation: isolate;
-    transform: translateZ(0);
   }
 }
 
