@@ -230,10 +230,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white">
       {/* ── Banner izquierdo: hero editorial + dashboard mock flotante ── */}
       <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden px-12 py-10"
+        className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden px-8 xl:px-10 py-6 xl:py-8 h-screen sticky top-0"
         style={{ background: 'var(--t-sidebar-bg)' }}
       >
         {/* Keyframes */}
@@ -324,16 +324,16 @@ export default function LoginPage() {
              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27200%27 height=%27200%27%3E%3Cfilter id=%27n%27%3E%3CfeTurbulence baseFrequency=%270.9%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23n)%27/%3E%3C/svg%3E")' }} />
 
         {/* ─── Top: brand mark ─── */}
-        <div className="relative z-10 anim-fade-up" style={{ animationDelay: '0.05s' }}>
-          <div className="flex items-center gap-3">
+        <div className="relative z-10 anim-fade-up shrink-0" style={{ animationDelay: '0.05s' }}>
+          <div className="flex items-center gap-2.5">
             <div className="relative">
               <div className="absolute inset-0 rounded-xl blur-xl scale-150 anim-glow"
                    style={{ background: 'var(--t-accent)' }} />
-              <img src={IconChart} alt="" className="relative h-11 w-auto max-w-[3.5rem] object-contain drop-shadow-xl" />
+              <img src={IconChart} alt="" className="relative h-9 w-auto max-w-[3rem] object-contain drop-shadow-xl" />
             </div>
             <div>
-              <p className="text-white font-extrabold text-xl leading-none tracking-tight">SimplifyPOS</p>
-              <p className="text-[11px] mt-1 font-semibold leading-none" style={{ color: 'var(--t-accent)' }}>
+              <p className="text-white font-extrabold text-lg leading-none tracking-tight">SimplifyPOS</p>
+              <p className="text-[10px] mt-1 font-semibold leading-none" style={{ color: 'var(--t-accent)' }}>
                 Point of Sale · Colombia
               </p>
             </div>
@@ -341,20 +341,20 @@ export default function LoginPage() {
         </div>
 
         {/* ─── Centro: hero claim + dashboard mock ─── */}
-        <div className="relative z-10 flex flex-col items-start max-w-2xl">
+        <div className="relative z-10 flex flex-col items-start max-w-2xl flex-1 justify-center min-h-0 py-3">
           {/* Live ticker como "introducción" */}
-          <div className="mb-6 anim-fade-up" style={{ animationDelay: '0.15s' }}>
+          <div className="mb-4 anim-fade-up" style={{ animationDelay: '0.15s' }}>
             <LiveTicker />
           </div>
 
           {/* Hero claim grande */}
-          <h1 className="text-[44px] xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-4 anim-fade-up"
+          <h1 className="text-[34px] xl:text-[42px] 2xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-3 anim-fade-up"
               style={{ animationDelay: '0.25s' }}>
             Vende más. <br />
             <span className="text-shimmer">Gestiona menos.</span>
           </h1>
 
-          <p className="text-base text-white/65 mb-7 max-w-md leading-relaxed anim-fade-up"
+          <p className="text-sm xl:text-base text-white/65 mb-5 max-w-md leading-relaxed anim-fade-up"
              style={{ animationDelay: '0.35s' }}>
             El POS que entiende cómo trabajan los comerciantes colombianos.
             Inventario, ventas, caja y DIAN — en una sola app.
@@ -386,7 +386,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Mock body */}
-                <div className="p-4 space-y-3">
+                <div className="p-3 space-y-2.5">
                   {/* Greeting row */}
                   <div className="flex items-center justify-between">
                     <div>
@@ -418,12 +418,12 @@ export default function LoginPage() {
                   </div>
 
                   {/* Mini bar chart */}
-                  <div className="rounded-lg p-3 border border-white/10" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="rounded-lg p-2.5 border border-white/10" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="flex items-center justify-between mb-1.5">
                       <p className="text-[10px] text-white/55 font-semibold">Ventas por día — esta semana</p>
                       <p className="text-[9px] text-white/30 font-mono">7d</p>
                     </div>
-                    <div className="flex items-end gap-1 h-14">
+                    <div className="flex items-end gap-1 h-10">
                       {[0.5, 0.7, 0.45, 0.85, 0.6, 0.95, 0.75].map((h, i) => (
                         <div
                           key={i}
@@ -445,19 +445,18 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Activity rows */}
+                  {/* Activity rows — solo 2 para mantener compacto */}
                   <div className="space-y-1.5">
                     {[
                       { icon: '🍺', text: 'Cerveza Águila × 6', time: 'hace 2m', amount: '$18.000', color: 'rgb(110,231,183)' },
                       { icon: '🥤', text: 'Coca-Cola 1.5L',     time: 'hace 5m', amount: '$8.500',  color: 'rgb(147,197,253)' },
-                      { icon: '🍔', text: 'Hamburguesa doble',  time: 'hace 8m', amount: '$24.000', color: 'rgb(216,180,254)' },
                     ].map((row, i) => (
                       <div
                         key={i}
-                        className="mock-row flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-white/5"
+                        className="mock-row flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg border border-white/5"
                         style={{ background: 'rgba(255,255,255,0.03)', animationDelay: `${0.9 + i * 0.12}s` }}
                       >
-                        <span className="text-base leading-none">{row.icon}</span>
+                        <span className="text-sm leading-none">{row.icon}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-[11px] text-white/85 font-semibold truncate leading-tight">{row.text}</p>
                           <p className="text-[9px] text-white/35 leading-tight">{row.time}</p>
@@ -501,8 +500,8 @@ export default function LoginPage() {
         </div>
 
         {/* ─── Bottom: stats + colombian pride ─── */}
-        <div className="relative z-10 anim-fade-up" style={{ animationDelay: '0.7s' }}>
-          <div className="grid grid-cols-3 gap-4 pb-5 border-b border-white/10">
+        <div className="relative z-10 anim-fade-up shrink-0" style={{ animationDelay: '0.7s' }}>
+          <div className="grid grid-cols-3 gap-3 pb-3 border-b border-white/10">
             {[
               { v: <AnimatedCounter target={8} suffix="s" />,    l: 'Por venta',     i: Zap,       c: 'text-amber-300'   },
               { v: <AnimatedCounter target={100} suffix="%" />,  l: 'Cifras DIAN',   i: Shield,    c: 'text-emerald-300' },
@@ -510,33 +509,31 @@ export default function LoginPage() {
             ].map((s, i) => {
               const Icon = s.i
               return (
-                <div key={i} className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                        style={{ background: 'rgba(255,255,255,0.06)' }}>
-                    <Icon size={14} className={s.c} strokeWidth={2.4} />
+                    <Icon size={13} className={s.c} strokeWidth={2.4} />
                   </div>
-                  <div>
-                    <p className="text-xl font-extrabold text-white tabular-nums leading-none">{s.v}</p>
-                    <p className="text-[10px] text-white/45 mt-1.5 leading-none">{s.l}</p>
+                  <div className="min-w-0">
+                    <p className="text-base xl:text-lg font-extrabold text-white tabular-nums leading-none">{s.v}</p>
+                    <p className="text-[10px] text-white/45 mt-1 leading-none truncate">{s.l}</p>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2 text-white/50">
-              <Sparkles size={12} style={{ color: 'var(--t-accent)' }} />
-              <span className="text-[11px] font-medium">
+              <Sparkles size={11} style={{ color: 'var(--t-accent)' }} />
+              <span className="text-[10px] font-medium">
                 Hecho con <span className="text-red-400">♥</span> en Colombia 🇨🇴
               </span>
             </div>
-            <div className="flex items-center gap-3 text-[10px] text-white/30">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Sistema operativo
-              </span>
-            </div>
+            <span className="flex items-center gap-1 text-[10px] text-white/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Sistema operativo
+            </span>
           </div>
         </div>
       </div>
