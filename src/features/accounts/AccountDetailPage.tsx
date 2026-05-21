@@ -10,12 +10,12 @@ import { z } from 'zod'
 import {
   ArrowLeft, Plus, Trash2, ShoppingCart, CreditCard, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Search, Package, X, Receipt,
-  FileText, Eye, Hash, Calendar,
+  FileText, Eye, Hash, Calendar, TrendingUp,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
   Button, Card, Badge, Spinner, EmptyState, Modal, ConfirmDialog,
-  ProgressBar, StatCard, SectionHeader, InfoBanner, Input, Select,
+  ProgressBar, SectionHeader, InfoBanner, Input, Select,
 } from '@/shared/components/ui'
 import Can from '@/shared/components/Can'
 import { formatCOP, formatDate, formatDateTime } from '@/shared/lib/formatters'
@@ -313,85 +313,129 @@ export default function AccountDetailPage() {
         </InfoBanner>
       )}
 
-      {/* ── Hero summary ────────────────────────────────────────────────────── */}
-      <Card padding={false}>
-        <div className="p-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Total cuenta</p>
-              <p className="text-xl font-bold text-slate-900 tabular-nums mt-0.5">{formatCOP(cuenta.total)}</p>
+      {/* ── Hero summary + Actividad — 2 columnas en desktop ─────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+
+        {/* Hero summary */}
+        <Card padding={false} className="h-full flex flex-col">
+          <div className="p-5 flex-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Total cuenta</p>
+                <p className="text-xl font-bold text-slate-900 tabular-nums mt-0.5">{formatCOP(cuenta.total)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Pendiente</p>
+                <p className={`text-xl font-bold tabular-nums mt-0.5 ${cuenta.esta_pagada ? 'text-slate-300' : 'text-red-600'}`}>
+                  {formatCOP(cuenta.valor_pendiente ?? 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Pagado</p>
+                <p className="text-xl font-bold text-green-600 tabular-nums mt-0.5">{formatCOP(pagadoTotal)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Apertura</p>
+                <p className="text-sm font-medium text-slate-600 mt-1">{formatDate(cuenta.fecha_creacion)}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Pendiente</p>
-              <p className={`text-xl font-bold tabular-nums mt-0.5 ${cuenta.esta_pagada ? 'text-slate-300' : 'text-red-600'}`}>
-                {formatCOP(cuenta.valor_pendiente ?? 0)}
+
+            {/* Barra de progreso */}
+            <ProgressBar
+              value={pctPagado}
+              color={cuenta.esta_pagada ? 't-bg' : pctPagado > 50 ? 'bg-yellow-400' : 'bg-red-400'}
+              size="md"
+              showValue
+              label="Progreso de pago"
+            />
+          </div>
+
+          {/* Botón pago prominente */}
+          {!cuenta.esta_pagada && (
+            <div className="px-5 pb-4">
+              <Can permission="cuentas:pay">
+                <Button
+                  className="w-full"
+                  icon={<CreditCard size={16} />}
+                  onClick={() => requireCaja('registrar un pago') && setShowAddPago(true)}
+                >
+                  Registrar pago — {formatCOP(cuenta.valor_pendiente ?? 0)} pendiente
+                </Button>
+              </Can>
+            </div>
+          )}
+
+          {cuenta.esta_pagada && (
+            <div className="px-5 pb-4">
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                <p className="text-sm font-medium text-green-700">Cuenta completamente pagada</p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Actividad de la cuenta */}
+        <Card padding={false} className="h-full flex flex-col">
+          <div className="p-5 flex-1 flex flex-col">
+            <SectionHeader
+              title="Actividad de la cuenta"
+              icon={<TrendingUp size={15} />}
+            />
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+              {/* Ventas */}
+              <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30 p-4 flex flex-col justify-between min-h-[110px]">
+                <div className="flex items-start justify-between">
+                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                    <ShoppingCart size={16} className="text-blue-600" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{cuenta.ventas.length}</p>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Ventas registradas</p>
+                </div>
+              </div>
+
+              {/* Productos */}
+              <div className="relative overflow-hidden rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-purple-50/30 p-4 flex flex-col justify-between min-h-[110px]">
+                <div className="flex items-start justify-between">
+                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                    <Package size={16} className="text-purple-600" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{ventasAgrupadas.length}</p>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Productos distintos</p>
+                </div>
+              </div>
+
+              {/* Pagos */}
+              <div className="relative overflow-hidden rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-green-50/30 p-4 flex flex-col justify-between min-h-[110px]">
+                <div className="flex items-start justify-between">
+                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                    <CreditCard size={16} className="text-green-600" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{cuenta.pagos.length}</p>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Pagos realizados</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Mini-insight footer */}
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              <p className="text-[11px] text-slate-500">
+                Promedio por venta:{' '}
+                <span className="font-semibold text-slate-700 tabular-nums">
+                  {formatCOP(cuenta.ventas.length > 0 ? cuenta.total / cuenta.ventas.length : 0)}
+                </span>
               </p>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Pagado</p>
-              <p className="text-xl font-bold text-green-600 tabular-nums mt-0.5">{formatCOP(pagadoTotal)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Apertura</p>
-              <p className="text-sm font-medium text-slate-600 mt-1">{formatDate(cuenta.fecha_creacion)}</p>
-            </div>
           </div>
-
-          {/* Barra de progreso */}
-          <ProgressBar
-            value={pctPagado}
-            color={cuenta.esta_pagada ? 't-bg' : pctPagado > 50 ? 'bg-yellow-400' : 'bg-red-400'}
-            size="md"
-            showValue
-            label="Progreso de pago"
-          />
-        </div>
-
-        {/* Botón pago prominente */}
-        {!cuenta.esta_pagada && (
-          <div className="px-5 pb-4">
-            <Can permission="cuentas:pay">
-              <Button
-                className="w-full"
-                icon={<CreditCard size={16} />}
-                onClick={() => requireCaja('registrar un pago') && setShowAddPago(true)}
-              >
-                Registrar pago — {formatCOP(cuenta.valor_pendiente ?? 0)} pendiente
-              </Button>
-            </Can>
-          </div>
-        )}
-
-        {cuenta.esta_pagada && (
-          <div className="px-5 pb-4">
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
-              <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-              <p className="text-sm font-medium text-green-700">Cuenta completamente pagada</p>
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* ── Estadísticas ventas ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <StatCard
-          label="Ventas registradas"
-          value={String(cuenta.ventas.length)}
-          icon={<ShoppingCart size={15} className="text-blue-600" />}
-          accent="blue"
-        />
-        <StatCard
-          label="Productos distintos"
-          value={String(ventasAgrupadas.length)}
-          icon={<Package size={15} className="text-purple-600" />}
-          accent="purple"
-        />
-        <StatCard
-          label="Pagos realizados"
-          value={String(cuenta.pagos.length)}
-          icon={<CreditCard size={15} className="t-text" />}
-          accent="green"
-        />
+        </Card>
       </div>
       {/* ── Ventas — full width centrado ──────────────────────────────────── */}
       <Card padding={false}>
