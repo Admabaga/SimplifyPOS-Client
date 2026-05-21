@@ -84,7 +84,7 @@ export default function SessionExpiredModal() {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-8 text-center" style={{ background: 'var(--t-sidebar-bg)' }}>
-          <img src={Logo} alt="SimplifyPOS" className="w-12 h-12 mx-auto mb-3 opacity-90" />
+          <img src={Logo} alt="SimplifyPOS" className="h-14 w-auto max-w-[4.5rem] mx-auto mb-3 opacity-90 object-contain" />
           <h2 className="text-white font-bold text-lg">Sesión expirada</h2>
           <p className="text-white/70 text-sm mt-1">
             Tu sesión venció. Ingresa tu contraseña para continuar.

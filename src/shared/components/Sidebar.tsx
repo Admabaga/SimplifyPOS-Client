@@ -345,7 +345,7 @@ export default function Sidebar() {
           <img
             src={Logo}
             alt="SimplifyPOS"
-            className="w-9 h-9 rounded-lg object-contain shrink-0"
+            className="h-10 w-auto max-w-[3rem] object-contain shrink-0"
           />
           {!collapsed && (
             <div className="min-w-0">
@@ -362,7 +362,7 @@ export default function Sidebar() {
       {/* ── Mobile topbar ─────────────────────────────────── */}
       <div style={{ background: 'var(--t-sidebar-bg)' }} className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 shadow-lg">
         <div className="flex items-center gap-2.5">
-          <img src={Logo} alt="SimplifyPOS" className="w-7 h-7 rounded-lg" />
+          <img src={Logo} alt="SimplifyPOS" className="h-8 w-auto max-w-[2.5rem] object-contain" />
           <div>
             <p className="text-white font-bold text-sm leading-tight">SimplifyPOS</p>
             <p style={{ color: 'var(--t-accent)' }} className="text-[10px] leading-tight opacity-80">Point of Sale</p>
@@ -388,7 +388,7 @@ export default function Sidebar() {
           <aside style={{ background: 'var(--t-sidebar-bg)' }} className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 shadow-2xl flex flex-col">
             {/* Logo mobile */}
             <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10 shrink-0">
-              <img src={Logo} alt="SimplifyPOS" className="w-8 h-8 rounded-lg" />
+              <img src={Logo} alt="SimplifyPOS" className="h-9 w-auto max-w-[3rem] object-contain" />
               <div>
                 <p className="text-white font-bold text-sm leading-tight">SimplifyPOS</p>
                 <p style={{ color: 'var(--t-accent)' }} className="text-[11px] leading-tight mt-0.5 opacity-80">Point of Sale</p>

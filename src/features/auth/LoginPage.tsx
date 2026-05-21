@@ -219,7 +219,7 @@ export default function LoginPage() {
             <img
               src={IconChart}
               alt="SimplifyPOS"
-              className="relative w-24 h-24 drop-shadow-2xl anim-float"
+              className="relative h-28 w-auto max-w-[9rem] object-contain drop-shadow-2xl anim-float"
             />
           </div>
 
@@ -309,7 +309,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Logo mobile */}
           <div className="flex justify-center mb-8 lg:hidden">
-            <img src={IconChart} alt="SimplifyPOS" className="w-16 h-16" />
+            <img src={IconChart} alt="SimplifyPOS" className="h-20 w-auto max-w-[6rem] object-contain" />
           </div>
 
           <div className="bg-white rounded-2xl shadow-lg p-8">

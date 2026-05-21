@@ -18,7 +18,7 @@ import { formatCOP } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
 import type { Producto, ProductoPrecio } from '@/shared/types'
 import { productsApi } from './api'
-import type { CreateProductoDto, CreateProductoPrecioDto } from './api'
+import type { CreateProductoDto, CreateProductoPrecioDto, UpdateProductoPrecioDto } from './api'
 import { categoriasApi } from '@/features/categories/api'
 import { useCurrencyInput } from '@/shared/hooks/useCurrencyInput'
 
@@ -145,6 +145,7 @@ export default function ProductsPage() {
   const [pricesProduct, setPricesProduct]   = useState<Producto | null>(null)
   const [showCreate, setShowCreate]         = useState(false)
   const [showAddPrice, setShowAddPrice]     = useState(false)
+  const [editPriceItem, setEditPriceItem]   = useState<ProductoPrecio | null>(null)
   const [deletePriceId, setDeletePriceId]   = useState<number | null>(null)
   const [inlineEdit, setInlineEdit]         = useState<{ id: number; field: 'nombre'; value: string } | null>(null)
 
@@ -218,6 +219,21 @@ export default function ProductsPage() {
       setShowAddPrice(false)
     },
     onError: (err: unknown) => toast.error(apiError(err, 'Error al añadir precio')),
+  })
+
+  const updatePriceMutation = useMutation({
+    mutationFn: ({ priceId, dto }: { priceId: number; dto: UpdateProductoPrecioDto }) =>
+      productsApi.updatePrice(pricesProduct!.id, priceId, dto),
+    onSuccess: (updated) => {
+      const pid = pricesProduct?.id
+      qc.setQueryData(['products', pid, 'prices'], (old: ProductoPrecio[] | undefined) =>
+        old ? old.map((pr) => (pr.id === updated.id ? updated : pr)) : old
+      )
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Precio actualizado')
+      setEditPriceItem(null)
+    },
+    onError: (err: unknown) => toast.error(apiError(err, 'Error al actualizar precio')),
   })
 
   const deletePriceMutation = useMutation({
@@ -568,11 +584,22 @@ export default function ProductsPage() {
                     {pr.cantidad > 1 && <p className="text-xs text-slate-400">{pr.cantidad} unidades por presentación</p>}
                   </div>
                   <p className="text-base font-bold text-slate-900 tabular-nums">{formatCOP(pr.precio)}</p>
-                  {!isProtegido && (
-                    <Can permission="precios:delete">
-                      <Button size="sm" variant="ghost" icon={<Trash2 size={13} />} onClick={() => setDeletePriceId(pr.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Can permission="precios:update">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<Pencil size={13} />}
+                        onClick={() => setEditPriceItem(pr)}
+                        className="text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                      />
                     </Can>
-                  )}
+                    {!isProtegido && (
+                      <Can permission="precios:delete">
+                        <Button size="sm" variant="ghost" icon={<Trash2 size={13} />} onClick={() => setDeletePriceId(pr.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+                      </Can>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -586,6 +613,26 @@ export default function ProductsPage() {
           onClose={() => setShowAddPrice(false)}
           onSubmit={(dto) => addPriceMutation.mutate({ dto })}
           loading={addPriceMutation.isPending}
+        />
+      )}
+
+      {editPriceItem && (
+        <PriceFormModal
+          open={!!editPriceItem}
+          onClose={() => setEditPriceItem(null)}
+          onSubmit={(dto) =>
+            updatePriceMutation.mutate({
+              priceId: editPriceItem.id,
+              dto: { nombre: dto.nombre, precio: dto.precio, cantidad: dto.cantidad },
+            })
+          }
+          loading={updatePriceMutation.isPending}
+          defaultValues={{
+            nombre: editPriceItem.nombre,
+            precio: Number(editPriceItem.precio) || 0,
+            cantidad: Number(editPriceItem.cantidad) || 1,
+          }}
+          isEdit
         />
       )}
 
@@ -696,27 +743,42 @@ interface PriceFormModalProps {
   onClose: () => void
   onSubmit: (dto: PriceForm) => void
   loading: boolean
+  defaultValues?: Partial<PriceForm>
+  isEdit?: boolean
 }
 
-function PriceFormModal({ open, onClose, onSubmit, loading }: PriceFormModalProps) {
+function PriceFormModal({ open, onClose, onSubmit, loading, defaultValues, isEdit = false }: PriceFormModalProps) {
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<PriceForm>({
     resolver: zodResolver(priceSchema) as unknown as Resolver<any>,
+    defaultValues: {
+      nombre: defaultValues?.nombre ?? '',
+      precio: defaultValues?.precio ?? 0,
+      cantidad: defaultValues?.cantidad ?? 0,
+    },
   })
 
   // Estado local para evitar el bug NumberInput+RHF (ref.current.value formateado → coerce → valor incorrecto)
-  const precioInput = useCurrencyInput(0)
-  const cantInput   = useCurrencyInput(0)
+  const precioInput = useCurrencyInput(defaultValues?.precio ?? 0)
+  const cantInput   = useCurrencyInput(defaultValues?.cantidad ?? 0)
 
   useEffect(() => {
-    if (open) { reset(); precioInput.setFromNumber(0); cantInput.setFromNumber(0) }
+    if (open) {
+      reset({
+        nombre: defaultValues?.nombre ?? '',
+        precio: defaultValues?.precio ?? 0,
+        cantidad: defaultValues?.cantidad ?? 0,
+      })
+      precioInput.setFromNumber(defaultValues?.precio ?? 0)
+      cantInput.setFromNumber(defaultValues?.cantidad ?? 0)
+    }
   }, [open, reset]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Modal open={open} onClose={onClose} title="Añadir presentación" size="sm"
+    <Modal open={open} onClose={onClose} title={isEdit ? 'Editar presentación' : 'Añadir presentación'} size="sm"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button loading={loading} onClick={handleSubmit(onSubmit)}>Añadir</Button>
+          <Button loading={loading} onClick={handleSubmit(onSubmit)}>{isEdit ? 'Guardar' : 'Añadir'}</Button>
         </>
       }
     >

@@ -17,6 +17,13 @@ export interface CreateProductoPrecioDto {
   cantidad: number
 }
 
+export interface UpdateProductoPrecioDto {
+  nombre?: string
+  precio?: number
+  cantidad?: number
+  activo?: boolean
+}
+
 export const productsApi = {
   getAll: (params?: PaginationParams) =>
     apiClient.get<Producto[]>('/products', { params }).then((r) => r.data),
@@ -38,6 +45,9 @@ export const productsApi = {
 
   addPrice: (productId: number, dto: CreateProductoPrecioDto) =>
     apiClient.post<ProductoPrecio>(`/products/${productId}/prices`, dto).then((r) => r.data),
+
+  updatePrice: (productId: number, priceId: number, dto: UpdateProductoPrecioDto) =>
+    apiClient.patch<ProductoPrecio>(`/products/${productId}/prices/${priceId}`, dto).then((r) => r.data),
 
   removePrice: (productId: number, priceId: number) =>
     apiClient.delete(`/products/${productId}/prices/${priceId}`).then((r) => r.data),

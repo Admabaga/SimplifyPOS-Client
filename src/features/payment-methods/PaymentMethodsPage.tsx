@@ -195,23 +195,23 @@ function MedioPagoCard({ mp, onEdit, onDelete }: {
   const comision = parseFloat(mp.comision_porcentaje as string) || 0
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
+    <Card className="hover:shadow-md transition-shadow overflow-hidden">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="p-2.5 rounded-xl t-bg-xlt t-text shrink-0">
             {tipoIcon(mp.tipo)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-semibold text-slate-800 truncate">{mp.nombre}</p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs text-slate-500 flex items-center gap-1">
-                <ArrowUpDown size={10} />
-                {comision > 0 ? `${comision}% comisión` : 'Sin comisión'}
+              <span className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                <ArrowUpDown size={10} className="shrink-0" />
+                <span className="truncate">{comision > 0 ? `${comision}% comisión` : 'Sin comisión'}</span>
               </span>
             </div>
           </div>
         </div>
-        <div className="flex gap-1 shrink-0">
+        <div className="flex gap-0.5 shrink-0 -mr-1">
           <Can permission="medios_pago:update">
             <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={onEdit} />
           </Can>
