@@ -17,6 +17,8 @@ import { productsApi } from '@/features/products/api'
 import { cuentasApi } from '@/features/accounts/api'
 import { billingApi } from '@/features/billing/api'
 import { Card, Spinner, Badge, StatCard, TabBar } from '@/shared/components/ui'
+import { AIAdvisorPanel } from '@/shared/components/AIAdvisorPanel'
+import { aiApi } from '@/shared/api/aiApi'
 import { formatCOP, MONTHS_ES } from '@/shared/lib/formatters'
 const BOG = 'America/Bogota'
 import { useAuthStore } from '@/stores/auth'
@@ -708,6 +710,17 @@ export default function DashboardPage() {
             </Card>
           </div>
         </>
+      )}
+
+      {/* ── AI Advisor ─────────────────────────────────────────────────────── */}
+      {canSeeReports && (
+        <AIAdvisorPanel
+          title="Asesor de negocio"
+          subtitle="Claude analiza tus ventas, cuentas y stock, y te dice qué hacer esta semana"
+          cta="Pedir consejo a la IA"
+          iconGradient="from-emerald-500 to-teal-600"
+          onAnalyze={() => aiApi.posAdvisor()}
+        />
       )}
     </div>
   )
