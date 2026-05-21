@@ -20,7 +20,7 @@ import { z } from 'zod'
 import type { Resolver } from 'react-hook-form'
 import {
   CheckCircle2, ChevronRight, Store, Package, CreditCard,
-  Wallet, Rocket, X,
+  Wallet, Rocket,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { Button, Input, Modal } from '@/shared/components/ui'
@@ -122,14 +122,6 @@ export default function SetupWizard({ open, onDismiss }: Props) {
   return (
     <Modal open={open} onClose={onDismiss} title="" size="lg" footer={null}>
       <div className="relative">
-        {/* Cerrar */}
-        <button
-          onClick={onDismiss}
-          className="absolute -top-1 -right-1 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors z-10"
-        >
-          <X size={16} />
-        </button>
-
         {/* Barra de progreso */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
