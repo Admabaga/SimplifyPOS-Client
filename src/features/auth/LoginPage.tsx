@@ -349,23 +349,38 @@ export default function LoginPage() {
 
         {/* ─── Centro: hero claim + dashboard mock ─── */}
         <div className="relative z-10 flex flex-col items-start max-w-2xl w-full flex-1 justify-center min-h-0 py-4">
-          {/* Live ticker como "introducción" */}
-          <div className="mb-4 anim-fade-up self-center sm:self-start max-w-full" style={{ animationDelay: '0.15s' }}>
-            <LiveTicker />
-          </div>
-
           {/* Hero claim grande */}
-          <h1 className="text-[30px] sm:text-[38px] xl:text-[42px] 2xl:text-5xl font-extrabold leading-[1.05] tracking-tight text-white mb-3 anim-fade-up"
-              style={{ animationDelay: '0.25s' }}>
-            Vende más. <br />
-            <span className="text-shimmer">Gestiona menos.</span>
+          <h1 className="text-[28px] sm:text-[36px] xl:text-[40px] font-extrabold leading-[1.08] tracking-tight text-white mb-3 anim-fade-up"
+              style={{ animationDelay: '0.15s' }}>
+            Tu negocio,<br />
+            <span className="text-shimmer">siempre al día.</span>
           </h1>
 
-          <p className="text-sm xl:text-base text-white/65 mb-5 max-w-md leading-relaxed anim-fade-up"
-             style={{ animationDelay: '0.35s' }}>
-            El POS que entiende cómo trabajan los comerciantes colombianos.
-            Inventario, ventas, caja y DIAN — en una sola app.
+          <p className="text-sm xl:text-base text-white/65 mb-6 max-w-sm leading-relaxed anim-fade-up"
+             style={{ animationDelay: '0.25s' }}>
+            El POS diseñado para comerciantes colombianos. Inventario, ventas, caja y DIAN en una sola app.
           </p>
+
+          {/* Feature bullets — 3 props claras como Wompi */}
+          <div className="flex flex-col gap-3 mb-6 anim-fade-up w-full max-w-sm" style={{ animationDelay: '0.32s' }}>
+            {[
+              { icon: '⚡', title: 'Venta en 8 segundos', desc: 'Busca, agrega y cobra sin fricciones' },
+              { icon: '📊', title: 'Reportes en tiempo real', desc: 'KPIs, caja y stock siempre actualizados' },
+              { icon: '🧾', title: 'Facturación DIAN', desc: 'Facturas POS e informales con un click' },
+            ].map((f, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 px-3.5 py-3 rounded-xl border border-white/10"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                <span className="text-xl leading-none mt-0.5">{f.icon}</span>
+                <div>
+                  <p className="text-sm font-bold text-white leading-tight">{f.title}</p>
+                  <p className="text-xs text-white/55 mt-0.5 leading-tight">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* CTA mobile — scroll al login (oculto en desktop) */}
           <button
@@ -383,8 +398,8 @@ export default function LoginPage() {
             <span className="ml-1 opacity-70">↓</span>
           </button>
 
-          {/* Dashboard mock flotante 3D */}
-          <div className="relative w-full anim-fade-up" style={{ animationDelay: '0.45s' }}>
+          {/* Dashboard mock flotante 3D — solo xl+ para no saturar */}
+          <div className="relative w-full anim-fade-up hidden xl:block" style={{ animationDelay: '0.45s' }}>
             {/* Glow detrás del mock */}
             <div className="absolute -inset-4 rounded-3xl blur-2xl opacity-50"
                  style={{ background: 'radial-gradient(circle at 50% 0%, var(--t-accent) 0%, transparent 60%)' }} />

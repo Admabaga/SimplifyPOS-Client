@@ -7,7 +7,7 @@
  * - Seed automático de genéricos si la lista está vacía
  * - Búsqueda por nombre o documento
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -306,6 +306,9 @@ interface FormModalProps {
 
 function ClienteFormModal({ open, onClose, onSaved, inicial }: FormModalProps) {
   const isEdit = !!inicial
+  const [showSnapshotBanner, setShowSnapshotBanner] = useState(
+    !isEdit && !localStorage.getItem('snapshot_banner_dismissed'),
+  )
   const {
     register, handleSubmit, reset,
     formState: { errors, isSubmitting },
@@ -362,10 +365,27 @@ function ClienteFormModal({ open, onClose, onSaved, inicial }: FormModalProps) {
       size="md"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <InfoBanner icon={<AlertCircle size={15} />} variant="info">
-          Estos datos se copiarán como snapshot al crear la cuenta. Si el cliente cambia
-          sus datos, las cuentas anteriores conservan el snapshot original.
-        </InfoBanner>
+        {!isEdit && showSnapshotBanner && (
+          <InfoBanner icon={<AlertCircle size={15} />} variant="info">
+            <span className="flex items-start justify-between gap-2">
+              <span>
+                Estos datos se copiarán como snapshot al crear la cuenta. Si el cliente cambia
+                sus datos, las cuentas anteriores conservan el snapshot original.
+              </span>
+              <button
+                type="button"
+                className="shrink-0 text-blue-400 hover:text-blue-600 mt-0.5"
+                aria-label="Cerrar aviso"
+                onClick={() => {
+                  localStorage.setItem('snapshot_banner_dismissed', '1')
+                  setShowSnapshotBanner(false)
+                }}
+              >
+                ✕
+              </button>
+            </span>
+          </InfoBanner>
+        )}
 
         <Input
           label="Nombre / Razón social *"

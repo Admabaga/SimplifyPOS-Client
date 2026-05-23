@@ -20,6 +20,7 @@ const schema = z.object({
   telefono: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   direccion: z.string().optional(),
+  ciudad: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -99,7 +100,8 @@ export default function SuppliersPage() {
                 <Th>Nombre</Th>
                 <Th className="hidden sm:table-cell">Teléfono</Th>
                 <Th className="hidden md:table-cell">Email</Th>
-                <Th className="hidden lg:table-cell">Dirección</Th>
+                <Th className="hidden lg:table-cell">Ciudad</Th>
+                <Th className="hidden xl:table-cell">Dirección</Th>
                 <Th>Acciones</Th>
               </tr>
             </thead>
@@ -114,11 +116,12 @@ export default function SuppliersPage() {
                   </Td>
                   <Td className="hidden sm:table-cell">{p.telefono ?? '—'}</Td>
                   <Td className="hidden md:table-cell">{p.email ?? '—'}</Td>
-                  <Td className="hidden lg:table-cell">{p.direccion ?? '—'}</Td>
+                  <Td className="hidden lg:table-cell">{(p as any).ciudad ?? '—'}</Td>
+                  <Td className="hidden xl:table-cell">{p.direccion ?? '—'}</Td>
                   <Td>
                     <div className="flex gap-1">
                       <Can permission="proveedores:update">
-                        <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={() => setEditItem({ id: p.id, nombre: p.nombre, telefono: p.telefono ?? '', email: p.email ?? '', direccion: p.direccion ?? '' })} />
+                        <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={() => setEditItem({ id: p.id, nombre: p.nombre, telefono: p.telefono ?? '', email: p.email ?? '', direccion: p.direccion ?? '', ciudad: (p as any).ciudad ?? '' })} />
                       </Can>
                       <Can permission="proveedores:delete">
                         <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setDeleteId(p.id)} className="text-red-500 hover:text-red-700" />
@@ -182,6 +185,7 @@ function ProveedorModal({ open, onClose, defaultValues, onSubmit, loading, title
       telefono: defaultValues?.telefono ?? '',
       email: defaultValues?.email ?? '',
       direccion: defaultValues?.direccion ?? '',
+      ciudad: (defaultValues as any)?.ciudad ?? '',
     },
   })
 
@@ -199,7 +203,10 @@ function ProveedorModal({ open, onClose, defaultValues, onSubmit, loading, title
     >
       <form className="space-y-3">
         <Input label="Nombre *" {...register('nombre')} error={errors.nombre?.message} />
-        <Input label="Teléfono" {...register('telefono')} />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Teléfono" {...register('telefono')} />
+          <Input label="Ciudad" {...register('ciudad')} placeholder="Medellín" />
+        </div>
         <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
         <Input label="Dirección" {...register('direccion')} />
       </form>

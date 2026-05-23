@@ -31,6 +31,7 @@ const schema = z.object({
   nombre:      z.string().min(1, 'Requerido'),
   descripcion: z.string().optional(),
   iva:         z.coerce.number().int().min(0).max(100),
+  codigo_ciiu: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -241,6 +242,7 @@ function CategoriaModal({ open, onClose, defaultValues, onSubmit, loading, title
       nombre:      defaultValues?.nombre ?? '',
       descripcion: defaultValues?.descripcion ?? '',
       iva:         defaultValues?.iva ?? 19,
+      codigo_ciiu: defaultValues?.codigo_ciiu ?? '',
     },
   })
 
@@ -256,6 +258,11 @@ function CategoriaModal({ open, onClose, defaultValues, onSubmit, loading, title
       <form className="space-y-3">
         <Input label="Nombre *" {...register('nombre')} error={errors.nombre?.message} autoFocus />
         <Input label="Descripción" {...register('descripcion')} placeholder="Ej: Artículos de canasta básica" />
+        <Input
+          label="Código CIIU"
+          {...register('codigo_ciiu')}
+          placeholder="Ej: 4711 — Comercio al por menor"
+        />
         <Select
           label="Tarifa IVA *"
           {...register('iva')}

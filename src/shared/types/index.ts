@@ -29,6 +29,7 @@ export interface Categoria {
   nombre: string
   descripcion?: string | null
   iva: number          // tarifa IVA % (0, 5 o 19) — art. Estatuto Tributario
+  codigo_ciiu?: string | null   // Código CIIU DIAN (actividad económica)
   created_at: string
 }
 
@@ -38,6 +39,7 @@ export interface Proveedor {
   telefono?: string | null
   email?: string | null
   direccion?: string | null
+  ciudad?: string | null
   created_at: string
 }
 
@@ -55,6 +57,7 @@ export interface Producto {
   nombre: string
   codigo?: string | null
   codigo_interno?: string | null
+  codigo_arancelario?: string | null  // Partida arancelaria DIAN (productos importados)
   descripcion?: string | null
   precio_ponderado: string
   stock_total: number
