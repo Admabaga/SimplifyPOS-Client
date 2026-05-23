@@ -5,6 +5,8 @@ export interface CreateCategoriaDto {
   nombre: string
   descripcion?: string
   iva?: number
+  codigo_ciiu?: string
+  codigo_arancelario_default?: string
 }
 
 export const categoriasApi = {

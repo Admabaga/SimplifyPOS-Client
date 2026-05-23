@@ -30,6 +30,7 @@ export interface Categoria {
   descripcion?: string | null
   iva: number          // tarifa IVA % (0, 5 o 19) — art. Estatuto Tributario
   codigo_ciiu?: string | null   // Código CIIU DIAN (actividad económica)
+  codigo_arancelario_default?: string | null  // Partida arancelaria que heredan los productos
   created_at: string
 }
 

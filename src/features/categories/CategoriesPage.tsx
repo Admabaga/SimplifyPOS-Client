@@ -28,10 +28,11 @@ import type { Categoria } from '@/shared/types'
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  nombre:      z.string().min(1, 'Requerido'),
-  descripcion: z.string().optional(),
-  iva:         z.coerce.number().int().min(0).max(100),
-  codigo_ciiu: z.string().optional(),
+  nombre:                     z.string().min(1, 'Requerido'),
+  descripcion:                z.string().optional(),
+  iva:                        z.coerce.number().int().min(0).max(100),
+  codigo_ciiu:                z.string().optional(),
+  codigo_arancelario_default: z.string().optional(),
 })
 type FormData = z.infer<typeof schema>
 
@@ -148,6 +149,7 @@ export default function CategoriesPage() {
                 <th className="text-left py-2 px-3 text-slate-500 font-medium">Categoría</th>
                 <th className="text-left py-2 px-3 text-slate-500 font-medium hidden sm:table-cell">Descripción</th>
                 <th className="text-center py-2 px-3 text-slate-500 font-medium">IVA</th>
+                <th className="text-left py-2 px-3 text-slate-500 font-medium hidden lg:table-cell">Arancel DIAN</th>
                 {isMaster && <th className="py-2 px-3" />}
               </tr>
             </thead>
@@ -165,6 +167,11 @@ export default function CategoriesPage() {
                   <td className="py-2.5 px-3 text-slate-500 text-xs hidden sm:table-cell">{cat.descripcion ?? '—'}</td>
                   <td className="py-2.5 px-3 text-center">
                     <IvaBadge iva={cat.iva} />
+                  </td>
+                  <td className="py-2.5 px-3 hidden lg:table-cell">
+                    {cat.codigo_arancelario_default
+                      ? <span className="font-mono text-xs text-slate-500">{cat.codigo_arancelario_default}</span>
+                      : <span className="text-slate-300 text-xs">—</span>}
                   </td>
                   {isMaster && (
                     <td className="py-2.5 px-3">
@@ -239,10 +246,11 @@ function CategoriaModal({ open, onClose, defaultValues, onSubmit, loading, title
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema) as any,
     defaultValues: {
-      nombre:      defaultValues?.nombre ?? '',
-      descripcion: defaultValues?.descripcion ?? '',
-      iva:         defaultValues?.iva ?? 19,
-      codigo_ciiu: defaultValues?.codigo_ciiu ?? '',
+      nombre:                     defaultValues?.nombre ?? '',
+      descripcion:                defaultValues?.descripcion ?? '',
+      iva:                        defaultValues?.iva ?? 19,
+      codigo_ciiu:                defaultValues?.codigo_ciiu ?? '',
+      codigo_arancelario_default: defaultValues?.codigo_arancelario_default ?? '',
     },
   })
 
@@ -258,11 +266,18 @@ function CategoriaModal({ open, onClose, defaultValues, onSubmit, loading, title
       <form className="space-y-3">
         <Input label="Nombre *" {...register('nombre')} error={errors.nombre?.message} autoFocus />
         <Input label="Descripción" {...register('descripcion')} placeholder="Ej: Artículos de canasta básica" />
-        <Input
-          label="Código CIIU"
-          {...register('codigo_ciiu')}
-          placeholder="Ej: 4711 — Comercio al por menor"
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            label="Código CIIU"
+            {...register('codigo_ciiu')}
+            placeholder="Ej: 4711"
+          />
+          <Input
+            label="Arancel DIAN"
+            {...register('codigo_arancelario_default')}
+            placeholder="Ej: 2203.00.00.00"
+          />
+        </div>
         <Select
           label="Tarifa IVA *"
           {...register('iva')}
