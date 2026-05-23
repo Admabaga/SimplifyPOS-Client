@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell, AlertTriangle, PackageX, Package, ArrowRight,
@@ -140,6 +141,8 @@ export default function NotificationsPage() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
 
+  const qc = useQueryClient()
+  const [forcing, setForcing] = useState(false)
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['notifications', 'stock'],
     queryFn: () => notificationsApi.getStockAlerts(),
@@ -148,6 +151,20 @@ export default function NotificationsPage() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
+
+  const handleForceRefresh = async () => {
+    setForcing(true)
+    try {
+      const fresh = await notificationsApi.getStockAlerts(90, true)
+      qc.setQueryData(['notifications', 'stock'], fresh)
+      toast.success(`Stock revisado — ${fresh.count} alerta${fresh.count === 1 ? '' : 's'}`)
+    } catch {
+      toast.error('No se pudo revisar el stock')
+      refetch()
+    } finally {
+      setForcing(false)
+    }
+  }
 
   const notifications = data?.notifications ?? []
   const filtered =
@@ -166,10 +183,11 @@ export default function NotificationsPage() {
           <Button
             variant="secondary"
             size="sm"
-            icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />}
-            onClick={() => refetch()}
+            icon={<RefreshCw size={14} className={isFetching || forcing ? 'animate-spin' : ''} />}
+            onClick={handleForceRefresh}
+            disabled={forcing}
           >
-            Actualizar
+            {forcing ? 'Revisando…' : 'Actualizar'}
           </Button>
         }
       />

@@ -99,7 +99,21 @@ function ProductCard({
           )}
         </div>
       )}
-      {product.codigo && <p className="text-xs text-slate-400 font-mono mb-2">#{product.codigo}</p>}
+      {(product.codigo || product.codigo_arancelario) && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-2">
+          {product.codigo && (
+            <p className="text-xs text-slate-400 font-mono">#{product.codigo}</p>
+          )}
+          {product.codigo_arancelario && (
+            <p
+              className="text-[10px] text-slate-400 font-mono"
+              title="Código arancelario DIAN"
+            >
+              DIAN: {product.codigo_arancelario}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Precios (presentaciones) */}
       {product.precios && product.precios.length > 0 && (
@@ -455,7 +469,16 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-slate-400 font-mono text-xs hidden sm:table-cell">{p.codigo ?? '—'}</Td>
+                    <Td className="text-slate-400 font-mono text-xs hidden sm:table-cell">
+                      <div className="flex flex-col leading-tight">
+                        <span>{p.codigo ?? '—'}</span>
+                        {p.codigo_arancelario && (
+                          <span className="text-[10px] text-slate-400/80" title="Código arancelario DIAN">
+                            DIAN {p.codigo_arancelario}
+                          </span>
+                        )}
+                      </div>
+                    </Td>
                     <Td>
                       {/* Mobile: solo conteo */}
                       <span className="sm:hidden text-xs text-slate-500 whitespace-nowrap">

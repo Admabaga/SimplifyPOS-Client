@@ -27,8 +27,8 @@ export interface StockAlertsResponse {
 }
 
 export const notificationsApi = {
-  getStockAlerts: (days = 90) =>
+  getStockAlerts: (days = 90, force = false) =>
     apiClient
-      .get<StockAlertsResponse>('/notifications/stock', { params: { days } })
+      .get<StockAlertsResponse>('/notifications/stock', { params: { days, force } })
       .then((r) => r.data),
 }
