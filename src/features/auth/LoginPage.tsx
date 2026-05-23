@@ -238,7 +238,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       {/* ── Banner: hero editorial + dashboard mock flotante (mobile + desktop) ── */}
       <div
-        className="w-full lg:w-1/2 flex flex-col justify-between relative overflow-hidden px-5 sm:px-8 xl:px-10 py-6 xl:py-8 min-h-screen lg:h-screen lg:sticky lg:top-0"
+        className="w-full lg:w-1/2 flex flex-col justify-between relative overflow-hidden px-5 sm:px-8 xl:px-10 py-6 xl:py-8 min-h-[520px] lg:h-screen lg:sticky lg:top-0"
         style={{ background: 'var(--t-sidebar-bg)' }}
       >
         {/* Keyframes */}
@@ -348,7 +348,7 @@ export default function LoginPage() {
         </div>
 
         {/* ─── Centro: hero claim + dashboard mock ─── */}
-        <div className="relative z-10 flex flex-col items-start max-w-2xl w-full flex-1 justify-center min-h-0 py-4">
+        <div className="relative z-10 flex flex-col items-start max-w-2xl w-full flex-1 justify-start overflow-hidden py-4 lg:py-6">
           {/* Hero claim grande */}
           <h1 className="text-[28px] sm:text-[36px] xl:text-[40px] font-extrabold leading-[1.08] tracking-tight text-white mb-3 anim-fade-up"
               style={{ animationDelay: '0.15s' }}>
@@ -362,7 +362,7 @@ export default function LoginPage() {
           </p>
 
           {/* Feature bullets — 3 props claras como Wompi */}
-          <div className="flex flex-col gap-3 mb-6 anim-fade-up w-full max-w-sm" style={{ animationDelay: '0.32s' }}>
+          <div className="flex flex-col gap-3 mb-6 anim-fade-up w-full max-w-sm xl:hidden" style={{ animationDelay: '0.32s' }}>
             {[
               { icon: '⚡', title: 'Venta en 8 segundos', desc: 'Busca, agrega y cobra sin fricciones' },
               { icon: '📊', title: 'Reportes en tiempo real', desc: 'KPIs, caja y stock siempre actualizados' },
