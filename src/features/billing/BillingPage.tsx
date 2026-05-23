@@ -21,8 +21,14 @@ import TicketsHistorialTab from './components/TicketsHistorialTab'
 type Tab = 'empresa' | 'resoluciones' | 'historial'
 
 export default function BillingPage() {
-  const can = useAuthStore((s) => s.can)
-  const canConfigure = can('facturacion:configure')
+  const can  = useAuthStore((s) => s.can)
+  const user = useAuthStore((s) => s.user)
+
+  // Doble barrera: permiso + rol. Supervisor/cajero no ven config aunque
+  // su JWT tenga el permiso por datos obsoletos (antes de la migración).
+  const adminRoles = ['master', 'admin']
+  const isAdminOrMaster = adminRoles.includes(user?.role ?? '')
+  const canConfigure = isAdminOrMaster && can('facturacion:configure')
 
   // Si no puede configurar, solo verá historial.
   const defaultTab: Tab = canConfigure ? 'empresa' : 'historial'
