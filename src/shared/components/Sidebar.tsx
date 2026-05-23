@@ -56,7 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Gastos',        to: '/expenses',       icon: <Wallet size={17} />,        permission: 'gastos:read' },
       { label: 'Medios de pago',to: '/payment-methods',icon: <CreditCard size={17} />,   permission: 'medios_pago:read' },
       { label: 'Reportes',      to: '/reports',        icon: <TrendingUp size={17} />,    permission: 'reportes:read' },
-      { label: 'Facturación',   to: '/admin/billing',  icon: <ScrollText size={17} />,    permission: 'facturacion:configure' },
+      { label: 'Facturación',   to: '/admin/billing',  icon: <ScrollText size={17} />,    permission: 'facturacion:read' },
     ],
   },
   {

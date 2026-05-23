@@ -768,13 +768,18 @@ export function Divider({ label }: { label?: string }) {
 // ─── TabBar ──────────────────────────────────────────────────────────────────
 
 interface TabBarProps<T extends string> {
-  tabs: { key: T; label: string; count?: number }[]
+  tabs: { key: T; label: string; count?: number; dot?: 'red' | 'yellow' | 'green' }[]
   active: T
   onChange: (key: T) => void
   className?: string
 }
 
 export function TabBar<T extends string>({ tabs, active, onChange, className }: TabBarProps<T>) {
+  const dotCls: Record<'red' | 'yellow' | 'green', string> = {
+    red:    'bg-red-500',
+    yellow: 'bg-yellow-400',
+    green:  'bg-emerald-500',
+  }
   return (
     <div className={clsx('flex gap-0.5 p-1 bg-slate-100 rounded-lg overflow-x-auto scrollbar-none', className)}>
       {tabs.map((t) => (
@@ -788,6 +793,9 @@ export function TabBar<T extends string>({ tabs, active, onChange, className }: 
               : 'text-slate-500 hover:text-slate-700'
           )}
         >
+          {t.dot && (
+            <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', dotCls[t.dot])} />
+          )}
           {t.label}
           {t.count !== undefined && (
             <span className={clsx(
