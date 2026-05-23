@@ -16,8 +16,9 @@ import { Users, Plus, Pencil, PowerOff, AlertCircle, Search, ShieldCheck } from 
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Select, Modal, Badge, Spinner, EmptyState,
-  Table, Th, Td, SearchInput, ConfirmDialog, TabBar, InfoBanner,
+  Table, Th, Td, SearchInput, ConfirmDialog, TabBar, InfoBanner, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { formatDate } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
@@ -80,6 +81,8 @@ export default function ClientesPage() {
         (c.email ?? '').toLowerCase().includes(q),
     )
   }, [clientes, search])
+
+  const pg = usePagination(filtered)
 
   const activos = clientes.filter((c) => c.activo).length
   const genericos = clientes.filter((c) => c.es_generico).length
@@ -193,7 +196,7 @@ export default function ClientesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
+              {pg.paginated.map((c) => (
                 <tr
                   key={c.id}
                   className={`border-t border-slate-50 transition-colors hover:bg-slate-50/60 ${!c.activo ? 'opacity-50' : ''}`}
@@ -262,6 +265,7 @@ export default function ClientesPage() {
               ))}
             </tbody>
           </Table>
+          <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
         </div>
       )}
 

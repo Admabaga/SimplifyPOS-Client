@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,8 +8,9 @@ import { Plus, BookOpen, CheckCircle2, Circle, AlertCircle, TrendingUp, ChevronR
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Select, Table, Th, Td, Badge, Spinner, EmptyState,
-  Modal, Card, StatCard, TabBar, SearchInput, ProgressBar, InfoBanner,
+  Modal, Card, StatCard, TabBar, SearchInput, ProgressBar, InfoBanner, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
@@ -38,7 +39,7 @@ export default function AccountsPage() {
 
   const { data: cuentas = [], isLoading } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => cuentasApi.getAll(),
+    queryFn: () => cuentasApi.getAll({ limit: 500 }),
   })
 
   const createMutation = useMutation({
@@ -94,6 +95,11 @@ export default function AccountsPage() {
       return new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime()
     })
   }, [cuentas, tab, search, dateFilter])
+
+  const pg = usePagination(filtered)
+
+  // Reset paginación cuando cambien filtros
+  useEffect(() => { pg.reset() }, [tab, search, dateFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabItems = [
     { key: 'abiertas' as FilterTab, label: 'Abiertas', count: stats.abiertas },
@@ -219,7 +225,7 @@ export default function AccountsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => {
+              {pg.paginated.map((c) => {
                 const pendiente = c.valor_pendiente ?? 0
                 const pagado    = c.total - pendiente
                 const pct       = c.total > 0 ? (pagado / c.total) * 100 : 0
@@ -277,6 +283,9 @@ export default function AccountsPage() {
               })}
             </tbody>
           </Table>
+
+          {/* Paginación */}
+          <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
 
           {/* Footer stats */}
           <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">

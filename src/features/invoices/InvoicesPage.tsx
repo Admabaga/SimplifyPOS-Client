@@ -11,8 +11,9 @@ import {
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Table, Th, Td, Spinner, EmptyState, Modal, Card,
-  StatCard, DateRangeBar, SearchInput, Badge, FileDropZone, InfoBanner,
+  StatCard, DateRangeBar, SearchInput, Badge, FileDropZone, InfoBanner, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import { apiError } from '@/shared/lib/apiError'
 import Can from '@/shared/components/Can'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
@@ -50,7 +51,7 @@ export default function InvoicesPage() {
 
   const { data: facturas = [], isLoading } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => facturasApi.getAll(),
+    queryFn: () => facturasApi.getAll({ limit: 500 }),
   })
 
   const { data: proveedores = [] } = useQuery({
@@ -108,6 +109,8 @@ export default function InvoicesPage() {
       return true
     })
   }, [facturas, desde, hasta, search, proveedores])
+
+  const pg = usePagination(filtered)
 
   const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
@@ -238,7 +241,7 @@ export default function InvoicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((f) => {
+                {pg.paginated.map((f) => {
                   const total    = facturaTotal(f)
                   const expanded = expandedIds.has(f.id)
 
@@ -310,6 +313,7 @@ export default function InvoicesPage() {
             </Table>
             </div>
 
+            <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
             <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
               <span>{filtered.length} factura{filtered.length !== 1 ? 's' : ''}</span>
               <span className="font-semibold text-slate-700 tabular-nums">

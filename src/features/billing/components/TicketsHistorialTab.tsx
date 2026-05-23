@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ScrollText, Eye, Receipt, FileText, XCircle, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
-  Card, Spinner, Badge, EmptyState, Table, Th, Td, Button, Modal,
+  Card, Spinner, Badge, EmptyState, Table, Th, Td, Button, Modal, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { billingApi } from '../api'
 import { formatCOP, formatDateTime } from '@/shared/lib/formatters'
@@ -27,7 +28,7 @@ export default function TicketsHistorialTab() {
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ['billing', 'tickets'],
-    queryFn: () => billingApi.listTickets(200, 0),
+    queryFn: () => billingApi.listTickets(500, 0),
   })
 
   const annulMutation = useMutation({
@@ -56,10 +57,12 @@ export default function TicketsHistorialTab() {
 
   const recibos = tickets.filter((t) => t.tipo_documento === 'INFORMAL')
   const dian    = tickets.filter((t) => t.tipo_documento !== 'INFORMAL')
+  const lista   = subTab === 'recibos' ? recibos : dian
+  const pg      = usePagination(lista)
+
+  useEffect(() => { pg.reset() }, [subTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) return <div className="flex justify-center py-12"><Spinner size={28} /></div>
-
-  const lista = subTab === 'recibos' ? recibos : dian
 
   return (
     <>
@@ -108,7 +111,7 @@ export default function TicketsHistorialTab() {
                 </tr>
               </thead>
               <tbody>
-                {lista.map((t) => (
+                {pg.paginated.map((t) => (
                   <tr key={t.id} className={`border-b border-slate-100 ${t.estado === 'ANULADA' ? 'opacity-60 bg-red-50/30' : ''}`}>
                     <Td>
                       <span className="text-[11px] text-slate-500 whitespace-nowrap">{formatDateTime(t.fecha_emision)}</span>
@@ -153,6 +156,7 @@ export default function TicketsHistorialTab() {
                 ))}
               </tbody>
             </Table>
+            <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
           </div>
         )}
       </Card>

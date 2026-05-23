@@ -11,8 +11,9 @@ import {
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Table, Th, Td, Badge, Spinner, EmptyState,
-  Modal, ConfirmDialog, Card, StatCard, SearchInput,
+  Modal, ConfirmDialog, Card, StatCard, SearchInput, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { formatCOP } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
@@ -32,6 +33,7 @@ const productSchema = z.object({
   activo:               z.boolean().default(true),
   stock_inicial:        z.coerce.number().min(0).optional(),
   precio_costo_inicial: z.coerce.number().min(0).optional(),
+  codigo_arancelario:   z.string().optional(),
 })
 
 const priceSchema = z.object({
@@ -151,7 +153,7 @@ export default function ProductsPage() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
-    queryFn:  () => productsApi.getAll(),
+    queryFn:  () => productsApi.getAll({ limit: 500 }),
   })
 
   const { data: categorias = [] } = useQuery({
@@ -289,6 +291,8 @@ export default function ProductsPage() {
     })
   }, [products, search, catFilter, stockFilter])
 
+  const pg = usePagination(filtered)
+
   const catName = (id?: number) => categorias.find((c) => c.id === id)?.nombre
 
   return (
@@ -381,7 +385,7 @@ export default function ProductsPage() {
       ) : viewMode === 'grid' ? (
         /* ── Grid view ──────────────────────────────────────────────────── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((p) => (
+          {pg.paginated.map((p) => (
             <ProductCard
               key={p.id}
               product={p}
@@ -411,7 +415,7 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => {
+              {pg.paginated.map((p) => {
                 const cat   = categorias.find((c) => c.id === p.categoria_id)
                 const stock = p.stock_total ?? 0
                 const presentaciones = p.precios?.filter((pr: any) => pr.nombre !== 'Perdida' && pr.activo !== false) ?? []
@@ -515,6 +519,7 @@ export default function ProductsPage() {
             </tbody>
           </Table>
           </div>
+          <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
           <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex justify-between text-xs text-slate-500">
             <span>{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
             <span>Stock total: <strong className="text-slate-700">{stats.totalStock} u.</strong></span>
@@ -531,7 +536,7 @@ export default function ProductsPage() {
           open={!!editProduct}
           onClose={() => setEditProduct(null)}
           categorias={categorias}
-          defaultValues={{ nombre: editProduct.nombre, activo: editProduct.activo, codigo: editProduct.codigo ?? undefined, descripcion: editProduct.descripcion ?? undefined, categoria_id: editProduct.categoria_id ?? undefined }}
+          defaultValues={{ nombre: editProduct.nombre, activo: editProduct.activo, codigo: editProduct.codigo ?? undefined, descripcion: editProduct.descripcion ?? undefined, categoria_id: editProduct.categoria_id ?? undefined, codigo_arancelario: (editProduct as any).codigo_arancelario ?? undefined }}
           onSubmit={(dto) => updateMutation.mutate({ id: editProduct.id, dto })}
           loading={updateMutation.isPending}
           title="Editar producto"
@@ -667,13 +672,14 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
   const { register, handleSubmit, formState: { errors } } = useForm<ProductForm>({
     resolver: zodResolver(productSchema) as unknown as Resolver<any>,
     defaultValues: {
-      nombre:               defaultValues?.nombre      ?? '',
-      codigo:               defaultValues?.codigo      ?? '',
-      descripcion:          defaultValues?.descripcion ?? '',
+      nombre:               defaultValues?.nombre              ?? '',
+      codigo:               defaultValues?.codigo              ?? '',
+      descripcion:          defaultValues?.descripcion         ?? '',
       categoria_id:         defaultValues?.categoria_id,
-      activo:               defaultValues?.activo      ?? true,
+      activo:               defaultValues?.activo              ?? true,
       stock_inicial:        undefined,
       precio_costo_inicial: undefined,
+      codigo_arancelario:   (defaultValues as any)?.codigo_arancelario ?? '',
     },
   })
 
@@ -688,7 +694,15 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
     >
       <form className="space-y-4">
         <Input label="Nombre *"      {...register('nombre')}      error={errors.nombre?.message} autoFocus />
-        <Input label="Código"        {...register('codigo')}      placeholder="Ej: AGU001" />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Código interno" {...register('codigo')}      placeholder="Ej: AGU001" />
+          <Input
+            label="Código arancelario DIAN"
+            {...register('codigo_arancelario')}
+            placeholder="Ej: 2203.00.00.00"
+            title="Partida arancelaria DIAN — aplica a productos importados"
+          />
+        </div>
         <Input label="Descripción"   {...register('descripcion')} placeholder="Descripción opcional..." />
         <div className="space-y-1.5">
           <label className="block text-sm font-medium text-slate-700">Categoría</label>

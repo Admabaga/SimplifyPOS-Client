@@ -670,25 +670,81 @@ export function Td({ children, className }: { children?: ReactNode; className?: 
 
 interface PaginationProps { page: number; total: number; pageSize?: number; onChange: (page: number) => void }
 
-export function Pagination({ page, total, pageSize = 25, onChange }: PaginationProps) {
+/** Genera la secuencia de botones de página con ellipsis */
+function pageRange(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '...')[] = [1]
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end   = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+}
+
+export function Pagination({ page, total, pageSize = 50, onChange }: PaginationProps) {
   const totalPages = Math.ceil(total / pageSize)
   if (totalPages <= 1) return null
   const start = (page - 1) * pageSize + 1
-  const end = Math.min(page * pageSize, total)
+  const end   = Math.min(page * pageSize, total)
+
+  const btnBase  = 'min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium transition-all border select-none'
+  const btnIdle  = 'border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+  const btnActive = 'border-transparent text-white shadow-sm t-bg'
+  const btnDisabled = 'border-slate-100 text-slate-300 pointer-events-none'
+
   return (
-    <div className="flex items-center justify-between px-1 mt-4">
-      <p className="text-xs text-slate-500">
-        <span className="font-medium text-slate-700">{start}–{end}</span> de <span className="font-medium text-slate-700">{total}</span>
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 bg-slate-50/60">
+      {/* Info */}
+      <p className="text-xs text-slate-500 order-2 sm:order-1">
+        Mostrando{' '}
+        <span className="font-semibold text-slate-700 tabular-nums">{start}–{end}</span>
+        {' '}de{' '}
+        <span className="font-semibold text-slate-700 tabular-nums">{total}</span>
+        {' '}resultados
       </p>
-      <div className="flex items-center gap-1">
-        <button onClick={() => onChange(page - 1)} disabled={page === 1} aria-label="Anterior"
-          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-colors">
-          <ChevronLeft size={14} />
+
+      {/* Controles */}
+      <div className="flex items-center gap-1 order-1 sm:order-2">
+        {/* Anterior */}
+        <button
+          onClick={() => onChange(page - 1)}
+          disabled={page === 1}
+          aria-label="Página anterior"
+          className={clsx(btnBase, page === 1 ? btnDisabled : btnIdle, 'flex items-center gap-1 px-2.5')}
+        >
+          <ChevronLeft size={13} />
+          <span className="hidden sm:inline">Ant.</span>
         </button>
-        <span className="text-xs text-slate-600 px-2 font-medium tabular-nums">{page} / {totalPages}</span>
-        <button onClick={() => onChange(page + 1)} disabled={page === totalPages} aria-label="Siguiente"
-          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-colors">
-          <ChevronRight size={14} />
+
+        {/* Números */}
+        <div className="flex items-center gap-0.5">
+          {pageRange(page, totalPages).map((p, i) =>
+            p === '...' ? (
+              <span key={`ellipsis-${i}`} className="w-7 text-center text-xs text-slate-400 select-none">···</span>
+            ) : (
+              <button
+                key={p}
+                onClick={() => onChange(p)}
+                aria-current={p === page ? 'page' : undefined}
+                className={clsx(btnBase, p === page ? btnActive : btnIdle)}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Siguiente */}
+        <button
+          onClick={() => onChange(page + 1)}
+          disabled={page === totalPages}
+          aria-label="Página siguiente"
+          className={clsx(btnBase, page === totalPages ? btnDisabled : btnIdle, 'flex items-center gap-1 px-2.5')}
+        >
+          <span className="hidden sm:inline">Sig.</span>
+          <ChevronRight size={13} />
         </button>
       </div>
     </div>

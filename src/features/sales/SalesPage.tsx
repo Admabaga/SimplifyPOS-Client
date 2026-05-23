@@ -10,8 +10,9 @@ import {
 } from 'recharts'
 import {
   PageHeader, Card, Table, Th, Td, Spinner, EmptyState, Button,
-  StatCard, DateRangeBar, SearchInput, Badge, InfoBanner,
+  StatCard, DateRangeBar, SearchInput, Badge, InfoBanner, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
 import { ventasApi } from './api'
 import { productsApi } from '@/features/products/api'
@@ -109,6 +110,8 @@ export default function SalesPage() {
       (v.nombre_cajero?.toLowerCase().includes(q) ?? false)
     )
   }, [ventas, search, products, cuentas])
+
+  const pg = usePagination(filtered)
 
   return (
     <div>
@@ -272,7 +275,7 @@ export default function SalesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((v) => (
+              {pg.paginated.map((v) => (
                 <tr key={v.id} className="hover:bg-slate-50 transition-colors group">
                   <Td className="font-medium text-slate-800">
                     <div className="min-w-0">
@@ -311,6 +314,7 @@ export default function SalesPage() {
             </tbody>
           </Table>
 
+          <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
           <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap justify-between items-center gap-2 text-xs text-slate-500">
             <span>{filtered.length} venta{filtered.length !== 1 ? 's' : ''}</span>
             <div className="flex gap-4 font-semibold">

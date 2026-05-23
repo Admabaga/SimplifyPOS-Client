@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import ThemePanel from './ThemePanel'
 import {
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
-  ScrollText, Building2, XCircle, BarChart3, Server, Brain,
+  ScrollText, Building2, XCircle, BarChart3, Server, Brain, Palette,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -276,6 +277,7 @@ export default function Sidebar() {
   const { clearActiveTenant } = useMasterStore()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [themeOpen, setThemeOpen]   = useState(false)
 
   const handleLogout = async () => {
     try { await authApi.logout() } catch { /* ignore */ }
@@ -377,13 +379,28 @@ export default function Sidebar() {
             <p style={{ color: 'var(--t-accent)' }} className="text-[10px] leading-tight opacity-80">Point of Sale</p>
           </div>
         </div>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
-          className="text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-        >
-          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="flex items-center gap-1 relative">
+          {/* Tema — visible en mobile */}
+          <button
+            onClick={() => setThemeOpen((v) => !v)}
+            aria-label="Personalizar tema"
+            title="Personalizar interfaz"
+            className={`p-1.5 rounded-lg transition-colors ${
+              themeOpen ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Palette size={17} />
+          </button>
+          <ThemePanel open={themeOpen} onClose={() => setThemeOpen(false)} />
+
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+            className="text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </div>
 
       {/* ── Mobile drawer ─────────────────────────────────── */}

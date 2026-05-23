@@ -9,6 +9,7 @@ export interface CreateProductoDto {
   activo?: boolean
   stock_inicial?: number
   precio_costo_inicial?: number
+  codigo_arancelario?: string
 }
 
 export interface CreateProductoPrecioDto {

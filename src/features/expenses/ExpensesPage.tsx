@@ -8,8 +8,9 @@ import { Pencil, Trash2, Plus, Receipt, DollarSign, TrendingDown, Search, Tag } 
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Table, Th, Td, Spinner, EmptyState,
-  Modal, ConfirmDialog, Card, StatCard,
+  Modal, ConfirmDialog, Card, StatCard, Pagination,
 } from '@/shared/components/ui'
+import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { apiError } from '@/shared/lib/apiError'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
@@ -41,7 +42,7 @@ export default function ExpensesPage() {
 
   const { data: gastos = [], isLoading } = useQuery({
     queryKey: ['expenses'],
-    queryFn: () => gastosApi.getAll(),
+    queryFn: () => gastosApi.getAll({ limit: 500 }),
   })
 
   const createMutation = useMutation({
@@ -115,6 +116,8 @@ export default function ExpensesPage() {
     }
     return result
   }, [gastos, categoriaFilter, search])
+
+  const pg = usePagination(filtered)
 
   return (
     <div>
@@ -208,7 +211,7 @@ export default function ExpensesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map((g) => {
+                {pg.paginated.map((g) => {
                   const monto = parseFloat(String(g.monto))
                   const isAlto = monto > stats.totalMes * 0.3
 
@@ -275,6 +278,7 @@ export default function ExpensesPage() {
                 })}
               </tbody>
             </Table>
+            <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
             <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
               <span>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}</span>
               <span className="font-semibold text-slate-700">
