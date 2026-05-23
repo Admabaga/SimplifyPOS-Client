@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
-  ScrollText, Building2, XCircle, BarChart3, Server,
+  ScrollText, Building2, XCircle, BarChart3, Server, Brain,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -130,6 +130,7 @@ function NavContent({ collapsed, onNavigate, can, role }: {
             { to: '/master/analytics', label: 'Analytics', icon: <BarChart3 size={17} />, title: 'Métricas cross-tenant del ecosistema' },
             { to: '/master',           label: 'Negocios',  icon: <Building2 size={17} />, title: 'Gestión de tenants' },
             { to: '/master/infra',     label: 'Infra',     icon: <Server size={17} />,    title: 'Salud técnica e infraestructura' },
+            { to: '/master/ai',        label: 'IA Center', icon: <Brain size={17} />,     title: 'Centro de Inteligencia IA' },
           ].map((item) => (
             <NavLink
               key={item.to}

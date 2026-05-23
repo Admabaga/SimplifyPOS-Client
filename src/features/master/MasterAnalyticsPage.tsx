@@ -27,8 +27,6 @@ import {
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { formatCOP } from '@/shared/lib/formatters'
 import { masterApi } from './api'
-import { AIAdvisorPanel } from '@/shared/components/AIAdvisorPanel'
-import { aiApi } from '@/shared/api/aiApi'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -657,16 +655,6 @@ export default function MasterAnalyticsPage() {
         </Card>
       )}
 
-      {/* ── AI Marketing Advisor ────────────────────────────────────────────── */}
-      {data && (
-        <AIAdvisorPanel
-          title="Estrategia de Marketing"
-          subtitle="Claude analiza tus métricas cross-tenant y te da acciones concretas de crecimiento y retención"
-          cta="Generar estrategia con IA"
-          iconGradient="from-pink-500 to-rose-600"
-          onAnalyze={() => aiApi.marketing(data as unknown as Record<string, unknown>)}
-        />
-      )}
     </div>
   )
 }

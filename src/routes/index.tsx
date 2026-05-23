@@ -28,6 +28,7 @@ const ClientesPage = lazy(() => import('@/features/clients/ClientesPage'))
 const MasterPage = lazy(() => import('@/features/master/MasterPage'))
 const MasterAnalyticsPage = lazy(() => import('@/features/master/MasterAnalyticsPage'))
 const MasterInfraPage = lazy(() => import('@/features/master/MasterInfraPage'))
+const MasterAIPage = lazy(() => import('@/features/master/MasterAIPage'))
 
 function Loading() {
   return (
@@ -123,6 +124,7 @@ export default function AppRoutes() {
               <Route path="/master" element={<MasterPage />} />
               <Route path="/master/analytics" element={<MasterAnalyticsPage />} />
               <Route path="/master/infra" element={<MasterInfraPage />} />
+              <Route path="/master/ai" element={<MasterAIPage />} />
             </Route>
           </Route>
         </Route>
