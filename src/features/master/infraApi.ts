@@ -57,10 +57,19 @@ export interface InfraAnalysis {
   generated_at: string
 }
 
+// Timeout extendido: metrics hace muchas queries DB (puede tardar 10-30s en cold start)
+// y analyze llama Anthropic. Sin esto axios mata la request a los 15s globales.
+const INFRA_METRICS_TIMEOUT = 60_000 // 1 min
+const INFRA_AI_TIMEOUT = 120_000 // 2 min
+
 export const infraApi = {
   getMetrics: () =>
-    apiClient.get<InfraMetrics>('/master/infra/metrics').then((r) => r.data),
+    apiClient
+      .get<InfraMetrics>('/master/infra/metrics', { timeout: INFRA_METRICS_TIMEOUT })
+      .then((r) => r.data),
 
   analyze: () =>
-    apiClient.post<InfraAnalysis>('/master/infra/analyze').then((r) => r.data),
+    apiClient
+      .post<InfraAnalysis>('/master/infra/analyze', undefined, { timeout: INFRA_AI_TIMEOUT })
+      .then((r) => r.data),
 }

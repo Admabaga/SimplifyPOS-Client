@@ -65,5 +65,8 @@ export const masterApi = {
     apiClient.patch(`/master/tenants/${adminId}/toggle-activo`).then((r) => r.data),
 
   analytics: () =>
-    apiClient.get<MasterAnalytics>('/master/analytics').then((r) => r.data),
+    // Timeout 60s: muchas queries cross-tenant + posible cold start de Render free.
+    apiClient
+      .get<MasterAnalytics>('/master/analytics', { timeout: 60_000 })
+      .then((r) => r.data),
 }
