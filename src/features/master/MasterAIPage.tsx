@@ -21,6 +21,7 @@ import {
 import { Button } from '@/shared/components/ui'
 import { aiApi } from '@/shared/api/aiApi'
 import { masterApi } from './api'
+import { formatRelativeTime, usePersistedAnalysis } from './usePersistedAnalysis'
 
 // ─── renderAnalysis (replicado de AIAdvisorPanel) ────────────────────────────
 
@@ -81,7 +82,7 @@ function AnalysisSkeleton() {
 // ─── Card 1 — Asesor del Ecosistema ──────────────────────────────────────────
 
 function EcosystemAdvisorCard() {
-  const [analysis, setAnalysis] = useState<string | null>(null)
+  const { analysis, generatedAt, save } = usePersistedAnalysis('master_ai_pos_advisor_v1')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,7 +91,7 @@ function EcosystemAdvisorCard() {
     setError(null)
     try {
       const result = await aiApi.posAdvisor()
-      setAnalysis(result.analysis)
+      save(result.analysis)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string }
       const msg = err?.response?.data?.detail || err?.message || 'Error desconocido'
@@ -193,8 +194,24 @@ function EcosystemAdvisorCard() {
 
         {/* Analysis */}
         {analysis && !loading && (
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-50/60 to-teal-50/30 border border-emerald-100 p-5">
-            <div className="prose prose-sm max-w-none">{renderAnalysis(analysis)}</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <Clock size={11} />
+                <span>Generado {formatRelativeTime(generatedAt)}</span>
+              </div>
+              <button
+                onClick={handleAnalyze}
+                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 transition-colors"
+                title="Genera un nuevo análisis (consume tokens de Anthropic)"
+              >
+                <RefreshCw size={11} />
+                Nuevo análisis
+              </button>
+            </div>
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-50/60 to-teal-50/30 border border-emerald-100 p-5">
+              <div className="prose prose-sm max-w-none">{renderAnalysis(analysis)}</div>
+            </div>
           </div>
         )}
       </div>
@@ -205,7 +222,7 @@ function EcosystemAdvisorCard() {
 // ─── Card 2 — Estrategia de Marketing ─────────────────────────────────────────
 
 function MarketingStrategyCard() {
-  const [analysis, setAnalysis] = useState<string | null>(null)
+  const { analysis, generatedAt, save } = usePersistedAnalysis('master_ai_marketing_v1')
   const [loading, setLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
 
@@ -226,7 +243,7 @@ function MarketingStrategyCard() {
     setAiError(null)
     try {
       const result = await aiApi.marketing(analyticsData as unknown as Record<string, unknown>)
-      setAnalysis(result.analysis)
+      save(result.analysis)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } }; message?: string }
       const msg = err?.response?.data?.detail || err?.message || 'Error desconocido'
@@ -346,8 +363,25 @@ function MarketingStrategyCard() {
 
         {/* Analysis */}
         {analysis && !loading && (
-          <div className="rounded-2xl bg-gradient-to-br from-rose-50/60 to-pink-50/30 border border-rose-100 p-5">
-            <div className="prose prose-sm max-w-none">{renderAnalysis(analysis)}</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                <Clock size={11} />
+                <span>Generado {formatRelativeTime(generatedAt)}</span>
+              </div>
+              <button
+                onClick={handleAnalyze}
+                disabled={!analyticsData}
+                className="text-[11px] font-semibold text-rose-700 hover:text-rose-900 flex items-center gap-1 transition-colors disabled:opacity-40"
+                title="Genera una nueva estrategia (consume tokens de Anthropic)"
+              >
+                <RefreshCw size={11} />
+                Nuevo análisis
+              </button>
+            </div>
+            <div className="rounded-2xl bg-gradient-to-br from-rose-50/60 to-pink-50/30 border border-rose-100 p-5">
+              <div className="prose prose-sm max-w-none">{renderAnalysis(analysis)}</div>
+            </div>
           </div>
         )}
       </div>
