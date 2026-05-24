@@ -141,8 +141,11 @@ function AIPanel() {
       {mutation.isError && (
         <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
           <p className="font-semibold mb-1">Error al conectar con Claude AI</p>
-          <p className="text-xs opacity-75">
-            Asegúrate de tener ANTHROPIC_API_KEY configurada en el .env del servidor.
+          <p className="text-xs opacity-75 whitespace-pre-wrap break-words">
+            {(mutation.error as { response?: { data?: { detail?: string } }; message?: string })
+              ?.response?.data?.detail ||
+              (mutation.error as Error)?.message ||
+              'Error desconocido. Revisa que ANTHROPIC_API_KEY esté configurada.'}
           </p>
           <Button size="sm" variant="secondary" className="mt-3" onClick={() => mutation.mutate()}>
             Reintentar

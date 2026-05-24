@@ -92,7 +92,8 @@ function EcosystemAdvisorCard() {
       const result = await aiApi.posAdvisor()
       setAnalysis(result.analysis)
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido'
+      const err = e as { response?: { data?: { detail?: string } }; message?: string }
+      const msg = err?.response?.data?.detail || err?.message || 'Error desconocido'
       setError(msg)
     } finally {
       setLoading(false)
@@ -181,8 +182,8 @@ function EcosystemAdvisorCard() {
               <AlertCircle size={14} className="text-red-500 shrink-0" />
               <p className="text-sm font-semibold text-red-700">No se pudo conectar con Claude</p>
             </div>
-            <p className="text-xs text-red-500 mb-3 ml-5">
-              Asegúrate de tener ANTHROPIC_API_KEY configurada en el servidor.
+            <p className="text-xs text-red-500 mb-3 ml-5 whitespace-pre-wrap break-words">
+              {error}
             </p>
             <Button size="sm" variant="secondary" onClick={handleAnalyze}>
               Reintentar
@@ -227,7 +228,8 @@ function MarketingStrategyCard() {
       const result = await aiApi.marketing(analyticsData as unknown as Record<string, unknown>)
       setAnalysis(result.analysis)
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error desconocido'
+      const err = e as { response?: { data?: { detail?: string } }; message?: string }
+      const msg = err?.response?.data?.detail || err?.message || 'Error desconocido'
       setAiError(msg)
     } finally {
       setLoading(false)
@@ -333,8 +335,8 @@ function MarketingStrategyCard() {
               <AlertCircle size={14} className="text-red-500 shrink-0" />
               <p className="text-sm font-semibold text-red-700">No se pudo conectar con Claude</p>
             </div>
-            <p className="text-xs text-red-500 mb-3 ml-5">
-              Asegúrate de tener ANTHROPIC_API_KEY configurada en el servidor.
+            <p className="text-xs text-red-500 mb-3 ml-5 whitespace-pre-wrap break-words">
+              {aiError}
             </p>
             <Button size="sm" variant="secondary" onClick={handleAnalyze}>
               Reintentar
