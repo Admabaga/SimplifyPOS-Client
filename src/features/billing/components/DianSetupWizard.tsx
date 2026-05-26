@@ -23,11 +23,11 @@ import type { EmpresaConfig } from '../types'
 
 /* ─── Catálogos DIAN ─────────────────────────────────────────────────────── */
 const RESPONSABILIDADES_FISCALES = [
-  { code: 'O-13',   label: 'Gran contribuyente' },
-  { code: 'O-15',   label: 'Autorretenedor' },
-  { code: 'O-23',   label: 'Agente de retención IVA' },
-  { code: 'O-47',   label: 'Régimen simple de tributación' },
-  { code: 'R-99-PN', label: 'No aplica / No responsable de IVA' },
+  { code: 'R-99-PN', label: 'No responsable de IVA',       hint: 'La mayoría de tiendas de barrio, restaurantes y negocios pequeños' },
+  { code: 'O-47',    label: 'Régimen simple de tributación', hint: 'Si pagas el impuesto SIMPLE (antes IMAS/IMAS)' },
+  { code: 'O-13',    label: 'Gran contribuyente',           hint: 'Solo si la DIAN te clasificó expresamente así' },
+  { code: 'O-15',    label: 'Autorretenedor',               hint: 'Si la DIAN te autorizó retener en la fuente' },
+  { code: 'O-23',    label: 'Agente de retención IVA',      hint: 'Si retienes IVA a tus proveedores' },
 ] as const
 
 const CIIU_COMUNES = [
@@ -299,32 +299,42 @@ function StepFiscales({
       {/* Responsabilidades */}
       <div>
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-          Responsabilidades fiscales <span className="text-red-500">*</span>
+          ¿Cómo es tu negocio ante la DIAN? <span className="text-red-500">*</span>
         </label>
         <p className="text-[11px] text-slate-500 mb-2">
-          Tiendas de barrio típicas solo marcan "No responsable de IVA".
+          Selecciona todas las que aplican. Si tienes dudas, la primera opción aplica para la mayoría.
         </p>
         <div className="space-y-1.5">
-          {RESPONSABILIDADES_FISCALES.map((r) => (
-            <label
-              key={r.code}
-              className={[
-                'flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer transition-colors',
-                responsabilidades.includes(r.code)
-                  ? 'border-violet-300 bg-violet-50'
-                  : 'border-slate-200 hover:bg-slate-50',
-              ].join(' ')}
-            >
-              <input
-                type="checkbox"
-                checked={responsabilidades.includes(r.code)}
-                onChange={() => toggle(r.code)}
-                className="rounded"
-              />
-              <span className="text-[10px] font-mono font-bold text-slate-500 w-16">{r.code}</span>
-              <span className="text-sm">{r.label}</span>
-            </label>
-          ))}
+          {RESPONSABILIDADES_FISCALES.map((r) => {
+            const selected = responsabilidades.includes(r.code)
+            return (
+              <button
+                key={r.code}
+                type="button"
+                onClick={() => toggle(r.code)}
+                className={[
+                  'w-full text-left rounded-xl border-2 px-3 py-2.5 transition-all',
+                  selected
+                    ? 'border-violet-400 bg-violet-50'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50',
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={[
+                    'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors',
+                    selected ? 'border-violet-500 bg-violet-500' : 'border-slate-300',
+                  ].join(' ')}>
+                    {selected && <CheckCircle2 size={10} className="text-white" />}
+                  </div>
+                  <span className={['font-semibold text-sm', selected ? 'text-violet-800' : 'text-slate-700'].join(' ')}>
+                    {r.label}
+                  </span>
+                  <span className="ml-auto text-[10px] font-mono text-slate-400">{r.code}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5 ml-6">{r.hint}</p>
+              </button>
+            )
+          })}
         </div>
       </div>
 
