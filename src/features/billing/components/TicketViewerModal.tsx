@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react'
 import { Printer, FileText, X, FileMinus, RefreshCw } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { QRCodeSVG } from 'qrcode.react'
 import toast from 'react-hot-toast'
 import { Button, Modal, Badge } from '@/shared/components/ui'
 import { formatCOP, formatDateTime, formatDate } from '@/shared/lib/formatters'
@@ -377,6 +378,51 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
             </div>
           )}
 
+          {/* ── CUFE + QR DIAN (obligatorio Resolución 165/2023) ───────────── */}
+          {ticket.cufe && ticket.tipo_documento === 'FACTURA_VENTA' && (
+            <div className="rounded-xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-indigo-50 p-4">
+              <div className="flex items-start gap-4">
+                <div className="bg-white rounded-lg p-2 border border-violet-100 shrink-0">
+                  <QRCodeSVG
+                    value={`https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=${ticket.cufe}`}
+                    size={88}
+                    level="M"
+                    marginSize={0}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-violet-700">
+                      CUFE — Validable en DIAN
+                    </p>
+                    {ticket.estado_dian === 'ACEPTADO_DIAN' && (
+                      <Badge variant="green" dot>
+                        Aceptada
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-600 mb-2 leading-relaxed">
+                    Escanea el QR o ingresa el CUFE en{' '}
+                    <a
+                      href="https://catalogo-vpfe.dian.gov.co"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-violet-700 underline"
+                    >
+                      catalogo-vpfe.dian.gov.co
+                    </a>{' '}
+                    para validar este documento.
+                  </p>
+                  <div className="bg-white rounded-md border border-violet-100 px-2 py-1.5">
+                    <p className="font-mono text-[9px] text-slate-700 break-all leading-relaxed">
+                      {ticket.cufe}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="text-center pt-2 space-y-0.5 text-slate-400">
             <p className="text-[10px] font-mono">Hash: {ticket.hash_integridad.slice(0, 32)}...</p>
@@ -613,6 +659,30 @@ function ThermalContent({ ticket }: { ticket: Ticket }) {
           <div className="pt-sep-dbl">{SEP_DBL}</div>
           <div className="pt-thanks">¡GRACIAS POR SU COMPRA!</div>
           <div className="pt-sub pt-tiny">Conserve este documento como soporte</div>
+        </>
+      )}
+
+      {/* ═══ CUFE + QR DIAN (Resolución 165/2023 — obligatorio en FACTURA_VENTA) ═══ */}
+      {ticket.cufe && ticket.tipo_documento === 'FACTURA_VENTA' && (
+        <>
+          <div className="pt-sep">{SEP}</div>
+          <div className="pt-thanks pt-tiny" style={{ marginBottom: '1mm' }}>
+            FACTURA ELECTRÓNICA DE VENTA
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', margin: '2mm 0' }}>
+            <QRCodeSVG
+              value={`https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=${ticket.cufe}`}
+              size={140}
+              level="M"
+              marginSize={0}
+            />
+          </div>
+          <div className="pt-sub pt-tiny" style={{ marginBottom: '1mm' }}>
+            Validar en catalogo-vpfe.dian.gov.co
+          </div>
+          <div className="pt-mono pt-tiny" style={{ wordBreak: 'break-all', fontSize: '6pt', lineHeight: 1.2 }}>
+            CUFE: {ticket.cufe}
+          </div>
         </>
       )}
 
