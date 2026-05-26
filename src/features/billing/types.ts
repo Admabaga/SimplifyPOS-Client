@@ -132,5 +132,13 @@ export interface Ticket {
   codigo_verificacion: string
   fecha_emision: string
 
+  // DIAN Electrónica
+  cufe?: string | null
+  estado_dian?: string
+  dian_tracking_id?: string | null
+  dian_mensaje?: string | null
+  dian_intentos?: number
+  dian_enviado_at?: string | null
+
   items: TicketItem[]
 }

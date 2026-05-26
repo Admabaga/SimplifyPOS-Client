@@ -41,4 +41,55 @@ export const billingApi = {
 
   anular: (id: number, motivo: string) =>
     apiClient.post<Ticket>(`/billing/tickets/${id}/anular`, { motivo }).then((r) => r.data),
+
+  reintentarDian: (id: number) =>
+    apiClient.post<Ticket>(`/billing/tickets/${id}/reintentar-dian`).then((r) => r.data),
+}
+
+// ─── Notas Crédito/Débito ─────────────────────────────────────────────────────
+
+export type TipoNota = 'CREDITO' | 'DEBITO'
+
+export interface Nota {
+  id: number
+  tipo: TipoNota
+  ticket_original_id: number
+  ticket_original_numero: string
+  ticket_original_cufe: string | null
+  numero_completo: string
+  motivo: string
+  motivo_codigo: string
+  subtotal: number
+  valor_iva: number
+  total: number
+  cufe: string | null
+  estado_dian: string
+  dian_tracking_id: string | null
+  dian_mensaje: string | null
+  dian_intentos: number
+  fecha_emision: string
+}
+
+export interface EmitirNotaInput {
+  ticket_original_id: number
+  tipo: TipoNota
+  motivo: string
+  motivo_codigo: '1' | '2' | '3' | '4' | '5'
+  subtotal: number
+  valor_iva: number
+  total: number
+}
+
+export const notasApi = {
+  emitir: (data: EmitirNotaInput) =>
+    apiClient.post<Nota>('/notas', data).then((r) => r.data),
+
+  list: (limit = 100, offset = 0) =>
+    apiClient.get<Nota[]>('/notas', { params: { limit, offset } }).then((r) => r.data),
+
+  byTicket: (ticketId: number) =>
+    apiClient.get<Nota[]>(`/notas/ticket/${ticketId}`).then((r) => r.data),
+
+  reintentarDian: (id: number) =>
+    apiClient.post<Nota>(`/notas/${id}/reintentar-dian`).then((r) => r.data),
 }

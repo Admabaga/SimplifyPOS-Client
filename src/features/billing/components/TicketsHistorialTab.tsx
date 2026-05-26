@@ -8,6 +8,7 @@ import {
 import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { billingApi } from '../api'
+import DianEstadoBadge from './DianEstadoBadge'
 import { formatCOP, formatDateTime } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
 import { useAuthStore } from '@/stores/auth'
@@ -132,9 +133,18 @@ export default function TicketsHistorialTab() {
                       <Td className="hidden md:table-cell"><span className="text-xs tabular-nums text-slate-500">{formatCOP(t.valor_iva)}</span></Td>
                     )}
                     <Td className="hidden sm:table-cell">
-                      {t.estado === 'EMITIDA'
-                        ? <Badge variant="green" dot>Emitida</Badge>
-                        : <Badge variant="red" dot>Anulada</Badge>}
+                      <div className="flex flex-col gap-1">
+                        {t.estado === 'EMITIDA'
+                          ? <Badge variant="green" dot>Emitida</Badge>
+                          : <Badge variant="red" dot>Anulada</Badge>}
+                        {subTab === 'dian' && t.estado_dian && t.estado_dian !== 'NO_APLICA' && (
+                          <DianEstadoBadge
+                            estado={t.estado_dian}
+                            mensaje={t.dian_mensaje}
+                            intentos={t.dian_intentos}
+                          />
+                        )}
+                      </div>
                     </Td>
                     <Td>
                       <div className="flex items-center justify-end gap-1">

@@ -11,11 +11,16 @@
  *
  * Impresión: misma estrategia visibility-hidden con ID único por ticket.
  */
-import { useEffect } from 'react'
-import { Printer, FileText, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Printer, FileText, X, FileMinus, RefreshCw } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Button, Modal, Badge } from '@/shared/components/ui'
 import { formatCOP, formatDateTime, formatDate } from '@/shared/lib/formatters'
 import type { Ticket } from '../types'
+import { billingApi } from '../api'
+import DianEstadoBadge from './DianEstadoBadge'
+import EmitirNotaCreditoModal from './EmitirNotaCreditoModal'
 
 interface Props {
   open: boolean
@@ -97,6 +102,20 @@ const TIPO_DOC_CLIENTE_LABEL = {
 
 export default function TicketViewerModal({ open, onClose, ticket }: Props) {
   const printRootId = `ticket-view-print-${ticket.id}`
+  const qc = useQueryClient()
+  const [showNotaModal, setShowNotaModal] = useState(false)
+
+  const reintentarMutation = useMutation({
+    mutationFn: () => billingApi.reintentarDian(ticket.id),
+    onSuccess: () => {
+      toast.success('Reenvío DIAN encolado — actualiza en unos segundos')
+      qc.invalidateQueries({ queryKey: ['tickets'] })
+    },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { detail?: string } } }
+      toast.error(err?.response?.data?.detail || 'Error al reintentar')
+    },
+  })
 
   useEffect(() => {
     if (!open) return
@@ -126,10 +145,39 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
           <Button size="sm" icon={<Printer size={13} />} onClick={() => window.print()}>
             Imprimir
           </Button>
+          {ticket.tipo_documento === 'FACTURA_VENTA' && ticket.estado === 'EMITIDA' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<FileMinus size={13} />}
+              onClick={() => setShowNotaModal(true)}
+            >
+              Nota crédito/débito
+            </Button>
+          )}
           {ticket.estado === 'ANULADA' && (
             <Badge variant="red" dot>
               <X size={11} className="inline mr-0.5" /> Anulada
             </Badge>
+          )}
+          {ticket.estado_dian && ticket.estado_dian !== 'NO_APLICA' && (
+            <DianEstadoBadge
+              estado={ticket.estado_dian}
+              mensaje={ticket.dian_mensaje}
+              intentos={ticket.dian_intentos}
+              size="md"
+            />
+          )}
+          {(ticket.estado_dian === 'RECHAZADO_DIAN' || ticket.estado_dian === 'ERROR_DIAN') && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<RefreshCw size={12} />}
+              onClick={() => reintentarMutation.mutate()}
+              loading={reintentarMutation.isPending}
+            >
+              Reintentar DIAN
+            </Button>
           )}
           <div className="flex-1" />
           <div className="text-[11px] text-slate-400 self-center">
@@ -337,6 +385,16 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
           </div>
         </div>
       </Modal>
+
+      <EmitirNotaCreditoModal
+        open={showNotaModal}
+        onClose={() => setShowNotaModal(false)}
+        ticketId={ticket.id}
+        ticketNumero={ticket.numero_completo}
+        ticketTotal={ticket.total}
+        ticketBaseGravable={ticket.base_gravable}
+        ticketIva={ticket.valor_iva}
+      />
     </>
   )
 }

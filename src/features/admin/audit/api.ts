@@ -38,9 +38,37 @@ export interface AuditStats {
   anomalies: AuditAnomaly[]
 }
 
+export interface AuditVerifyIssue {
+  type: 'TAMPERED' | 'CHAIN_BROKEN'
+  entry_id: number
+  user_id: number
+  action?: string
+  resource?: string
+  created_at: string | null
+  stored_hash?: string
+  expected_hash?: string
+  stored_prev?: string
+  expected_prev?: string
+}
+
+export interface AuditVerifyResult {
+  verified_at: string
+  total_entries: number
+  valid_entries: number
+  issues_count: number
+  integrity: 'OK' | 'COMPROMISED'
+  issues: AuditVerifyIssue[]
+  users_checked: number
+}
+
 export const auditApi = {
   list: (params?: AuditListParams) =>
     apiClient.get<AuditListResponse>('/reports/audit', { params }).then((r) => r.data),
   stats: () =>
     apiClient.get<AuditStats>('/reports/audit/stats').then((r) => r.data),
+  // Timeout largo: recorre toda la tabla audit_log y recalcula SHA-256
+  verify: () =>
+    apiClient
+      .get<AuditVerifyResult>('/reports/audit/verify', { timeout: 60_000 })
+      .then((r) => r.data),
 }

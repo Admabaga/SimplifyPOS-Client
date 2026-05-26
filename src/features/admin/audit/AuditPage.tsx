@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ClipboardList, AlertTriangle, Users, Activity, Clock,
-  Shield, Filter, X, Eye, Hash, Globe,
+  Shield, ShieldCheck, Filter, X, Eye, Hash, Globe,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { auditApi } from './api'
 import type { AuditAnomaly } from './api'
 import {
-  Card, PageHeader, Table, Th, Td, Badge, Spinner, EmptyState,
+  Button, Card, PageHeader, Table, Th, Td, Badge, Spinner, EmptyState,
   StatCard, Pagination, SearchInput, DateRangeBar, SectionHeader, Modal,
 } from '@/shared/components/ui'
 import { formatDate, formatDateTime } from '@/shared/lib/formatters'
@@ -75,6 +76,18 @@ export default function AuditPage() {
     staleTime: 60_000,
   })
 
+  const verifyMutation = useMutation({
+    mutationFn: () => auditApi.verify(),
+    onSuccess: (r) => {
+      if (r.integrity === 'OK') {
+        toast.success(`Cadena íntegra: ${r.total_entries.toLocaleString()} entradas válidas`)
+      } else {
+        toast.error(`Integridad comprometida: ${r.issues_count} problema(s) detectado(s)`)
+      }
+    },
+    onError: () => toast.error('Error al verificar la cadena'),
+  })
+
   const items = listData?.items ?? []
   const total = listData?.total ?? 0
 
@@ -99,12 +112,98 @@ export default function AuditPage() {
         title="Audit Log"
         subtitle="Actividad del sistema SimplifyPOS — visible solo para master"
         actions={
-          <Badge variant="purple" dot>
-            <Shield size={11} className="mr-1" />
-            Tamper-evident
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="purple" dot>
+              <Shield size={11} className="mr-1" />
+              Tamper-evident
+            </Badge>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<ShieldCheck size={13} />}
+              onClick={() => verifyMutation.mutate()}
+              loading={verifyMutation.isPending}
+            >
+              Verificar cadena
+            </Button>
+          </div>
         }
       />
+
+      {/* Resultado de verificación */}
+      {verifyMutation.data && (
+        <Card>
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              {verifyMutation.data.integrity === 'OK' ? (
+                <>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <ShieldCheck size={20} className="text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-emerald-700">
+                      Cadena hash íntegra ✓
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {verifyMutation.data.total_entries.toLocaleString()} entradas verificadas
+                      · {verifyMutation.data.users_checked} usuarios
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                    <AlertTriangle size={20} className="text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-red-700">
+                      Cadena comprometida — {verifyMutation.data.issues_count} problema(s)
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {verifyMutation.data.valid_entries.toLocaleString()} de{' '}
+                      {verifyMutation.data.total_entries.toLocaleString()} entradas válidas
+                    </p>
+                  </div>
+                </>
+              )}
+              <button
+                onClick={() => verifyMutation.reset()}
+                className="ml-auto text-xs text-slate-400 hover:text-slate-600"
+              >
+                Cerrar
+              </button>
+            </div>
+            {verifyMutation.data.issues.length > 0 && (
+              <div className="max-h-64 overflow-y-auto space-y-1.5 mt-3 pt-3 border-t border-slate-100">
+                {verifyMutation.data.issues.map((iss, i) => (
+                  <div
+                    key={i}
+                    className="text-[11px] rounded-lg bg-red-50 border border-red-100 p-2"
+                  >
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge variant="red">{iss.type}</Badge>
+                      <span className="text-slate-500">
+                        Entry #{iss.entry_id} · User {iss.user_id} ·{' '}
+                        {iss.action ?? '—'} {iss.resource ?? ''}
+                      </span>
+                    </div>
+                    {iss.type === 'TAMPERED' && (
+                      <div className="font-mono text-[10px] text-slate-600">
+                        stored: {iss.stored_hash} · expected: {iss.expected_hash}
+                      </div>
+                    )}
+                    {iss.type === 'CHAIN_BROKEN' && (
+                      <div className="font-mono text-[10px] text-slate-600">
+                        prev: {iss.stored_prev} · expected prev: {iss.expected_prev}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* KPI Stats */}
       {statsLoading ? (
