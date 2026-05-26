@@ -86,11 +86,14 @@ export default function BillingPage() {
         label: 'Datos empresa',
         dot: empresa ? 'green' : 'red',
       })
-      all.push({
-        key: 'dian',
-        label: 'Facturación electrónica',
-        dot: empresa?.dian_setup_completado ? 'green' : empresa ? 'yellow' : 'red',
-      })
+      // Solo mostrar tab DIAN si el setup está incompleto
+      if (!empresa?.dian_setup_completado) {
+        all.push({
+          key: 'dian',
+          label: 'Facturación electrónica',
+          dot: empresa ? 'yellow' : 'red',
+        })
+      }
       all.push({
         key: 'resoluciones',
         label: 'Resoluciones DIAN',
@@ -187,7 +190,7 @@ export default function BillingPage() {
       />
 
       {tab === 'empresa'     && canConfigure && <EmpresaConfigTab />}
-      {tab === 'dian'        && canConfigure && (
+      {tab === 'dian' && canConfigure && !empresa?.dian_setup_completado && (
         empresa
           ? <DianSetupWizard empresa={empresa} />
           : <Card><div className="text-sm text-slate-500 text-center py-6">

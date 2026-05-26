@@ -18,7 +18,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2, AlertCircle, ChevronRight, ChevronLeft,
   Building2, Scale, FileCheck, Zap, ExternalLink, Loader2,
-  ShieldCheck, RefreshCw,
 } from 'lucide-react'
 import {
   Card, Button, Input, Select, Badge, InfoBanner, SectionHeader,
@@ -64,108 +63,11 @@ const STEPS: { key: StepKey; label: string; icon: typeof Building2 }[] = [
 ]
 
 export default function DianSetupWizard({ empresa }: Props) {
-  const completo = empresa.dian_setup_completado === true
-  const [reconfigurar, setReconfigurar] = useState(false)
+  // Si el setup ya está completo, no renderizar nada —
+  // el tab no se muestra en BillingPage cuando está completado.
+  if (empresa.dian_setup_completado === true) return null
 
-  if (completo && !reconfigurar) {
-    return <DianSetupResumen empresa={empresa} onReconfigurar={() => setReconfigurar(true)} />
-  }
-
-  return <Wizard empresa={empresa} onClose={() => setReconfigurar(false)} />
-}
-
-/* ═════════════════════════════════════════════════════════════════════════════
-   RESUMEN — visible cuando setup ya está completo
-   ═════════════════════════════════════════════════════════════════════════════ */
-
-function DianSetupResumen({
-  empresa,
-  onReconfigurar,
-}: {
-  empresa: EmpresaConfig
-  onReconfigurar: () => void
-}) {
-  const enProduccion = empresa.dian_ambiente === 'PRODUCCION'
-  const ultimaPrueba = empresa.dian_ultima_prueba_at
-    ? new Date(empresa.dian_ultima_prueba_at).toLocaleDateString('es-CO', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
-    : null
-
-  return (
-    <Card>
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <ShieldCheck size={26} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="text-base font-bold text-slate-900">
-                Facturación electrónica DIAN configurada
-              </h3>
-              <Badge variant={enProduccion ? 'green' : 'yellow'} dot>
-                {enProduccion ? 'En producción' : 'Modo pruebas'}
-              </Badge>
-            </div>
-            <p className="text-sm text-slate-600">
-              Tu negocio está listo para emitir facturas electrónicas legales en Colombia.
-              {ultimaPrueba && (
-                <>
-                  {' '}
-                  Última verificación: <strong>{ultimaPrueba}</strong>.
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-          <ResumenItem label="Tipo de persona" value={empresa.tipo_persona ?? 'JURIDICA'} />
-          <ResumenItem
-            label="Actividad CIIU"
-            value={empresa.actividad_economica_ciiu || '—'}
-          />
-          <ResumenItem
-            label="Ambiente DIAN"
-            value={empresa.dian_ambiente ?? 'PRUEBAS'}
-          />
-        </div>
-
-        {!enProduccion && (
-          <InfoBanner variant="warning">
-            <span className="text-xs">
-              Estás emitiendo en <strong>ambiente de pruebas</strong>. Las facturas no son
-              válidas legalmente. Cuando estés listo, cambia a producción desde "Reconfigurar".
-            </span>
-          </InfoBanner>
-        )}
-
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            icon={<RefreshCw size={14} />}
-            onClick={onReconfigurar}
-          >
-            Reconfigurar
-          </Button>
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-function ResumenItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-        {label}
-      </div>
-      <div className="text-sm font-semibold text-slate-700 truncate mt-0.5">
-        {value}
-      </div>
-    </div>
-  )
+  return <Wizard empresa={empresa} onClose={() => {}} />
 }
 
 /* ═════════════════════════════════════════════════════════════════════════════
