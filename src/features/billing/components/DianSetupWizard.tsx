@@ -15,7 +15,7 @@ import {
   Scale, Zap, Loader2,
 } from 'lucide-react'
 import {
-  Card, Button, Input, Select, InfoBanner, SectionHeader,
+  Card, Button, Input, Select, InfoBanner,
 } from '@/shared/components/ui'
 import toast from 'react-hot-toast'
 import { billingApi, type DianSetupInput, type DianTestEmissionResult } from '../api'
@@ -258,8 +258,6 @@ function StepFiscales({
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="1. Configuración fiscal DIAN" icon={<Scale size={16} />} />
-
       <p className="text-sm text-slate-600">
         Datos que identifican tu negocio ante la DIAN. Los encuentras en tu <strong>RUT</strong>.
         Si tienes dudas, consulta con tu contador.
@@ -411,8 +409,6 @@ function StepPrueba({
 }) {
   return (
     <div className="space-y-4">
-      <SectionHeader title="2. Prueba de emisión" icon={<Zap size={16} />} />
-
       <p className="text-sm text-slate-600">
         Enviamos una factura sintética al servidor DIAN para confirmar que todo está conectado.
         No afecta tu numeración real ni genera cobros.
