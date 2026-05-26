@@ -25,11 +25,34 @@ export interface EmpresaConfig {
   actividad_economica: string
   obligaciones: string
   leyenda_pie: string
+  // DIAN multi-tenant
+  tipo_persona?: 'NATURAL' | 'JURIDICA'
+  responsabilidades_fiscales?: string
+  actividad_economica_ciiu?: string
+  dian_ambiente?: 'PRUEBAS' | 'PRODUCCION'
+  dian_test_set_id?: string | null
+  dian_habilitado_produccion?: boolean
+  dian_setup_completado?: boolean
+  dian_ultima_prueba_at?: string | null
   created_at: string
   updated_at: string
 }
 
-export type EmpresaConfigInput = Omit<EmpresaConfig, 'id' | 'admin_id' | 'created_at' | 'updated_at'>
+export type EmpresaConfigInput = Omit<
+  EmpresaConfig,
+  | 'id'
+  | 'admin_id'
+  | 'created_at'
+  | 'updated_at'
+  | 'tipo_persona'
+  | 'responsabilidades_fiscales'
+  | 'actividad_economica_ciiu'
+  | 'dian_ambiente'
+  | 'dian_test_set_id'
+  | 'dian_habilitado_produccion'
+  | 'dian_setup_completado'
+  | 'dian_ultima_prueba_at'
+>
 
 export interface ResolucionDian {
   id: number

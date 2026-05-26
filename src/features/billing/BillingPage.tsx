@@ -10,15 +10,18 @@
  */
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, FileText, ScrollText, CheckCircle2, AlertTriangle, Lock } from 'lucide-react'
+import {
+  Building2, FileText, ScrollText, CheckCircle2, AlertTriangle, Lock, ShieldCheck,
+} from 'lucide-react'
 import { PageHeader, TabBar, Card, Spinner } from '@/shared/components/ui'
 import { useAuthStore } from '@/stores/auth'
 import { billingApi } from './api'
 import EmpresaConfigTab from './components/EmpresaConfigTab'
 import ResolucionesTab from './components/ResolucionesTab'
 import TicketsHistorialTab from './components/TicketsHistorialTab'
+import DianSetupWizard from './components/DianSetupWizard'
 
-type Tab = 'empresa' | 'resoluciones' | 'historial'
+type Tab = 'empresa' | 'dian' | 'resoluciones' | 'historial'
 
 export default function BillingPage() {
   const can  = useAuthStore((s) => s.can)
@@ -84,6 +87,11 @@ export default function BillingPage() {
         dot: empresa ? 'green' : 'red',
       })
       all.push({
+        key: 'dian',
+        label: 'Facturación electrónica',
+        dot: empresa?.dian_setup_completado ? 'green' : empresa ? 'yellow' : 'red',
+      })
+      all.push({
         key: 'resoluciones',
         label: 'Resoluciones DIAN',
         dot: resActiva ? (resAlertas ? 'yellow' : 'green') : 'red',
@@ -117,6 +125,20 @@ export default function BillingPage() {
             okText={empresa?.razon_social ?? ''}
             warnText="Sin configurar"
             onClick={() => setTab('empresa')}
+          />
+          <ResumenCard
+            icon={<ShieldCheck size={18} />}
+            label="Facturación electrónica"
+            loading={loadingResumen}
+            ok={!!empresa?.dian_setup_completado}
+            okText={
+              empresa?.dian_ambiente === 'PRODUCCION'
+                ? 'Producción · activa'
+                : 'Pruebas · validada'
+            }
+            warnText={empresa ? 'Pendiente de prueba' : 'Sin configurar'}
+            warnLevel={empresa && !empresa.dian_setup_completado ? 'yellow' : undefined}
+            onClick={() => setTab('dian')}
           />
           <ResumenCard
             icon={<FileText size={18} />}
@@ -165,6 +187,13 @@ export default function BillingPage() {
       />
 
       {tab === 'empresa'     && canConfigure && <EmpresaConfigTab />}
+      {tab === 'dian'        && canConfigure && (
+        empresa
+          ? <DianSetupWizard empresa={empresa} />
+          : <Card><div className="text-sm text-slate-500 text-center py-6">
+              Primero completa los datos de tu empresa en la pestaña anterior.
+            </div></Card>
+      )}
       {tab === 'resoluciones' && canConfigure && <ResolucionesTab />}
       {tab === 'historial'    && <TicketsHistorialTab />}
     </div>

@@ -44,6 +44,36 @@ export const billingApi = {
 
   reintentarDian: (id: number) =>
     apiClient.post<Ticket>(`/billing/tickets/${id}/reintentar-dian`).then((r) => r.data),
+
+  // DIAN setup multi-tenant
+  updateDianSetup: (data: DianSetupInput) =>
+    apiClient.patch<EmpresaConfig>('/billing/empresa/dian-setup', data).then((r) => r.data),
+
+  testDianEmission: () =>
+    apiClient
+      .post<DianTestEmissionResult>('/billing/empresa/dian-test', { confirmar: true }, { timeout: 60000 })
+      .then((r) => r.data),
+}
+
+// ─── DIAN setup types ─────────────────────────────────────────────────────────
+
+export type TipoPersona = 'NATURAL' | 'JURIDICA'
+export type DianAmbiente = 'PRUEBAS' | 'PRODUCCION'
+
+export interface DianSetupInput {
+  tipo_persona: TipoPersona
+  responsabilidades_fiscales: string
+  actividad_economica_ciiu: string
+  dian_ambiente: DianAmbiente
+  dian_test_set_id?: string | null
+}
+
+export interface DianTestEmissionResult {
+  aceptado: boolean
+  estado: string
+  mensaje: string
+  cufe_validado?: string | null
+  tracking_id?: string | null
 }
 
 // ─── Notas Crédito/Débito ─────────────────────────────────────────────────────
