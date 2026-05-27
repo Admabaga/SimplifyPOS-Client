@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ClipboardList, AlertTriangle, Users, Activity, Clock,
-  Shield, ShieldCheck, Filter, X, Eye, Hash, Globe,
+  Shield, ShieldCheck, Filter, X, Eye, Hash, Globe, Download,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { auditApi } from './api'
@@ -15,12 +15,20 @@ import { formatDate, formatDateTime } from '@/shared/lib/formatters'
 
 const PAGE_SIZE = 50
 
-const ACTION_COLORS: Record<string, 'green' | 'red' | 'yellow' | 'blue' | 'gray'> = {
+const ACTION_COLORS: Record<string, 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'purple'> = {
   create: 'green',
   delete: 'red',
   update: 'yellow',
   login: 'blue',
   logout: 'gray',
+  pay: 'green',
+  emit: 'purple',
+  void: 'red',
+  open: 'blue',
+  close: 'gray',
+  lock: 'red',
+  unlock: 'green',
+  reset_password: 'yellow',
 }
 
 const SEVERITY_STYLES: Record<AuditAnomaly['severity'], { wrapper: string; iconWrap: string; badge: string; badgeText: string }> = {
@@ -29,7 +37,10 @@ const SEVERITY_STYLES: Record<AuditAnomaly['severity'], { wrapper: string; iconW
   low:    { wrapper: 'border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30',   iconWrap: 'bg-white text-blue-600',   badge: 'bg-blue-100 text-blue-700',     badgeText: 'Baja' },
 }
 
-const ACTION_OPTIONS = ['', 'create', 'update', 'delete', 'login', 'logout']
+const ACTION_OPTIONS = [
+  '', 'create', 'update', 'delete', 'login', 'logout',
+  'pay', 'emit', 'void', 'open', 'close', 'lock', 'unlock', 'reset_password',
+]
 
 interface AuditEvent {
   id: number
@@ -53,8 +64,32 @@ export default function AuditPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null)
+  const [exportLoading, setExportLoading] = useState(false)
 
   const offset = (page - 1) * PAGE_SIZE
+
+  const handleExportCsv = async () => {
+    setExportLoading(true)
+    try {
+      const blob = await auditApi.exportCsv({
+        search: search || undefined,
+        resource: resource || undefined,
+        action: action || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit_log_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Error al exportar el audit log')
+    } finally {
+      setExportLoading(false)
+    }
+  }
 
   const { data: listData, isLoading: listLoading } = useQuery({
     queryKey: ['audit', offset, search, resource, action, dateFrom, dateTo],
@@ -117,6 +152,15 @@ export default function AuditPage() {
               <Shield size={11} className="mr-1" />
               Tamper-evident
             </Badge>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Download size={13} />}
+              onClick={handleExportCsv}
+              loading={exportLoading}
+            >
+              Exportar CSV
+            </Button>
             <Button
               size="sm"
               variant="secondary"

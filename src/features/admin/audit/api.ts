@@ -71,4 +71,8 @@ export const auditApi = {
     apiClient
       .get<AuditVerifyResult>('/reports/audit/verify', { timeout: 60_000 })
       .then((r) => r.data),
+  exportCsv: (params?: Omit<AuditListParams, 'limit' | 'offset'>) =>
+    apiClient
+      .get<Blob>('/reports/audit/export', { params, responseType: 'blob', timeout: 60_000 })
+      .then((r) => r.data),
 }
