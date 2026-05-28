@@ -14,7 +14,7 @@ interface UseBarcodeOptions {
 
 export function useBarcode({ products, onProductFound, enabled = true }: UseBarcodeOptions) {
   const bufferRef    = useRef<string>('')
-  const lastKeyRef   = useRef<number>(0)
+  const lastKeyRef   = useRef<number>(Date.now())
   const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
