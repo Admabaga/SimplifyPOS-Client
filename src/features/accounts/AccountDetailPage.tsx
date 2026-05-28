@@ -143,7 +143,7 @@ export default function AccountDetailPage() {
         if (!old) return old
         return { ...old, ventas: [...old.ventas, newVenta] }
       })
-      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
       qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
       qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Venta añadida')
@@ -222,7 +222,7 @@ export default function AccountDetailPage() {
     mutationFn: (dto: AddPagoDto) => cuentasApi.addPago(cuentaId, dto),
     onSuccess: async (cuentaActualizada) => {
       qc.setQueryData(['accounts', cuentaId], cuentaActualizada)
-      qc.invalidateQueries({ queryKey: ['accounts'] })
+      qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
       toast.success('Pago registrado')
       setShowAddPago(false)
       await maybeAutoEmitirFactura(cuentaActualizada as Cuenta)
@@ -543,6 +543,7 @@ export default function AccountDetailPage() {
                       <Can permission="ventas:delete">
                         {g.ventas.length === 1 && (
                           <button
+                            aria-label="Eliminar venta"
                             onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
                             className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
                           >
@@ -586,6 +587,7 @@ export default function AccountDetailPage() {
                           {!cuenta.esta_pagada && (
                             <Can permission="ventas:delete">
                               <button
+                                aria-label="Eliminar venta"
                                 onClick={() => setDeleteVentaId(v.id)}
                                 className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
                               >
@@ -820,6 +822,7 @@ export default function AccountDetailPage() {
                 </div>
                 <Can permission="pagos:delete">
                   <button
+                    aria-label="Eliminar pago"
                     onClick={() => setDeletePagoId(p.id)}
                     className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded shrink-0"
                   >
@@ -1100,7 +1103,7 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                 <p className="text-sm font-semibold t-text-dk truncate">{selectedProduct.nombre}</p>
                 <p className="text-xs t-text">Stock: {selectedProduct.stock_total ?? 0} unidades</p>
               </div>
-              <button onClick={() => { setSelectedProdId(null); setSelectedPrecioId(null) }} className="t-text hover:t-text-dk">
+              <button aria-label="Deseleccionar producto" onClick={() => { setSelectedProdId(null); setSelectedPrecioId(null) }} className="t-text hover:t-text-dk">
                 <X size={16} />
               </button>
             </div>
@@ -1206,9 +1209,9 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                       </div>
                       <button
                         type="button"
+                        aria-label="Quitar descuento"
                         onClick={() => { setShowDescuento(false); setDescPct(''); descInput.setFromNumber(0) }}
                         className="text-orange-400 hover:text-orange-700 transition-colors"
-                        title="Quitar descuento"
                       >
                         <X size={14} />
                       </button>

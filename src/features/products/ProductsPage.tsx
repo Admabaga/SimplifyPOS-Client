@@ -321,6 +321,8 @@ export default function ProductsPage() {
               {(['table', 'grid'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
+                  aria-label={mode === 'table' ? 'Vista lista' : 'Vista cuadrícula'}
+                  aria-pressed={viewMode === mode}
                   onClick={() => setViewMode(mode)}
                   className={`p-1.5 rounded-md transition-all ${viewMode === mode ? 'bg-white shadow-xs text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}
                 >
@@ -527,12 +529,12 @@ export default function ProductsPage() {
                         <Button size="sm" variant="ghost" icon={<DollarSign size={13} />} onClick={() => setPricesProduct(p)} className="text-blue-500 hidden sm:inline-flex">
                           Precios
                         </Button>
-                        <Button size="sm" variant="ghost" icon={<DollarSign size={13} />} onClick={() => setPricesProduct(p)} className="text-blue-500 sm:hidden" />
+                        <Button size="sm" variant="ghost" aria-label="Ver precios" icon={<DollarSign size={13} />} onClick={() => setPricesProduct(p)} className="text-blue-500 sm:hidden" />
                         <Can permission="productos:update">
-                          <Button size="sm" variant="ghost" icon={<Pencil size={13} />} onClick={() => setEditProduct(p)} />
+                          <Button size="sm" variant="ghost" aria-label="Editar producto" icon={<Pencil size={13} />} onClick={() => setEditProduct(p)} />
                         </Can>
                         <Can permission="productos:delete">
-                          <Button size="sm" variant="ghost" icon={<Trash2 size={13} />} onClick={() => setDeleteId(p.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+                          <Button size="sm" variant="ghost" aria-label="Eliminar producto" icon={<Trash2 size={13} />} onClick={() => setDeleteId(p.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
                         </Can>
                       </div>
                     </Td>
@@ -617,6 +619,7 @@ export default function ProductsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        aria-label="Editar precio"
                         icon={<Pencil size={13} />}
                         onClick={() => setEditPriceItem(pr)}
                         className="text-slate-400 hover:text-slate-700 hover:bg-slate-100"
@@ -624,7 +627,7 @@ export default function ProductsPage() {
                     </Can>
                     {!isProtegido && (
                       <Can permission="precios:delete">
-                        <Button size="sm" variant="ghost" icon={<Trash2 size={13} />} onClick={() => setDeletePriceId(pr.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+                        <Button size="sm" variant="ghost" aria-label="Eliminar precio" icon={<Trash2 size={13} />} onClick={() => setDeletePriceId(pr.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
                       </Can>
                     )}
                   </div>
