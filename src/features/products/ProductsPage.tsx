@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { useProductFilters } from './useProductFilters'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -118,7 +119,7 @@ function ProductCard({
       {/* Precios (presentaciones) */}
       {product.precios && product.precios.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
-          {product.precios.filter((p: any) => p.nombre !== 'Perdida' && p.activo !== false).slice(0, 3).map((pr: any) => (
+          {product.precios.filter((p) => p.nombre !== 'Perdida' && p.activo !== false).slice(0, 3).map((pr) => (
             <span key={pr.id} className="inline-flex items-center gap-1 px-2 py-0.5 t-bg-xlt border t-border-lt rounded-lg text-xs t-text-dk font-medium">
               <Tag size={9} />
               {pr.nombre}: {formatCOP(pr.precio)}
@@ -215,7 +216,7 @@ export default function ProductsPage() {
       )
       return { prev }
     },
-    onError: (err: any, _id, ctx) => {
+    onError: (err: unknown, _id, ctx) => {
       qc.setQueryData(['products'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
@@ -263,7 +264,7 @@ export default function ProductsPage() {
       )
       return { prev, pid }
     },
-    onError: (err: any, _id, ctx) => {
+    onError: (err: unknown, _id, ctx) => {
       qc.setQueryData(['products', ctx?.pid, 'prices'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar precio'))
     },
@@ -283,27 +284,8 @@ export default function ProductsPage() {
     onError: (error) => toast.error(apiError(error)),
   })
 
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const activos   = products.filter((p) => p.activo)
-    const sinStock  = activos.filter((p) => (p.stock_total ?? 0) === 0)
-    const stockBajo = activos.filter((p) => (p.stock_total ?? 0) > 0 && (p.stock_total ?? 0) <= 5)
-    const totalStock = activos.reduce((s, p) => s + (p.stock_total ?? 0), 0)
-    return { total: products.length, activos: activos.length, sinStock: sinStock.length, stockBajo: stockBajo.length, totalStock }
-  }, [products])
-
-  // ── Filtrado ──────────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const stock = p.stock_total ?? 0
-      if (!p.nombre.toLowerCase().includes(search.toLowerCase())) return false
-      if (catFilter !== 'todas' && p.categoria_id !== catFilter)    return false
-      if (stockFilter === 'con-stock'  && stock === 0)   return false
-      if (stockFilter === 'sin-stock'  && stock > 0)    return false
-      if (stockFilter === 'bajo-stock' && (stock === 0 || stock > 5)) return false
-      return true
-    })
-  }, [products, search, catFilter, stockFilter])
+  // ── Stats + Filtrado (extraídos a useProductFilters) ─────────────────────
+  const { stats, filtered } = useProductFilters(products, search, catFilter, stockFilter)
 
   const pg = usePagination(filtered)
 
@@ -434,7 +416,7 @@ export default function ProductsPage() {
               {pg.paginated.map((p) => {
                 const cat   = categorias.find((c) => c.id === p.categoria_id)
                 const stock = p.stock_total ?? 0
-                const presentaciones = p.precios?.filter((pr: any) => pr.nombre !== 'Perdida' && pr.activo !== false) ?? []
+                const presentaciones = p.precios?.filter((pr) => pr.nombre !== 'Perdida' && pr.activo !== false) ?? []
 
                 return (
                   <tr key={p.id} className="hover:bg-slate-50 transition-colors">
@@ -488,7 +470,7 @@ export default function ProductsPage() {
                       </span>
                       {/* Desktop: chips */}
                       <div className="hidden sm:flex flex-wrap gap-1">
-                        {presentaciones.slice(0, 3).map((pr: any) => (
+                        {presentaciones.slice(0, 3).map((pr) => (
                           <span key={pr.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 t-bg-xlt border t-border-lt rounded-md text-[10px] t-text-dk font-medium whitespace-nowrap">
                             {pr.nombre}
                           </span>

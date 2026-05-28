@@ -91,7 +91,7 @@ export default function InvoicesPage() {
     const mesActual = new Date().toISOString().slice(0, 7)
     const esMes     = facturas.filter((f) => f.fecha_creacion?.startsWith(mesActual))
     const totalMes  = esMes.reduce((s, f) => s + facturaTotal(f), 0)
-    const totalUnidades = facturas.reduce((s, f) => s + f.compras.reduce((ss: number, c: any) => ss + (c.cantidad_inicial ?? 0), 0), 0)
+    const totalUnidades = facturas.reduce((s, f) => s + f.compras.reduce((ss: number, c: { cantidad_inicial?: number }) => ss + (c.cantidad_inicial ?? 0), 0), 0)
     return { total, totalItems, count: facturas.length, totalMes, esMes: esMes.length, totalUnidades }
   }, [facturas])
 
@@ -258,7 +258,7 @@ export default function InvoicesPage() {
                             <p className="font-semibold text-slate-800">{proveedorNombre(f.proveedor_id)}</p>
                             {f.compras.length > 0 && (
                               <p className="text-xs text-slate-400 truncate max-w-[180px]">
-                                {f.compras.slice(0, 2).map((c: any) => productoNombre(c.producto_id)).join(', ')}
+                                {f.compras.slice(0, 2).map((c) => productoNombre(c.producto_id)).join(', ')}
                                 {f.compras.length > 2 && ` +${f.compras.length - 2} más`}
                               </p>
                             )}
@@ -288,7 +288,7 @@ export default function InvoicesPage() {
                           <td colSpan={6} className="bg-slate-50 px-6 py-3 border-t border-slate-100">
                             <div className="space-y-1">
                               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Detalle de compras</p>
-                              {f.compras.map((c: any) => (
+                              {f.compras.map((c) => (
                                 <div key={c.id} className="flex items-center gap-3 py-1.5 text-sm">
                                   <div className="w-6 h-6 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
                                     <Package size={11} className="text-slate-500" />

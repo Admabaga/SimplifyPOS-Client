@@ -20,12 +20,15 @@ import { reportesApi } from './api'
 import { productsApi } from '@/features/products/api'
 
 // ── Tooltip for charts ──────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry { name: string; value: number; color: string }
+interface ChartTooltipProps { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string }
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[150px]">
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex justify-between gap-4">
           <span className="text-slate-500">{p.name}</span>
           <span className="font-semibold" style={{ color: p.color }}>{formatCOP(p.value)}</span>

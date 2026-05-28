@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
+import { useSalesStats } from './useSalesStats'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -18,12 +19,15 @@ import { ventasApi } from './api'
 import { productsApi } from '@/features/products/api'
 import { cuentasApi } from '@/features/accounts/api'
 
-function ChartTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry { name: string; value: number; color: string }
+interface ChartTooltipProps { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string }
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[140px]">
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex justify-between gap-4">
           <span className="text-slate-500">{p.name}</span>
           <span className="font-semibold" style={{ color: p.color }}>{formatCOP(p.value)}</span>
@@ -58,58 +62,8 @@ export default function SalesPage() {
     queryFn: () => cuentasApi.getAll(),
   })
 
-  const productoNombre = (id: number) => products.find((p) => p.id === id)?.nombre ?? `#${id}`
-  const cuentaNombre   = (id: number) => cuentas.find((c) => c.id === id)?.nombre  ?? `Cuenta #${id}`
-  const vendedorNombre = (v: { nombre_cajero?: string | null; vendido_por?: number | null }) =>
-    v.nombre_cajero ?? (v.vendido_por ? `Cajero #${v.vendido_por}` : '—')
-
-  // ── Stats ─────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const totalVentas   = ventas.reduce((s, v) => s + v.precio_venta, 0)
-    const totalGanancia = ventas.reduce((s, v) => s + v.ganancia, 0)
-    const totalUnidades = ventas.reduce((s, v) => s + v.cantidad_unidades, 0)
-    const margen        = totalVentas > 0 ? (totalGanancia / totalVentas) * 100 : 0
-    return { totalVentas, totalGanancia, totalUnidades, count: ventas.length, margen }
-  }, [ventas])
-
-  // ── Chart: ventas por día ─────────────────────────────────────────────────
-  const chartData = useMemo(() => {
-    const byDay = new Map<string, { ventas: number; ganancia: number }>()
-    for (const v of ventas) {
-      const dia = v.fecha_venta?.slice(0, 10) ?? ''
-      if (!dia) continue
-      const prev = byDay.get(dia) ?? { ventas: 0, ganancia: 0 }
-      byDay.set(dia, { ventas: prev.ventas + v.precio_venta, ganancia: prev.ganancia + v.ganancia })
-    }
-    return Array.from(byDay.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([dia, vals]) => ({
-        dia: new Date(dia + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }),
-        ventas: vals.ventas,
-        ganancia: vals.ganancia,
-      }))
-  }, [ventas])
-
-  // ── Top productos en período ──────────────────────────────────────────────
-  const topProductos = useMemo(() => {
-    const map = new Map<number, { nombre: string; total: number; unidades: number }>()
-    for (const v of ventas) {
-      const prev = map.get(v.producto_id) ?? { nombre: productoNombre(v.producto_id), total: 0, unidades: 0 }
-      map.set(v.producto_id, { nombre: prev.nombre, total: prev.total + v.precio_venta, unidades: prev.unidades + v.cantidad_unidades })
-    }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total).slice(0, 5)
-  }, [ventas, products])
-
-  // ── Filtrado ──────────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    if (!search) return ventas
-    const q = search.toLowerCase()
-    return ventas.filter((v) =>
-      productoNombre(v.producto_id).toLowerCase().includes(q) ||
-      cuentaNombre(v.cuenta_id).toLowerCase().includes(q) ||
-      (v.nombre_cajero?.toLowerCase().includes(q) ?? false)
-    )
-  }, [ventas, search, products, cuentas])
+  const { stats, chartData, topProductos, filtered, productoNombre, cuentaNombre, vendedorNombre } =
+    useSalesStats(ventas, products, cuentas, search)
 
   const pg = usePagination(filtered)
 

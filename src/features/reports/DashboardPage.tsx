@@ -28,12 +28,15 @@ type Periodo = 'mes' | 'semana' | 'hoy'
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label }: any) {
+interface TooltipPayloadEntry { name: string; value: number; color: string }
+interface ChartTooltipProps { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string }
+
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[140px]">
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <span className="text-slate-500">{p.name}</span>
           <span className="font-semibold" style={{ color: p.color }}>{formatCOP(p.value)}</span>
@@ -43,12 +46,12 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
-function BarTooltip({ active, payload, label }: any) {
+function BarTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs min-w-[160px]">
       <p className="font-semibold text-slate-700 truncate mb-2">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex justify-between gap-4">
           <span className="text-slate-500">{p.name}</span>
           <span className="font-semibold t-text-dk">{formatCOP(p.value)}</span>
@@ -573,7 +576,7 @@ export default function DashboardPage() {
                             startAngle={90}
                             endAngle={-270}
                           >
-                            {topChartData.map((_: any, i: number) => (
+                            {topChartData.map((_, i) => (
                               <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="white" strokeWidth={2} />
                             ))}
                           </Pie>
@@ -581,7 +584,7 @@ export default function DashboardPage() {
                             content={({ active, payload }) => {
                               if (!active || !payload?.length) return null
                               const item = payload[0]
-                              const total = topChartData.reduce((s: number, d: any) => s + d.total, 0)
+                              const total = topChartData.reduce((s, d) => s + d.total, 0)
                               const pct = total > 0 ? ((item?.value as number ?? 0) / total * 100).toFixed(1) : '0'
                               return (
                                 <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-3 text-xs max-w-[180px]">
@@ -597,8 +600,8 @@ export default function DashboardPage() {
                     )}
                     {/* Leyenda */}
                     <div className="space-y-1.5 mt-1">
-                      {topChartData.map((p: any, i: number) => {
-                        const total = topChartData.reduce((s: number, d: any) => s + d.total, 0)
+                      {topChartData.map((p, i) => {
+                        const total = topChartData.reduce((s, d) => s + d.total, 0)
                         const pct = total > 0 ? ((p.total / total) * 100).toFixed(0) : '0'
                         return (
                           <div key={i} className="flex items-center gap-2">
@@ -625,8 +628,8 @@ export default function DashboardPage() {
                   <h2 className="text-sm font-semibold text-slate-800">Ranking ventas — {mesActual}</h2>
                 </div>
                 <div className="divide-y divide-slate-50">
-                  {data.top_productos.slice(0, 6).map((p: any, i: number) => {
-                    const maxTotal = Math.max(...data.top_productos.map((x: any) => x.total))
+                  {data.top_productos.slice(0, 6).map((p, i) => {
+                    const maxTotal = Math.max(...data.top_productos.map((x) => x.total))
                     const pct = maxTotal > 0 ? (p.total / maxTotal) * 100 : 0
                     return (
                       <div key={p.producto_id} className="flex items-center gap-3 px-4 py-3">
