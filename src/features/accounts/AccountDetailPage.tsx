@@ -984,7 +984,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
 
   const handleSearchKey = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && filtered.length === 1) {
-      setSelectedProdId(filtered[0]!.id)
+      const p = filtered[0]!
+      if ((p.stock_total ?? 0) > 0) setSelectedProdId(p.id)
     }
   }, [filtered])
 
@@ -1070,8 +1071,9 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                 return (
                   <button
                     key={p.id}
+                    disabled={stock === 0}
                     onClick={() => { setSelectedProdId(p.id); setSelectedPrecioId(null) }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:t-bg-xlt border border-transparent hover:t-border-lt transition-all text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:t-bg-xlt border border-transparent hover:t-border-lt transition-all text-left disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-transparent"
                   >
                     <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                       <Package size={14} className="text-slate-500" />
