@@ -26,6 +26,7 @@ const CajaPage  = lazy(() => import('@/features/caja/CajaPage'))
 const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'))
 const ClientesPage = lazy(() => import('@/features/clients/ClientesPage'))
 const MasterPage = lazy(() => import('@/features/master/MasterPage'))
+const MasterTodayPage = lazy(() => import('@/features/master/MasterTodayPage'))
 const MasterAnalyticsPage = lazy(() => import('@/features/master/MasterAnalyticsPage'))
 const MasterInfraPage = lazy(() => import('@/features/master/MasterInfraPage'))
 const MasterAIPage = lazy(() => import('@/features/master/MasterAIPage'))
@@ -122,6 +123,7 @@ export default function AppRoutes() {
             </Route>
             <Route element={<ProtectedRoute permission="users:manage" />}>
               <Route path="/master" element={<MasterPage />} />
+              <Route path="/master/today" element={<MasterTodayPage />} />
               <Route path="/master/analytics" element={<MasterAnalyticsPage />} />
               <Route path="/master/infra" element={<MasterInfraPage />} />
               <Route path="/master/ai" element={<MasterAIPage />} />
