@@ -11,6 +11,8 @@ const makeProducto = (overrides: Partial<Producto> = {}): Producto => ({
   categoria_id: 1,
   codigo: null,
   descripcion: null,
+  precio_ponderado: '0',
+  created_at: '2026-01-01T00:00:00',
   precios: [],
   ...overrides,
 })
@@ -39,7 +41,7 @@ describe('useProductFilters — filtrado por búsqueda', () => {
   it('filtra por nombre parcial case-insensitive', () => {
     const { result } = renderHook(() => useProductFilters(productos, 'coca', 'todas', 'todos'))
     expect(result.current.filtered).toHaveLength(1)
-    expect(result.current.filtered[0].nombre).toBe('Coca Cola 355ml')
+    expect(result.current.filtered[0]!.nombre).toBe('Coca Cola 355ml')
   })
 
   it('sin búsqueda devuelve todos', () => {
@@ -75,12 +77,12 @@ describe('useProductFilters — filtrado por stock', () => {
   it('sin-stock devuelve solo productos con stock 0', () => {
     const { result } = renderHook(() => useProductFilters(productos, '', 'todas', 'sin-stock'))
     expect(result.current.filtered).toHaveLength(1)
-    expect(result.current.filtered[0].stock_total).toBe(0)
+    expect(result.current.filtered[0]!.stock_total).toBe(0)
   })
 
   it('bajo-stock devuelve productos con 1-5 unidades', () => {
     const { result } = renderHook(() => useProductFilters(productos, '', 'todas', 'bajo-stock'))
     expect(result.current.filtered).toHaveLength(1)
-    expect(result.current.filtered[0].stock_total).toBe(3)
+    expect(result.current.filtered[0]!.stock_total).toBe(3)
   })
 })

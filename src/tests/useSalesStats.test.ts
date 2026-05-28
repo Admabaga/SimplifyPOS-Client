@@ -20,8 +20,8 @@ const makeVenta = (overrides: Partial<Venta> = {}): Venta => ({
 })
 
 const productos: Producto[] = [
-  { id: 1, nombre: 'Coca Cola', activo: true, stock_total: 10, categoria_id: 1, codigo: null, descripcion: null, precios: [] },
-  { id: 2, nombre: 'Agua Cristal', activo: true, stock_total: 5, categoria_id: 1, codigo: null, descripcion: null, precios: [] },
+  { id: 1, nombre: 'Coca Cola', activo: true, stock_total: 10, categoria_id: 1, codigo: null, descripcion: null, precio_ponderado: '0', created_at: '2026-01-01T00:00:00', precios: [] },
+  { id: 2, nombre: 'Agua Cristal', activo: true, stock_total: 5, categoria_id: 1, codigo: null, descripcion: null, precio_ponderado: '0', created_at: '2026-01-01T00:00:00', precios: [] },
 ]
 
 const cuentas: Cuenta[] = [
@@ -71,7 +71,7 @@ describe('useSalesStats — chartData', () => {
 
   it('suma ventas y ganancia del mismo día', () => {
     const { result } = renderHook(() => useSalesStats(ventas, productos, cuentas, ''))
-    const dia1 = result.current.chartData[0]
+    const dia1 = result.current.chartData[0]!
     expect(dia1.ventas).toBe(35000) // 20000 + 15000
     expect(dia1.ganancia).toBe(8000) // 5000 + 3000
   })
@@ -81,13 +81,13 @@ describe('useSalesStats — topProductos', () => {
   it('ordena por total ventas descendente', () => {
     const { result } = renderHook(() => useSalesStats(ventas, productos, cuentas, ''))
     const top = result.current.topProductos
-    expect(top[0].nombre).toBe('Coca Cola') // 20000+10000=30000
-    expect(top[1].nombre).toBe('Agua Cristal') // 15000
+    expect(top[0]!.nombre).toBe('Coca Cola') // 20000+10000=30000
+    expect(top[1]!.nombre).toBe('Agua Cristal') // 15000
   })
 
   it('agrega unidades de mismo producto', () => {
     const { result } = renderHook(() => useSalesStats(ventas, productos, cuentas, ''))
-    expect(result.current.topProductos[0].unidades).toBe(3) // 2+1
+    expect(result.current.topProductos[0]!.unidades).toBe(3) // 2+1
   })
 })
 

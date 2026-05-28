@@ -940,7 +940,7 @@ export default function AccountDetailPage() {
 interface AddVentaModalProps {
   open: boolean
   onClose: () => void
-  products: { id: number; nombre: string; precios: { id: number; nombre: string; precio: number }[]; stock_total?: number }[]
+  products: { id: number; nombre: string; precios: { id: number; nombre: string; precio: number; cantidad: number; activo: boolean }[]; stock_total?: number }[]
   onSubmit: (dto: AddVentaDto) => void
   loading: boolean
   initialProductId?: number
@@ -990,9 +990,9 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
 
   const selectedProduct = products.find((p) => p.id === selectedProdId)
   const selectedPrecio = selectedProduct?.precios.find((pr) => pr.id === selectedPrecioId)
-  const precioActivos = selectedProduct?.precios.filter((pr: any) => pr.nombre !== 'Perdida') ?? []
+  const precioActivos = selectedProduct?.precios.filter((pr) => pr.nombre !== 'Perdida') ?? []
   const stockDisponible = selectedProduct?.stock_total ?? 0
-  const stockEnPresentaciones = Math.floor(stockDisponible / ((selectedPrecio as any)?.cantidad ?? 1))
+  const stockEnPresentaciones = Math.floor(stockDisponible / (selectedPrecio?.cantidad ?? 1))
   const precioLista = (selectedPrecio?.precio ?? 0) * cantidad
 
   // Calcular precio con descuento
@@ -1123,8 +1123,8 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
                   >
                     <div>
                       <p className="text-sm font-medium text-slate-800">{pr.nombre}</p>
-                      {(pr as any).cantidad > 1 && (
-                        <p className="text-xs text-slate-400">{(pr as any).cantidad} unidades por presentación</p>
+                      {pr.cantidad > 1 && (
+                        <p className="text-xs text-slate-400">{pr.cantidad} unidades por presentación</p>
                       )}
                     </div>
                     <span className={`text-sm font-bold tabular-nums ${selectedPrecioId === pr.id ? 't-text-dk' : 'text-slate-700'}`}>
@@ -1345,7 +1345,7 @@ interface AddPagoModalProps {
 function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading }: AddPagoModalProps) {
   const montoInput = useMontoInput(pendiente)
   const { register, handleSubmit, watch, formState: { errors } } = useForm<PagoForm>({
-    resolver: zodResolver(pagoSchema) as unknown as Resolver<any>,
+    resolver: zodResolver(pagoSchema) as Resolver<PagoForm>,
   })
 
   const medioId = watch('medio_pago_id')
