@@ -121,6 +121,7 @@ export interface Venta {
   vendido_por: number | null
   sesion_caja_id: number | null
   nombre_cajero: string | null
+  producto_nombre?: string | null
 }
 
 export interface Pago {

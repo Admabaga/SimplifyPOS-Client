@@ -255,7 +255,7 @@ export default function AccountDetailPage() {
     const map = new Map<number, VentaAgrupada>()
     for (const v of cuenta.ventas) {
       const prod = products.find((p) => p.id === v.producto_id)
-      const nombre = prod?.nombre ?? `Producto #${v.producto_id}`
+      const nombre = v.producto_nombre ?? prod?.nombre ?? `Producto #${v.producto_id}`
       if (!map.has(v.producto_id)) {
         map.set(v.producto_id, {
           producto_id: v.producto_id,
