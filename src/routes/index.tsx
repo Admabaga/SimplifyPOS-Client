@@ -118,7 +118,7 @@ export default function AppRoutes() {
             <Route element={<ProtectedRoute permission="audit:read" />}>
               <Route path="/admin/audit" element={<AuditPage />} />
             </Route>
-            <Route element={<ProtectedRoute permission="facturacion:configure" />}>
+            <Route element={<ProtectedRoute permission="facturacion:read" />}>
               <Route path="/admin/billing" element={<BillingPage />} />
             </Route>
             <Route element={<ProtectedRoute permission="users:manage" />}>
