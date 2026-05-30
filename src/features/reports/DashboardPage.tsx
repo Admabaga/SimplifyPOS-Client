@@ -107,7 +107,7 @@ function getYesterday() {
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const isDesktop = useIsDesktop()
-  const [periodo, setPeriodo] = useState<Periodo>('mes')
+  const [periodo, setPeriodo] = useState<Periodo>('hoy')
   const now = new Date()
   const year  = now.getFullYear()
   const month = now.getMonth() + 1
