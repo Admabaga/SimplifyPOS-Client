@@ -1,37 +1,28 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { Plus, BookOpen, CheckCircle2, Circle, AlertCircle, TrendingUp, ChevronRight, Calendar, Zap, Users, Receipt } from 'lucide-react'
+import { BookOpen, CheckCircle2, Circle, AlertCircle, TrendingUp, ChevronRight, Calendar } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
-  PageHeader, Button, Input, Select, Table, Th, Td, Badge, Spinner, EmptyState,
-  Modal, Card, StatCard, TabBar, SearchInput, ProgressBar, InfoBanner, Pagination,
+  PageHeader, Table, Th, Td, Badge, Spinner, EmptyState,
+  Card, StatCard, TabBar, SearchInput, ProgressBar, Pagination,
 } from '@/shared/components/ui'
 import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
 import { cuentasApi } from './api'
-import { clientesApi } from '@/features/clients/api'
 import { useCajaGuard } from '@/shared/hooks/useCajaGuard'
-import type { Cuenta, Cliente } from '@/shared/types'
+import type { Cuenta } from '@/shared/types'
 import QuickSaleModal from './QuickSaleModal'
+import NuevaCuentaInline from './NuevaCuentaInline'
 
-const schema = z.object({
-  nombre: z.string().min(1, 'Requerido'),
-})
-type FormData = z.infer<typeof schema>
-type CrearCuentaPayload = { nombre: string; cliente_id?: number }
 type FilterTab = 'abiertas' | 'pagadas' | 'todas'
 
 export default function AccountsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const { requireCaja } = useCajaGuard()
-  const [showCreate, setShowCreate] = useState(false)
   const [showQuickSale, setShowQuickSale] = useState(false)
   const [tab, setTab] = useState<FilterTab>('abiertas')
   const [search, setSearch] = useState('')
@@ -50,7 +41,6 @@ export default function AccountsPage() {
       )
       qc.setQueryData(['accounts', newCuenta.id], newCuenta)
       toast.success('Cuenta creada')
-      setShowCreate(false)
       navigate(`/accounts/${newCuenta.id}`)
     },
     onError: (err: unknown) => toast.error(apiError(err, 'Error al crear cuenta')),
@@ -119,24 +109,6 @@ export default function AccountsPage() {
       <PageHeader
         title="Cuentas de crédito"
         subtitle="Gestión de ventas a crédito y pagos"
-        actions={
-          <Can permission="ventas:create">
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                icon={<Zap size={15} className="text-yellow-500" />}
-                onClick={() => requireCaja('hacer una venta rápida') && setShowQuickSale(true)}
-              >
-                Venta rápida
-              </Button>
-              <Can permission="cuentas:create">
-                <Button icon={<Plus size={16} />} onClick={() => requireCaja('crear una cuenta') && setShowCreate(true)}>
-                  Nueva cuenta
-                </Button>
-              </Can>
-            </div>
-          </Can>
-        }
       />
 
       {/* ── Stats ────────────────────────────────────────────────────────────── */}
@@ -167,6 +139,16 @@ export default function AccountsPage() {
           accent="purple"
         />
       </div>
+
+      {/* ── Crear cuenta / venta rápida (inline, sin modal) ──────────────────── */}
+      <Can permission="cuentas:create">
+        <NuevaCuentaInline
+          onCrear={(payload) => createMutation.mutate(payload)}
+          creating={createMutation.isPending}
+          onVentaRapida={() => setShowQuickSale(true)}
+          guardCaja={requireCaja}
+        />
+      </Can>
 
       {/* ── Filters ──────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 mb-4">
@@ -201,13 +183,10 @@ export default function AccountsPage() {
         <EmptyState
           icon={<BookOpen size={40} />}
           title={search ? 'Sin resultados' : tab === 'abiertas' ? 'Sin cuentas abiertas' : 'Sin cuentas'}
-          description={search ? `No hay cuentas que coincidan con "${search}"` : 'Crea tu primera cuenta de crédito'}
-          action={
-            !search && (
-              <Can permission="cuentas:create">
-                <Button icon={<Plus size={14} />} onClick={() => requireCaja('crear una cuenta') && setShowCreate(true)}>Nueva cuenta</Button>
-              </Can>
-            )
+          description={
+            search
+              ? `No hay cuentas que coincidan con "${search}"`
+              : 'Usa el panel de arriba para crear tu primera cuenta de crédito'
           }
         />
       ) : (
@@ -300,199 +279,6 @@ export default function AccountsPage() {
 
       {/* ── Quick Sale Modal ─────────────────────────────────────────────────── */}
       <QuickSaleModal open={showQuickSale} onClose={() => setShowQuickSale(false)} />
-
-      {/* ── Create Modal ──────────────────────────────────────────────────────── */}
-      <NuevaCuentaModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onSubmit={(payload) => createMutation.mutate(payload)}
-        loading={createMutation.isPending}
-      />
     </div>
-  )
-}
-
-// ─── NuevaCuentaModal ────────────────────────────────────────────────────────
-//
-// Refactor: cliente_id se maneja con useState plano (no RHF) — RHF tenía
-// problemas capturando valores de campos no registrados al hacer submit.
-// El nombre sí va por RHF (validación). Al submit construimos el payload
-// manualmente con ambos valores. Esto garantiza que cliente_id viaje al backend.
-
-function NuevaCuentaModal({
-  open, onClose, onSubmit, loading,
-}: {
-  open: boolean
-  onClose: () => void
-  onSubmit: (d: CrearCuentaPayload) => void
-  loading: boolean
-}) {
-  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema) as any,
-    defaultValues: { nombre: '' },
-  })
-
-  const [modoCliente, setModoCliente] = useState(false)
-  const [clienteId, setClienteId] = useState<number | null>(null)
-
-  const { data: clientes = [] } = useQuery({
-    queryKey: ['clients', 'activos'],
-    queryFn: () => clientesApi.getAll(true),
-    enabled: open,
-  })
-
-  const clienteSeleccionado = clientes.find((c) => c.id === clienteId) as Cliente | undefined
-
-  function handleClienteChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const id = Number(e.target.value)
-    if (id > 0) {
-      setClienteId(id)
-      const c = clientes.find((x) => x.id === id)
-      if (c) setValue('nombre', c.nombre_fiscal, { shouldValidate: true })
-    } else {
-      setClienteId(null)
-    }
-  }
-
-  function handleClose() {
-    reset()
-    setModoCliente(false)
-    setClienteId(null)
-    onClose()
-  }
-
-  function handleFinalSubmit(data: FormData) {
-    // En modo "Cliente fiscal", cliente_id es obligatorio
-    if (modoCliente && !clienteId) {
-      toast.error('Selecciona un cliente o cambia a modo "Solo nombre"')
-      return
-    }
-    onSubmit({
-      nombre: data.nombre,
-      cliente_id: modoCliente && clienteId ? clienteId : undefined,
-    })
-  }
-
-  return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      title="Nueva cuenta de crédito"
-      size="md"
-      footer={
-        <>
-          <Button variant="secondary" onClick={handleClose} disabled={loading}>Cancelar</Button>
-          <Button
-            loading={loading}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            onClick={handleSubmit(handleFinalSubmit as any)}
-          >
-            Crear cuenta
-          </Button>
-        </>
-      }
-    >
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <form onSubmit={handleSubmit(handleFinalSubmit as any)} className="space-y-4">
-        {/* Toggle modo */}
-        <div className="flex rounded-xl border border-slate-200 overflow-hidden text-sm font-medium">
-          <button
-            type="button"
-            onClick={() => { setModoCliente(false); setClienteId(null) }}
-            className={`flex-1 py-2.5 flex items-center justify-center gap-2 transition-colors ${
-              !modoCliente ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <Users size={14} />
-            Solo nombre
-          </button>
-          <button
-            type="button"
-            onClick={() => setModoCliente(true)}
-            className={`flex-1 py-2.5 flex items-center justify-center gap-2 transition-colors border-l border-slate-200 ${
-              modoCliente ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <Receipt size={14} />
-            Cliente fiscal
-          </button>
-        </div>
-
-        {/* Modo: solo nombre */}
-        {!modoCliente && (
-          <div className="space-y-3">
-            <InfoBanner icon={<Users size={14} />} variant="info">
-              La cuenta se crea con un nombre libre. Podrás asignar un cliente fiscal después
-              y emitir la factura manualmente desde "Emitir documento".
-            </InfoBanner>
-            <Input
-              label="Nombre del cliente o negocio *"
-              placeholder="Ej: Restaurante El Parque"
-              autoFocus
-              {...register('nombre')}
-              error={errors.nombre?.message}
-            />
-          </div>
-        )}
-
-        {/* Modo: cliente fiscal */}
-        {modoCliente && (
-          <div className="space-y-3">
-            <InfoBanner icon={<Receipt size={14} />} variant="success">
-              Al pagar esta cuenta se <strong>generará automáticamente</strong> una factura de
-              venta con los datos del cliente seleccionado.
-            </InfoBanner>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                Cliente *
-              </label>
-              <select
-                value={clienteId ?? ''}
-                onChange={handleClienteChange}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
-              >
-                <option value="">Seleccionar cliente…</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.es_generico ? `⚡ ${c.nombre_fiscal}` : c.label}
-                  </option>
-                ))}
-              </select>
-              {modoCliente && !clienteId && (
-                <p className="text-[11px] text-amber-600 mt-1">Selecciona un cliente del directorio</p>
-              )}
-            </div>
-
-            {clienteSeleccionado && (
-              <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-1 text-sm">
-                <p className="font-semibold text-purple-800">{clienteSeleccionado.nombre_fiscal}</p>
-                {clienteSeleccionado.tipo_doc && (
-                  <p className="text-purple-600 text-xs">
-                    {clienteSeleccionado.tipo_doc} {clienteSeleccionado.documento}
-                  </p>
-                )}
-                {clienteSeleccionado.telefono && (
-                  <p className="text-purple-500 text-xs">{clienteSeleccionado.telefono}</p>
-                )}
-                {clienteSeleccionado.es_generico && (
-                  <p className="text-xs text-amber-600 font-medium mt-1">
-                    ⚡ Cliente genérico — útil cuando el cliente no da sus datos
-                  </p>
-                )}
-              </div>
-            )}
-
-            <Input
-              label="Nombre de la cuenta *"
-              placeholder="Se pre-llena con el nombre del cliente"
-              {...register('nombre')}
-              error={errors.nombre?.message}
-            />
-          </div>
-        )}
-      </form>
-    </Modal>
   )
 }

@@ -104,6 +104,7 @@ export default function AccountDetailPage() {
   const [showClienteModal, setShowClienteModal] = useState(false)
   const [autoTicket, setAutoTicket] = useState<Ticket | null>(null)  // ticket generado automáticamente
   const [viewTicket, setViewTicket] = useState<Ticket | null>(null)  // ticket existente que se está viendo
+  const [generandoFactura, setGenerandoFactura] = useState(false)    // loading mientras se genera la factura
 
   const { data: cuenta, isLoading } = useQuery({
     queryKey: ['accounts', cuentaId],
@@ -176,11 +177,16 @@ export default function AccountDetailPage() {
   })
 
   /**
-   * Helper: genera factura automática si la cuenta está pagada Y tiene cliente fiscal.
-   * Optimización: usa el cache de tickets ya cargado para evitar un round-trip extra.
-   * Emite POS (documento legal local) — NO envía a DIAN automáticamente.
-   * Para enviar a DIAN, el usuario presiona "Enviar a DIAN" en el modal del ticket.
-   * Si no hay resolución POS configurada → fallback a INFORMAL.
+   * Helper: genera la FACTURA DE VENTA automática si la cuenta quedó pagada Y
+   * tiene cliente fiscal completo (documento + nombre).
+   *
+   * Emite una FACTURA_VENTA con resolución, CUFE e IVA — documento legal completo
+   * según DIAN — pero NO la transmite a facture. Queda en estado "NO_ENVIADA".
+   * El cliente decide si la quiere electrónica: al ver la factura habrá un botón
+   * "Factura electrónica" que la transmite a la DIAN (opt-in).
+   *
+   * Si la cuenta NO tiene cliente fiscal completo (venta rápida / solo nombre),
+   * NO se genera nada automáticamente — el comerciante emite manualmente.
    */
   async function maybeAutoEmitirFactura(c: Cuenta): Promise<void> {
     if (!c.esta_pagada || !c.cliente_documento || !c.cliente_nombre_fiscal) return
@@ -201,23 +207,26 @@ export default function AccountDetailPage() {
       email: c.cliente_email ?? undefined,
     }
 
-    let ticket
+    setGenerandoFactura(true)
     try {
-      ticket = await billingApi.emitir(c.id, { tipo_documento: 'POS', cliente: clienteData })
-    } catch {
-      try {
-        ticket = await billingApi.emitir(c.id, { tipo_documento: 'INFORMAL', cliente: clienteData })
-      } catch (err) {
-        toast.error(apiError(err, 'No se pudo generar el documento. Emítelo manualmente desde "Emitir documento".'))
-        return
-      }
+      const ticket = await billingApi.emitir(c.id, {
+        tipo_documento: 'FACTURA_VENTA',
+        cliente: clienteData,
+      })
+      qc.invalidateQueries({ queryKey: ['billing', 'tickets'] })
+      qc.invalidateQueries({ queryKey: ['billing', 'cuenta-tickets', cuentaId] })
+      setAutoTicket(ticket)
+      toast.success(`Factura ${ticket.numero_completo} generada`)
+    } catch (err) {
+      toast.error(
+        apiError(
+          err,
+          'No se pudo generar la factura. Verifica que tengas una resolución DIAN activa o emítela manualmente desde "Emitir documento".',
+        ),
+      )
+    } finally {
+      setGenerandoFactura(false)
     }
-
-    // Actualizar caches en paralelo (no bloquea el modal de ver)
-    qc.invalidateQueries({ queryKey: ['billing', 'tickets'] })
-    qc.invalidateQueries({ queryKey: ['billing', 'cuenta-tickets', cuentaId] })
-    setAutoTicket(ticket)
-    toast.success(`Documento ${ticket.numero_completo} generado`)
   }
 
   const addPagoMutation = useMutation({
@@ -891,6 +900,21 @@ export default function AccountDetailPage() {
         cuentaId={cuenta.id}
         cuentaNombre={cuenta.nombre}
       />
+
+      {/* Overlay de loading mientras se genera la factura tras el pago */}
+      {generandoFactura && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl px-8 py-7 flex flex-col items-center gap-3 max-w-xs text-center animate-fade-in">
+            <Spinner size={32} />
+            <div>
+              <p className="font-semibold text-slate-800">Generando factura…</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Estamos preparando el documento legal de esta venta. Un momento.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ticket generado automáticamente al pagar — muestra el visor directamente */}
       {autoTicket && (

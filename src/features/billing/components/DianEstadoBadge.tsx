@@ -10,7 +10,7 @@
  *   ERROR_DIAN      — Error técnico, reintentable 🔄
  */
 
-import { AlertCircle, CheckCircle2, Clock, Minus, RefreshCw, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, FileText, Minus, RefreshCw, XCircle } from 'lucide-react'
 
 interface Props {
   estado: string
@@ -33,6 +33,12 @@ const CONFIG: Record<
     bg: 'bg-slate-100',
     text: 'text-slate-500',
     icon: Minus,
+  },
+  NO_ENVIADA: {
+    label: 'Sin enviar',
+    bg: 'bg-violet-50',
+    text: 'text-violet-700',
+    icon: FileText,
   },
   PENDIENTE_DIAN: {
     label: 'Pendiente DIAN',

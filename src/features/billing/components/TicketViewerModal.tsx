@@ -109,7 +109,7 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
   const enviarDianMutation = useMutation({
     mutationFn: () => billingApi.enviarADian(ticket.id),
     onSuccess: () => {
-      toast.success('Envío a DIAN encolado — el estado se actualizará en unos segundos')
+      toast.success('Factura enviada a la DIAN — quedará en estado Pendiente hasta su respuesta')
       qc.invalidateQueries({ queryKey: ['tickets'] })
       qc.invalidateQueries({ queryKey: ['billing', 'cuenta-tickets'] })
     },
@@ -119,18 +119,18 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
     },
   })
 
-  // Mostrar el botón "Enviar a DIAN" solo si el ticket es elegible:
+  // Botón "Factura electrónica" — visible solo si el documento es elegible:
   // - Tipo POS o FACTURA_VENTA con CUFE y resolución (= documento fiscal real)
-  // - Estado actual: NO_APLICA (primer envío), ERROR_DIAN o RECHAZADO_DIAN (reintento)
+  // - Estado: NO_ENVIADA/NO_APLICA (primer envío) o ERROR/RECHAZADO (reintento)
   const esDocFiscal = ticket.tipo_documento === 'POS' || ticket.tipo_documento === 'FACTURA_VENTA'
   const tieneCufe = !!ticket.cufe && !!ticket.resolucion_numero
+  const esPrimerEnvio = ticket.estado_dian === 'NO_ENVIADA' || ticket.estado_dian === 'NO_APLICA'
   const puedeEnviarDian =
     esDocFiscal && tieneCufe &&
-    (ticket.estado_dian === 'NO_APLICA' ||
+    (esPrimerEnvio ||
      ticket.estado_dian === 'ERROR_DIAN' ||
      ticket.estado_dian === 'RECHAZADO_DIAN')
-  const labelBotonDian =
-    ticket.estado_dian === 'NO_APLICA' ? 'Enviar a DIAN' : 'Reintentar DIAN'
+  const labelBotonDian = esPrimerEnvio ? 'Factura electrónica' : 'Reintentar envío DIAN'
 
   useEffect(() => {
     if (!open) return
