@@ -1,4 +1,22 @@
 /**
+ * Tipo para errores de la API en callbacks onError de React Query.
+ * Úsalo en lugar de `any` en onError: (err: ApiError) => ...
+ */
+export interface ApiError {
+  response?: {
+    status?: number
+    data?: {
+      detail?: string | { msg: string }[]
+      error?: string
+      message?: string
+      msg?: string
+    }
+  }
+  userMessage?: string
+  message?: string
+}
+
+/**
  * Función única para extraer mensajes de error de la API.
  * Prioridad:
  *  1. data.error   — FastAPI custom handler { error, code }

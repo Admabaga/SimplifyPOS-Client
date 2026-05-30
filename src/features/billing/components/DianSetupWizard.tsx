@@ -20,6 +20,7 @@ import {
 import toast from 'react-hot-toast'
 import { billingApi, type DianSetupInput, type DianTestEmissionResult } from '../api'
 import type { EmpresaConfig } from '../types'
+import type { ApiError } from '@/shared/lib/apiError'
 
 /* ─── Catálogos DIAN ─────────────────────────────────────────────────────── */
 const RESPONSABILIDADES_FISCALES = [
@@ -86,8 +87,8 @@ function Wizard({ empresa }: { empresa: EmpresaConfig }) {
   const setupMut = useMutation({
     mutationFn: (data: DianSetupInput) => billingApi.updateDianSetup(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['billing', 'empresa'] }),
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.detail ?? 'Error guardando configuración DIAN'),
+    onError: (err: ApiError) =>
+      toast.error((err?.response?.data?.detail as string) ?? 'Error guardando configuración DIAN'),
   })
 
   const testMut = useMutation({
@@ -99,8 +100,8 @@ function Wizard({ empresa }: { empresa: EmpresaConfig }) {
         toast.success('Prueba aceptada por DIAN — setup completado')
       }
     },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.detail ?? 'Error en prueba de emisión'),
+    onError: (err: ApiError) =>
+      toast.error((err?.response?.data?.detail as string) ?? 'Error en prueba de emisión'),
   })
 
   const stepValid = useMemo(() => {
