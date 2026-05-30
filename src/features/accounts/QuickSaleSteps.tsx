@@ -1,252 +1,20 @@
 /**
- * QuickSaleModal — Venta rápida / cliente anónimo
+ * QuickSaleSteps — componentes presentacionales de la venta rápida.
  *
- * Permite registrar una venta sin necesidad de crear una cuenta de crédito.
- * Flujo:
- *   1. Buscar producto → agregar al carrito (con cantidad).
- *   2. Seleccionar medio de pago.
- *   3. Confirmar → crea cuenta temporal, registra ventas y pago, cierra.
+ * StepCart (búsqueda + carrito) y StepPayment (resumen + medio de pago).
+ * Sin estado propio relevante: reciben todo por props desde useQuickSale.
+ * Reutilizados por el flujo inline de venta rápida (QuickSaleInline).
  */
-import { useState, useRef, useEffect, useCallback } from 'react'
-import Fuse from 'fuse.js'
-import { useCurrencyInput } from '@/shared/hooks/useCurrencyInput'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  Search, Plus, Minus, Trash2, ShoppingCart, CreditCard,
-  CheckCircle2, X, Package,
-} from 'lucide-react'
-import { toast } from 'react-hot-toast'
-import {
-  Modal, Button, Input, Spinner, Badge,
-} from '@/shared/components/ui'
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Package } from 'lucide-react'
+import { Input, Badge } from '@/shared/components/ui'
 import { formatCOP } from '@/shared/lib/formatters'
-import { apiError } from '@/shared/lib/apiError'
-import { cuentasApi } from './api'
-import { productsApi } from '@/features/products/api'
-import { apiClient } from '@/shared/api/client'
+import type { useCurrencyInput } from '@/shared/hooks/useCurrencyInput'
 import type { Producto, ProductoPrecio, MedioPago } from '@/shared/types'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface CartItem {
-  producto: Producto
-  precio: ProductoPrecio
-  cantidad: number
-}
-
-interface Props {
-  open: boolean
-  onClose: () => void
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
-
-export default function QuickSaleModal({ open, onClose }: Props) {
-  const qc = useQueryClient()
-
-  // Cart state
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [search, setSearch] = useState('')
-  const [step, setStep] = useState<'cart' | 'payment'>('cart')
-  const [selectedMedio, setSelectedMedio] = useState<MedioPago | null>(null)
-  const montoInput = useCurrencyInput(0)
-
-  const searchRef  = useRef<HTMLInputElement | null>(null)
-
-  // Reset on open/close
-  useEffect(() => {
-    if (open) {
-      setCart([])
-      setSearch('')
-      setStep('cart')
-      setSelectedMedio(null)
-      montoInput.setFromNumber(0)
-      setTimeout(() => searchRef.current?.focus(), 120)
-    }
-  }, [open])
-
-  // ── Data ────────────────────────────────────────────────────────────────────
-
-  const { data: productos = [] } = useQuery({
-    queryKey: ['products-all'],
-    queryFn: () => productsApi.getAll(),
-    staleTime: 30_000,
-  })
-
-  const { data: medios = [] } = useQuery<MedioPago[]>({
-    queryKey: ['payment-methods'],
-    queryFn: () => apiClient.get<MedioPago[]>('/payment-methods').then((r) => r.data),
-    staleTime: 60_000,
-  })
-
-  // ── Fuzzy search ─────────────────────────────────────────────────────────────
-
-  const activeProducts = productos.filter((p) => p.activo && p.stock_total > 0)
-  const fuse = new Fuse(activeProducts, {
-    keys: ['nombre', 'codigo', 'codigo_interno'],
-    threshold: 0.35,
-    includeScore: true,
-  })
-
-  const results = search.trim().length > 0
-    ? fuse.search(search).slice(0, 8).map((r) => r.item)
-    : activeProducts.slice(0, 8)
-
-  // ── Cart ops ─────────────────────────────────────────────────────────────────
-
-  const addToCart = useCallback((producto: Producto, precio: ProductoPrecio) => {
-    setCart((prev) => {
-      const idx = prev.findIndex(
-        (i) => i.producto.id === producto.id && i.precio.id === precio.id
-      )
-      if (idx >= 0) {
-        const item = prev[idx]!
-        const newItem: CartItem = { ...item, cantidad: Math.min(item.cantidad + 1, producto.stock_total) }
-        return prev.map((it, i) => (i === idx ? newItem : it))
-      }
-      return [...prev, { producto, precio, cantidad: 1 }]
-    })
-    setSearch('')
-    searchRef.current?.focus()
-  }, [])
-
-  const updateQty = useCallback((idx: number, delta: number) => {
-    setCart((prev) => {
-      const item = prev[idx]
-      if (!item) return prev
-      const newQty = item.cantidad + delta
-      if (newQty <= 0) return prev.filter((_, i) => i !== idx)
-      const newItem: CartItem = { ...item, cantidad: Math.min(newQty, item.producto.stock_total) }
-      return prev.map((it, i) => (i === idx ? newItem : it))
-    })
-  }, [])
-
-  const removeItem = useCallback((idx: number) => {
-    setCart((prev) => prev.filter((_, i) => i !== idx))
-  }, [])
-
-  // ── Totals ───────────────────────────────────────────────────────────────────
-
-  const total = cart.reduce((s, i) => s + i.precio.precio * i.cantidad, 0)
-
-  const montoFinal = montoInput.numericValue() > 0 ? montoInput.numericValue() : total
-
-  // ── Confirm mutation ─────────────────────────────────────────────────────────
-
-  const confirmMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedMedio) throw new Error('Selecciona un medio de pago')
-      if (cart.length === 0) throw new Error('Agrega al menos un producto')
-
-      // 1. Crear cuenta temporal
-      const now = new Date()
-      const label = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const cuenta = await cuentasApi.create({ nombre: `Venta rápida ${label}` })
-
-      // 2. Registrar ventas secuencialmente
-      for (const item of cart) {
-        await cuentasApi.addVenta(cuenta.id, {
-          producto_id: item.producto.id,
-          producto_precio_id: item.precio.id,
-          cantidad: item.cantidad,
-        })
-      }
-
-      // 3. Pagar
-      await cuentasApi.addPago(cuenta.id, {
-        medio_pago_id: selectedMedio.id,
-        sub_total: montoFinal,
-        descripcion: 'Venta rápida',
-      })
-
-      return cuenta
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['accounts'] })
-      toast.success('Venta registrada')
-      onClose()
-    },
-    onError: (err: unknown) => {
-      toast.error(apiError(err, 'Error al registrar venta'))
-    },
-  })
-
-  // ── Keyboard ─────────────────────────────────────────────────────────────────
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') onClose()
-    if (e.key === 'Enter' && step === 'payment' && selectedMedio && cart.length > 0) {
-      e.preventDefault()
-      confirmMutation.mutate()
-    }
-  }, [step, selectedMedio, cart.length, confirmMutation, onClose])
-
-  // ── Render ───────────────────────────────────────────────────────────────────
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="⚡ Venta rápida"
-      size="lg"
-      footer={
-        step === 'cart' ? (
-          <>
-            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button
-              icon={<CreditCard size={15} />}
-              disabled={cart.length === 0}
-              onClick={() => setStep('payment')}
-            >
-              Ir a pago · {formatCOP(total)}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="secondary" onClick={() => setStep('cart')}>← Volver</Button>
-            <Button
-              icon={<CheckCircle2 size={15} />}
-              loading={confirmMutation.isPending}
-              disabled={!selectedMedio || cart.length === 0}
-              onClick={() => confirmMutation.mutate()}
-            >
-              Confirmar pago · {formatCOP(montoFinal)}
-            </Button>
-          </>
-        )
-      }
-    >
-      <div onKeyDown={handleKeyDown}>
-        {step === 'cart' ? (
-          <StepCart
-            search={search}
-            setSearch={setSearch}
-            searchRef={searchRef}
-            results={results}
-            cart={cart}
-            total={total}
-            onAdd={addToCart}
-            onUpdateQty={updateQty}
-            onRemove={removeItem}
-          />
-        ) : (
-          <StepPayment
-            cart={cart}
-            total={total}
-            medios={medios}
-            selectedMedio={selectedMedio}
-            setSelectedMedio={setSelectedMedio}
-            montoInput={montoInput}
-          />
-        )}
-      </div>
-    </Modal>
-  )
-}
+import type { CartItem } from './useQuickSale'
 
 // ─── Step 1: Cart ─────────────────────────────────────────────────────────────
 
-function StepCart({
+export function StepCart({
   search, setSearch, searchRef, results, cart, total, onAdd, onUpdateQty, onRemove,
 }: {
   search: string
@@ -287,9 +55,7 @@ function StepCart({
           {results.length === 0 ? (
             <div className="px-4 py-3 text-sm text-slate-400 text-center">Sin resultados</div>
           ) : (
-            results.map((prod) => (
-              <ProductResultRow key={prod.id} product={prod} onAdd={onAdd} />
-            ))
+            results.map((prod) => <ProductResultRow key={prod.id} product={prod} onAdd={onAdd} />)
           )}
         </div>
       )}
@@ -337,7 +103,6 @@ function StepCart({
                 </div>
               </div>
             ))}
-            {/* Total row */}
             <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-t border-slate-200">
               <span className="text-sm font-semibold text-slate-600">Total</span>
               <span className="text-base font-bold text-slate-900 tabular-nums">{formatCOP(total)}</span>
@@ -353,8 +118,6 @@ function StepCart({
     </div>
   )
 }
-
-// ─── Product result row ───────────────────────────────────────────────────────
 
 function ProductResultRow({ product, onAdd }: { product: Producto; onAdd: (p: Producto, pr: ProductoPrecio) => void }) {
   const mainPrice = product.precios.find((p) => p.activo) ?? product.precios[0]
@@ -383,7 +146,6 @@ function ProductResultRow({ product, onAdd }: { product: Producto; onAdd: (p: Pr
     )
   }
 
-  // Multiple prices → show each
   return (
     <div className="border-b border-slate-100 last:border-0">
       <div className="px-4 pt-2 pb-1">
@@ -412,7 +174,7 @@ function ProductResultRow({ product, onAdd }: { product: Producto; onAdd: (p: Pr
 
 // ─── Step 2: Payment ──────────────────────────────────────────────────────────
 
-function StepPayment({
+export function StepPayment({
   cart, total, medios, selectedMedio, setSelectedMedio, montoInput,
 }: {
   cart: CartItem[]
@@ -427,7 +189,6 @@ function StepPayment({
 
   return (
     <div className="space-y-5">
-      {/* Resumen */}
       <div className="bg-slate-50 rounded-xl p-4 space-y-2">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Resumen</p>
         {cart.map((item) => (
@@ -445,7 +206,6 @@ function StepPayment({
         </div>
       </div>
 
-      {/* Medios de pago */}
       <div>
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Medio de pago</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -466,7 +226,6 @@ function StepPayment({
         </div>
       </div>
 
-      {/* Monto recibido (opcional — para calcular cambio) */}
       {selectedMedio?.tipo === 'EFECTIVO' && (
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Monto recibido</p>
@@ -488,19 +247,12 @@ function StepPayment({
                 </button>
               ))}
           </div>
-          <Input
-            {...montoInput.inputProps}
-            placeholder={total.toLocaleString('es-CO')}
-          />
+          <Input {...montoInput.inputProps} placeholder={total.toLocaleString('es-CO')} />
           {cambio > 0 && (
-            <p className="mt-1.5 text-sm text-green-700 font-semibold">
-              Cambio: {formatCOP(cambio)}
-            </p>
+            <p className="mt-1.5 text-sm text-green-700 font-semibold">Cambio: {formatCOP(cambio)}</p>
           )}
           {cambio < 0 && (
-            <p className="mt-1.5 text-sm text-red-600 font-semibold">
-              Falta: {formatCOP(-cambio)}
-            </p>
+            <p className="mt-1.5 text-sm text-red-600 font-semibold">Falta: {formatCOP(-cambio)}</p>
           )}
         </div>
       )}

@@ -14,7 +14,6 @@ import { apiError } from '@/shared/lib/apiError'
 import { cuentasApi } from './api'
 import { useCajaGuard } from '@/shared/hooks/useCajaGuard'
 import type { Cuenta } from '@/shared/types'
-import QuickSaleModal from './QuickSaleModal'
 import NuevaCuentaInline from './NuevaCuentaInline'
 
 type FilterTab = 'abiertas' | 'pagadas' | 'todas'
@@ -23,7 +22,6 @@ export default function AccountsPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const { requireCaja } = useCajaGuard()
-  const [showQuickSale, setShowQuickSale] = useState(false)
   const [tab, setTab] = useState<FilterTab>('abiertas')
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState<'todas' | '7d' | '30d' | '90d'>('todas')
@@ -145,7 +143,6 @@ export default function AccountsPage() {
         <NuevaCuentaInline
           onCrear={(payload) => createMutation.mutate(payload)}
           creating={createMutation.isPending}
-          onVentaRapida={() => setShowQuickSale(true)}
           guardCaja={requireCaja}
         />
       </Can>
@@ -276,9 +273,6 @@ export default function AccountsPage() {
           </div>
         </Card>
       )}
-
-      {/* ── Quick Sale Modal ─────────────────────────────────────────────────── */}
-      <QuickSaleModal open={showQuickSale} onClose={() => setShowQuickSale(false)} />
     </div>
   )
 }

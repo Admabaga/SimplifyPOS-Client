@@ -12,8 +12,10 @@
  */
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Users, Receipt, Zap, Plus, ChevronRight } from 'lucide-react'
+import { Users, Receipt, Zap, Plus } from 'lucide-react'
 import { Card, Button, Input } from '@/shared/components/ui'
+import Combobox from '@/shared/components/Combobox'
+import QuickSaleInline from './QuickSaleInline'
 import { clientesApi } from '@/features/clients/api'
 import type { Cliente } from '@/shared/types'
 
@@ -22,7 +24,6 @@ type Modo = 'nombre' | 'cliente' | 'rapida'
 interface Props {
   onCrear: (payload: { nombre: string; cliente_id?: number }) => void
   creating: boolean
-  onVentaRapida: () => void
   /** Guarda de caja: devuelve false (y muestra toast) si no hay caja abierta. */
   guardCaja: (accion: string) => boolean
 }
@@ -33,7 +34,7 @@ const MODOS: { key: Modo; label: string; icon: typeof Users }[] = [
   { key: 'rapida', label: 'Venta rápida', icon: Zap },
 ]
 
-export default function NuevaCuentaInline({ onCrear, creating, onVentaRapida, guardCaja }: Props) {
+export default function NuevaCuentaInline({ onCrear, creating, guardCaja }: Props) {
   const [modo, setModo] = useState<Modo>('nombre')
   const [nombre, setNombre] = useState('')
   const [clienteId, setClienteId] = useState<number | null>(null)
@@ -54,12 +55,10 @@ export default function NuevaCuentaInline({ onCrear, creating, onVentaRapida, gu
     setClienteId(null)
   }
 
-  function handleClienteChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const id = Number(e.target.value)
-    if (id > 0) {
-      setClienteId(id)
-      const c = clientes.find((x) => x.id === id)
-      if (c) setNombre(c.nombre_fiscal)
+  function handleClienteSelect(c: Cliente | null) {
+    if (c) {
+      setClienteId(c.id)
+      setNombre(c.nombre_fiscal)
     } else {
       setClienteId(null)
     }
@@ -129,19 +128,29 @@ export default function NuevaCuentaInline({ onCrear, creating, onVentaRapida, gu
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Cliente fiscal</label>
-                <select
-                  value={clienteId ?? ''}
-                  onChange={handleClienteChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                >
-                  <option value="">Seleccionar cliente…</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.es_generico ? `⚡ ${c.nombre_fiscal}` : (c.label ?? c.nombre_fiscal)}
-                    </option>
-                  ))}
-                </select>
+                <Combobox<Cliente>
+                  label="Cliente fiscal"
+                  items={clientes}
+                  value={clienteSel ?? null}
+                  onChange={handleClienteSelect}
+                  toKey={(c) => c.id}
+                  toText={(c) => `${c.documento ?? ''} ${c.tipo_doc ?? ''} ${c.nombre_fiscal}`}
+                  renderSelected={(c) => (c.es_generico ? c.nombre_fiscal : (c.label ?? c.nombre_fiscal))}
+                  placeholder="Escribe documento o nombre…"
+                  emptyText="No se encontró ningún cliente"
+                  renderItem={(c) => (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {c.es_generico ? `⚡ ${c.nombre_fiscal}` : c.nombre_fiscal}
+                      </span>
+                      {!c.es_generico && c.documento && (
+                        <span className="text-[11px] text-slate-400 shrink-0">
+                          {c.tipo_doc} {c.documento}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                />
               </div>
               <Button icon={<Plus size={16} />} loading={creating} disabled={submitDisabled} onClick={handleCrear}>
                 Crear cuenta
@@ -164,18 +173,12 @@ export default function NuevaCuentaInline({ onCrear, creating, onVentaRapida, gu
         )}
 
         {modo === 'rapida' && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-            <p className="text-sm text-slate-500">
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400">
               Venta inmediata sin crear cuenta de crédito — ideal para clientes de paso.
+              Busca productos, arma el carrito y cobra; la cuenta se cierra al instante.
             </p>
-            <Button
-              variant="secondary"
-              icon={<Zap size={15} className="text-yellow-500" />}
-              onClick={() => { if (guardCaja('hacer una venta rápida')) onVentaRapida() }}
-            >
-              Iniciar venta rápida
-              <ChevronRight size={14} />
-            </Button>
+            <QuickSaleInline guardCaja={guardCaja} />
           </div>
         )}
       </div>
