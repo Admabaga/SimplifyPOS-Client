@@ -42,8 +42,13 @@ export const billingApi = {
   anular: (id: number, motivo: string) =>
     apiClient.post<Ticket>(`/billing/tickets/${id}/anular`, { motivo }).then((r) => r.data),
 
+  /** Dispara el envío a DIAN — primer envío (POS) o reintento (ERROR/RECHAZADO). */
+  enviarADian: (id: number) =>
+    apiClient.post<Ticket>(`/billing/tickets/${id}/enviar-dian`).then((r) => r.data),
+
+  /** @deprecated usa enviarADian — el endpoint viejo redirige al nuevo. */
   reintentarDian: (id: number) =>
-    apiClient.post<Ticket>(`/billing/tickets/${id}/reintentar-dian`).then((r) => r.data),
+    apiClient.post<Ticket>(`/billing/tickets/${id}/enviar-dian`).then((r) => r.data),
 
   // DIAN setup multi-tenant
   updateDianSetup: (data: DianSetupInput) =>

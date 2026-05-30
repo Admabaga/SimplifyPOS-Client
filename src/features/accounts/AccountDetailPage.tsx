@@ -178,7 +178,9 @@ export default function AccountDetailPage() {
   /**
    * Helper: genera factura automática si la cuenta está pagada Y tiene cliente fiscal.
    * Optimización: usa el cache de tickets ya cargado para evitar un round-trip extra.
-   * Intenta FACTURA_VENTA (requiere resolución DIAN activa) → fallback a INFORMAL.
+   * Emite POS (documento legal local) — NO envía a DIAN automáticamente.
+   * Para enviar a DIAN, el usuario presiona "Enviar a DIAN" en el modal del ticket.
+   * Si no hay resolución POS configurada → fallback a INFORMAL.
    */
   async function maybeAutoEmitirFactura(c: Cuenta): Promise<void> {
     if (!c.esta_pagada || !c.cliente_documento || !c.cliente_nombre_fiscal) return
@@ -201,7 +203,7 @@ export default function AccountDetailPage() {
 
     let ticket
     try {
-      ticket = await billingApi.emitir(c.id, { tipo_documento: 'FACTURA_VENTA', cliente: clienteData })
+      ticket = await billingApi.emitir(c.id, { tipo_documento: 'POS', cliente: clienteData })
     } catch {
       try {
         ticket = await billingApi.emitir(c.id, { tipo_documento: 'INFORMAL', cliente: clienteData })

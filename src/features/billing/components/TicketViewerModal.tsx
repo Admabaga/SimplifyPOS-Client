@@ -106,17 +106,31 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
   const qc = useQueryClient()
   const [showNotaModal, setShowNotaModal] = useState(false)
 
-  const reintentarMutation = useMutation({
-    mutationFn: () => billingApi.reintentarDian(ticket.id),
+  const enviarDianMutation = useMutation({
+    mutationFn: () => billingApi.enviarADian(ticket.id),
     onSuccess: () => {
-      toast.success('Reenvío DIAN encolado — actualiza en unos segundos')
+      toast.success('Envío a DIAN encolado — el estado se actualizará en unos segundos')
       qc.invalidateQueries({ queryKey: ['tickets'] })
+      qc.invalidateQueries({ queryKey: ['billing', 'cuenta-tickets'] })
     },
     onError: (e: unknown) => {
       const err = e as { response?: { data?: { detail?: string } } }
-      toast.error(err?.response?.data?.detail || 'Error al reintentar')
+      toast.error(err?.response?.data?.detail || 'Error al enviar a DIAN')
     },
   })
+
+  // Mostrar el botón "Enviar a DIAN" solo si el ticket es elegible:
+  // - Tipo POS o FACTURA_VENTA con CUFE y resolución (= documento fiscal real)
+  // - Estado actual: NO_APLICA (primer envío), ERROR_DIAN o RECHAZADO_DIAN (reintento)
+  const esDocFiscal = ticket.tipo_documento === 'POS' || ticket.tipo_documento === 'FACTURA_VENTA'
+  const tieneCufe = !!ticket.cufe && !!ticket.resolucion_numero
+  const puedeEnviarDian =
+    esDocFiscal && tieneCufe &&
+    (ticket.estado_dian === 'NO_APLICA' ||
+     ticket.estado_dian === 'ERROR_DIAN' ||
+     ticket.estado_dian === 'RECHAZADO_DIAN')
+  const labelBotonDian =
+    ticket.estado_dian === 'NO_APLICA' ? 'Enviar a DIAN' : 'Reintentar DIAN'
 
   useEffect(() => {
     if (!open) return
@@ -169,15 +183,21 @@ export default function TicketViewerModal({ open, onClose, ticket }: Props) {
               size="md"
             />
           )}
-          {(ticket.estado_dian === 'RECHAZADO_DIAN' || ticket.estado_dian === 'ERROR_DIAN') && (
+          {puedeEnviarDian && (
             <Button
               size="sm"
-              variant="ghost"
+              variant={ticket.estado_dian === 'NO_APLICA' ? 'secondary' : 'ghost'}
               icon={<RefreshCw size={12} />}
-              onClick={() => reintentarMutation.mutate()}
-              loading={reintentarMutation.isPending}
+              onClick={() => enviarDianMutation.mutate()}
+              loading={enviarDianMutation.isPending}
+              disabled={enviarDianMutation.isPending}
             >
-              Reintentar DIAN
+              {labelBotonDian}
+            </Button>
+          )}
+          {ticket.estado_dian === 'PENDIENTE_DIAN' && (
+            <Button size="sm" variant="ghost" disabled icon={<RefreshCw size={12} className="animate-spin" />}>
+              Enviando a DIAN...
             </Button>
           )}
           <div className="flex-1" />
