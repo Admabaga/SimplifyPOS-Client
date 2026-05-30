@@ -66,7 +66,7 @@ export default function NuevaCuentaInline({ onCrear, creating, onVentaRapida, gu
   }
 
   function handleCrear() {
-    // Crear cuenta NO requiere caja abierta — solo ventas/pagos la necesitan.
+    if (!guardCaja('crear una cuenta')) return
     if (!nombre.trim()) return
     if (modo === 'cliente' && !clienteId) return
     onCrear({
