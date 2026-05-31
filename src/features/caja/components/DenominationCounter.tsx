@@ -48,7 +48,7 @@ export default function DenominationCounter({
   esperado,
   onAplicar,
   defaultCounts,
-  collapsedDefault = false,
+  collapsedDefault = true,
 }: Props) {
   const [open, setOpen] = useState(!collapsedDefault)
   const [billetes, setBilletes] = useState<Counts>(() =>

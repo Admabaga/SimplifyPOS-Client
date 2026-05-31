@@ -138,14 +138,15 @@ export default function NuevaCuentaInline({ onCrear, creating, guardCaja }: Prop
                   renderSelected={(c) => (c.es_generico ? c.nombre_fiscal : (c.label ?? c.nombre_fiscal))}
                   placeholder="Escribe documento o nombre…"
                   emptyText="No se encontró ningún cliente"
+                  onEnterWithSelection={handleCrear}
                   renderItem={(c) => (
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate">
+                    <div className="flex flex-col gap-0.5 py-0.5">
+                      <span className="text-sm font-medium text-slate-800 truncate">
                         {c.es_generico ? `⚡ ${c.nombre_fiscal}` : c.nombre_fiscal}
                       </span>
                       {!c.es_generico && c.documento && (
-                        <span className="text-[11px] text-slate-400 shrink-0">
-                          {c.tipo_doc} {c.documento}
+                        <span className="text-[11px] text-slate-400">
+                          {c.tipo_doc} · {c.documento}
                         </span>
                       )}
                     </div>

@@ -6,6 +6,7 @@ import React, {
   type ButtonHTMLAttributes, type ReactNode, type ReactElement,
   forwardRef, useEffect, useId, useRef, useState, isValidElement, cloneElement,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, Calendar, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -510,7 +511,15 @@ interface ModalProps {
   title: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  /**
+   * sm  = 384px   · diálogos simples
+   * md  = 448px   · formularios cortos
+   * lg  = 672px   · formularios medianos
+   * xl  = 896px   · contenido complejo
+   * 2xl = 1152px  · modales con 2 columnas en desktop
+   * full= ~95vw   · pantalla casi completa en desktop
+   */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
 }
 
 export function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
@@ -560,17 +569,23 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   if (!open) return null
 
   const sizes = {
-    sm: 'sm:max-w-sm',
-    md: 'sm:max-w-md',
-    lg: 'sm:max-w-2xl',
-    xl: 'sm:max-w-4xl',
+    sm:   'sm:max-w-sm',
+    md:   'sm:max-w-md',
+    lg:   'sm:max-w-2xl',
+    xl:   'sm:max-w-4xl',
+    '2xl':'sm:max-w-5xl lg:max-w-6xl',
+    full: 'sm:max-w-[95vw] lg:max-w-[92vw]',
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="presentation">
-      {/* Backdrop — fixed propio para cubrir siempre el 100% del viewport */}
-      <div className="fixed inset-0 bg-black/55" onClick={onClose} aria-hidden="true" />
-      {/* Panel — z-index relativo para estar encima del backdrop */}
+  // Modales 2xl y full usan casi toda la altura disponible en desktop
+  const heightCls = (size === '2xl' || size === 'full')
+    ? 'max-h-[92vh] lg:max-h-[90vh]'
+    : 'max-h-[90vh]'
+
+  // Portal al document.body — el backdrop cubre TODO el viewport incluyendo sidebar
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 lg:p-6" role="presentation">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
         role="dialog"
@@ -580,28 +595,29 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
         className={clsx(
           'relative z-10 bg-white w-full focus:outline-none animate-slide-up',
           'rounded-2xl shadow-2xl flex flex-col',
-          'max-h-[90vh]',
+          heightCls,
           sizes[size],
         )}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-          <h3 id={titleId} className="text-base font-semibold text-slate-900">{title}</h3>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 shrink-0">
+          <h3 id={titleId} className="text-sm font-semibold text-slate-900">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Cerrar"
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
         <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">{children}</div>
         {footer && (
-          <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/60 rounded-b-2xl shrink-0">
+          <div className="px-5 py-3.5 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/60 rounded-b-2xl shrink-0">
             {footer}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

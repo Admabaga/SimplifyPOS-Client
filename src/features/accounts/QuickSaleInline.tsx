@@ -44,6 +44,7 @@ export default function QuickSaleInline({ guardCaja }: Props) {
           total={qs.total}
           onAdd={qs.addToCart}
           onUpdateQty={qs.updateQty}
+          onSetQty={qs.setQty}
           onRemove={qs.removeItem}
         />
       ) : (
@@ -78,7 +79,7 @@ export default function QuickSaleInline({ guardCaja }: Props) {
               disabled={!qs.selectedMedio || qs.cart.length === 0}
               onClick={handleConfirm}
             >
-              Confirmar pago · {formatCOP(qs.montoFinal)}
+              Confirmar pago · {formatCOP(qs.total)}
             </Button>
           </>
         )}

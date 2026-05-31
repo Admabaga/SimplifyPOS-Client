@@ -30,6 +30,11 @@ interface ComboboxProps<T> {
   emptyText?: string
   disabled?: boolean
   className?: string
+  /**
+   * Si hay un item ya seleccionado y el dropdown está cerrado,
+   * un Enter dispara este callback (ej: confirmar/crear con el item activo).
+   */
+  onEnterWithSelection?: () => void
 }
 
 function normalize(s: string): string {
@@ -50,6 +55,7 @@ export default function Combobox<T>({
   emptyText = 'Sin resultados',
   disabled = false,
   className = '',
+  onEnterWithSelection,
 }: ComboboxProps<T>) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -87,6 +93,12 @@ export default function Combobox<T>({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    // Dropdown cerrado: Enter con item seleccionado → disparar onEnterWithSelection
+    if (!open && e.key === 'Enter' && value && onEnterWithSelection) {
+      e.preventDefault()
+      onEnterWithSelection()
+      return
+    }
     if (!open && (e.key === 'ArrowDown' || e.key === 'Enter')) {
       setOpen(true)
       return

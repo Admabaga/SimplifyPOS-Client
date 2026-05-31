@@ -29,6 +29,7 @@ export default function AccountsPage() {
   const { data: cuentas = [], isLoading } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => cuentasApi.getAll({ limit: 500 }),
+    refetchOnMount: 'always',   // siempre refresca al volver de AccountDetail
   })
 
   const createMutation = useMutation({

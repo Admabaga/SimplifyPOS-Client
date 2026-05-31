@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useBarcode } from '@/shared/hooks/useBarcode'
 import Fuse from 'fuse.js'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -234,9 +235,18 @@ export default function AccountDetailPage() {
     onSuccess: async (cuentaActualizada) => {
       qc.setQueryData(['accounts', cuentaId], cuentaActualizada)
       qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
-      toast.success('Pago registrado')
-      setShowAddPago(false)
-      await maybeAutoEmitirFactura(cuentaActualizada as Cuenta)
+      qc.invalidateQueries({ queryKey: ['accounts'] })   // refresca la lista al volver
+      const cuenta = cuentaActualizada as Cuenta
+      if (cuenta.esta_pagada) {
+        // Cuenta saldada — cerrar modal y emitir factura automática si aplica
+        toast.success('Cuenta pagada completamente ✓')
+        setShowAddPago(false)
+        await maybeAutoEmitirFactura(cuenta)
+      } else {
+        // Pago parcial — modal queda abierto, el pendiente se actualiza reactivamente
+        const restante = cuenta.valor_pendiente ?? 0
+        toast.success(`Abono registrado — quedan ${formatCOP(restante)} pendientes`)
+      }
     },
     onError: (err: unknown) => toast.error(apiError(err)),
   })
@@ -257,7 +267,10 @@ export default function AccountDetailPage() {
       toast.error(apiError(err))
     },
     onSuccess: () => { toast.success('Pago eliminado'); setDeletePagoId(null) },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['accounts', cuentaId] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
+      qc.invalidateQueries({ queryKey: ['accounts'] })
+    },
   })
 
   // ── Ventas agrupadas por producto ─────────────────────────────────────────
@@ -901,10 +914,10 @@ export default function AccountDetailPage() {
         cuentaNombre={cuenta.nombre}
       />
 
-      {/* Overlay de loading mientras se genera la factura tras el pago */}
-      {generandoFactura && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl px-8 py-7 flex flex-col items-center gap-3 max-w-xs text-center animate-fade-in">
+      {/* Overlay de loading mientras se genera la factura — portal al body para cubrir toda la pantalla */}
+      {generandoFactura && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl px-8 py-7 flex flex-col items-center gap-3 max-w-xs text-center animate-fade-in">
             <Spinner size={32} />
             <div>
               <p className="font-semibold text-slate-800">Generando factura…</p>
@@ -913,7 +926,8 @@ export default function AccountDetailPage() {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Ticket generado automáticamente al pagar — muestra el visor directamente */}
@@ -1381,9 +1395,14 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
   const subTotal = montoInput.numericValue()
   const comision = medioSeleccionado ? (subTotal * (Number(medioSeleccionado.comision_porcentaje) / 100)) : 0
   const totalNeto = subTotal - comision
+  // Monto real a cobrar: si el cliente da más efectivo, el vuelto se calcula pero se cobra solo lo pendiente
+  const montoReal = subTotal > pendiente ? pendiente : subTotal
   const cambio = subTotal > pendiente ? subTotal - pendiente : 0
+  const faltante = subTotal > 0 && subTotal < pendiente ? pendiente - subTotal : 0
+  const esParcial = faltante > 0
   const canPay = !!medioId && subTotal >= 1
 
+  // Resetear input cuando el pendiente cambia (ej: después de un abono parcial exitoso)
   useEffect(() => {
     if (open) montoInput.setFromNumber(pendiente > 0 ? pendiente : 0)
   }, [open, pendiente]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1391,8 +1410,12 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
   const doSubmit = handleSubmit((formData) => {
     const monto = montoInput.numericValue()
     if (monto < 1) { toast.error('Ingresa un monto válido'); return }
-    onSubmit({ ...formData, sub_total: monto })
+    onSubmit({ ...formData, sub_total: montoReal })
   })
+
+  const btnLabel = esParcial
+    ? `Registrar abono · ${formatCOP(montoReal)}`
+    : `Pagar ${formatCOP(montoReal)}`
 
   return (
     <Modal
@@ -1404,7 +1427,7 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
           <Button loading={loading} icon={<CreditCard size={14} />} onClick={doSubmit}>
-            Registrar pago
+            {btnLabel}
           </Button>
         </>
       }
@@ -1418,7 +1441,7 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
         <div className="p-3.5 bg-yellow-50 border border-yellow-100 rounded-xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="text-yellow-500 shrink-0" />
-            <span className="text-sm font-medium text-yellow-700">Pendiente</span>
+            <span className="text-sm font-medium text-yellow-700">Pendiente total</span>
           </div>
           <span className="text-base font-bold text-yellow-800 tabular-nums">{formatCOP(pendiente)}</span>
         </div>
@@ -1449,34 +1472,37 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
 
           {/* Monto */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Monto *</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none">$</span>
-                <input
-                  {...montoInput.inputProps}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none"
-                />
-              </div>
-              {pendiente > 0 && (
-                <button
-                  type="button"
-                  onClick={() => montoInput.setFromNumber(pendiente)}
-                  className="shrink-0 px-3 py-2 text-xs font-semibold rounded-xl border t-border t-text hover:t-bg-lt transition-colors"
-                  title={`Pagar todo — ${formatCOP(pendiente)}`}
-                >
-                  Pagar todo
-                </button>
-              )}
+            <label className="text-sm font-medium text-slate-700">Monto recibido *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 pointer-events-none select-none">$</span>
+              <input
+                {...montoInput.inputProps}
+                placeholder="0"
+                className="w-full pl-7 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none"
+              />
             </div>
           </div>
 
-          {/* Descripción */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Descripción (opcional)</label>
-            <input {...register('descripcion')} placeholder="Ej: Abono parcial..." className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none" />
-          </div>
+          {/* Abono parcial — falta algo */}
+          {esParcial && (
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                    <Wallet size={13} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800">Abono parcial</p>
+                    <p className="text-[10px] text-blue-600">Se registrará {formatCOP(montoReal)} — el modal quedará abierto para el siguiente pago</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-blue-500 font-medium">Quedará pendiente</p>
+                  <p className="text-base font-bold text-blue-800 tabular-nums">{formatCOP(faltante)}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Vuelto / cambio */}
           {cambio > 0 && (
@@ -1485,19 +1511,25 @@ function AddPagoModal({ open, onClose, mediosPago, pendiente, onSubmit, loading 
                 <span className="text-lg">💵</span>
                 <div>
                   <p className="text-sm font-semibold t-text-dk">Vuelto a dar</p>
-                  <p className="text-[10px] t-text">El cliente pagó más de lo debido</p>
+                  <p className="text-[10px] t-text">Se cobrará {formatCOP(pendiente)}, devolver {formatCOP(cambio)}</p>
                 </div>
               </div>
               <span className="text-xl font-bold t-text-dk tabular-nums">{formatCOP(cambio)}</span>
             </div>
           )}
 
+          {/* Descripción */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700">Descripción (opcional)</label>
+            <input {...register('descripcion')} placeholder="Ej: Abono parcial, Nequi..." className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none" />
+          </div>
+
           {/* Resumen comisión */}
           {comision > 0 && (
             <div className="p-3 bg-orange-50 border border-orange-100 rounded-xl text-xs space-y-1">
               <div className="flex justify-between text-orange-700">
-                <span>Monto pagado por cliente</span>
-                <span className="font-semibold tabular-nums">{formatCOP(subTotal)}</span>
+                <span>Monto a cobrar</span>
+                <span className="font-semibold tabular-nums">{formatCOP(montoReal)}</span>
               </div>
               <div className="flex justify-between text-orange-600">
                 <span>Comisión {medioSeleccionado?.nombre} ({medioSeleccionado?.comision_porcentaje}%)</span>

@@ -94,6 +94,16 @@ export function useQuickSale(onDone: () => void) {
     })
   }, [])
 
+  const setQty = useCallback((idx: number, qty: number) => {
+    setCart((prev) => {
+      const item = prev[idx]
+      if (!item) return prev
+      if (qty <= 0) return prev.filter((_, i) => i !== idx)
+      const newItem: CartItem = { ...item, cantidad: Math.min(qty, item.producto.stock_total) }
+      return prev.map((it, i) => (i === idx ? newItem : it))
+    })
+  }, [])
+
   const removeItem = useCallback((idx: number) => {
     setCart((prev) => prev.filter((_, i) => i !== idx))
   }, [])
@@ -119,7 +129,7 @@ export function useQuickSale(onDone: () => void) {
       }
       await cuentasApi.addPago(cuenta.id, {
         medio_pago_id: selectedMedio.id,
-        sub_total: montoFinal,
+        sub_total: total,           // monto a pagar (no el efectivo recibido)
         descripcion: 'Venta rápida',
       })
       return cuenta
@@ -138,7 +148,7 @@ export function useQuickSale(onDone: () => void) {
     // estado
     cart, search, step, selectedMedio, montoInput, searchRef, results, medios, total, montoFinal,
     // setters / acciones
-    setSearch, setStep, setSelectedMedio, addToCart, updateQty, removeItem, reset,
+    setSearch, setStep, setSelectedMedio, addToCart, updateQty, setQty, removeItem, reset,
     confirm: () => confirmMutation.mutate(),
     confirming: confirmMutation.isPending,
   }
