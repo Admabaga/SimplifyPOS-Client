@@ -139,6 +139,7 @@ export default function Combobox<T>({
           aria-expanded={open}
           aria-controls="combobox-list"
           autoComplete="off"
+          autoFocus
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {value && !disabled && (

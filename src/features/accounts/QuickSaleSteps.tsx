@@ -37,6 +37,7 @@ export function StepCart({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar producto por nombre o código..."
+          autoFocus
           className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
         />
         {search && (

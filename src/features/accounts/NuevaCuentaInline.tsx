@@ -29,13 +29,13 @@ interface Props {
 }
 
 const MODOS: { key: Modo; label: string; icon: typeof Users }[] = [
+  { key: 'rapida', label: 'Venta rápida', icon: Zap },
   { key: 'nombre', label: 'Solo nombre', icon: Users },
   { key: 'cliente', label: 'Cliente fiscal', icon: Receipt },
-  { key: 'rapida', label: 'Venta rápida', icon: Zap },
 ]
 
 export default function NuevaCuentaInline({ onCrear, creating, guardCaja }: Props) {
-  const [modo, setModo] = useState<Modo>('nombre')
+  const [modo, setModo] = useState<Modo>('rapida')
   const [nombre, setNombre] = useState('')
   const [clienteId, setClienteId] = useState<number | null>(null)
 
