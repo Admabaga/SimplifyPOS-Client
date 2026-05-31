@@ -51,13 +51,21 @@ export function useGlobalShortcuts() {
           break
         case 'F4':
           e.preventDefault()
-          navigate('/sales')
+          navigate('/admin/billing')
           break
-        case 'F5':
+        case 'F6':
+          e.preventDefault()
+          navigate('/reports')
+          break
+        case 'F7':
           e.preventDefault()
           navigate('/notifications')
           break
-        case 'F6':
+        case 'F8':
+          e.preventDefault()
+          navigate('/sales')
+          break
+        case 'F9':
           e.preventDefault()
           navigate('/products')
           break
