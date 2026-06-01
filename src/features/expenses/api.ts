@@ -12,9 +12,20 @@ export interface CreateGastoDto {
   comprobante_path?: string | null
 }
 
+export interface GastosStats {
+  total: number
+  total_mes: number
+  max_gasto: number
+  count: number
+}
+
 export const gastosApi = {
   getAll: (params?: PaginationParams) =>
     apiClient.get<Gasto[]>('/expenses', { params }).then((r) => r.data),
+
+  /** Agregados exactos del tenant (no dependen de paginación). */
+  stats: () =>
+    apiClient.get<GastosStats>('/expenses/stats').then((r) => r.data),
 
   create: (dto: CreateGastoDto) =>
     apiClient.post<Gasto>('/expenses', dto).then((r) => r.data),

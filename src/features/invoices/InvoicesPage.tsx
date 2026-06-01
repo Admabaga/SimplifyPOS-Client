@@ -51,7 +51,15 @@ export default function InvoicesPage() {
 
   const { data: facturas = [], isLoading } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => facturasApi.getAll({ limit: 500 }),
+    queryFn: () => facturasApi.getAll({ limit: 100 }),
+    refetchOnMount: 'always',
+  })
+
+  // Stats EXACTOS del tenant (agregados SQL, no dependen de paginación)
+  const { data: statsData } = useQuery({
+    queryKey: ['invoices', 'stats'],
+    queryFn: facturasApi.stats,
+    refetchOnMount: 'always',
   })
 
   const { data: proveedores = [] } = useQuery({
@@ -70,6 +78,7 @@ export default function InvoicesPage() {
       qc.setQueryData(['invoices'], (old: typeof facturas | undefined) =>
         old ? [newFactura, ...old] : [newFactura]
       )
+      qc.invalidateQueries({ queryKey: ['invoices', 'stats'] })  // stats SQL exactos
       // Products stock changed — must refetch
       qc.invalidateQueries({ queryKey: ['products'] })
       qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
@@ -84,16 +93,14 @@ export default function InvoicesPage() {
   const facturaTotal    = (f: { compras: { precio_total: number }[] }) =>
     f.compras.reduce((s, c) => s + (c.precio_total ?? 0), 0)
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const total     = facturas.reduce((s, f) => s + facturaTotal(f), 0)
-    const totalItems = facturas.reduce((s, f) => s + f.compras.length, 0)
-    const mesActual = new Date().toISOString().slice(0, 7)
-    const esMes     = facturas.filter((f) => f.fecha_creacion?.startsWith(mesActual))
-    const totalMes  = esMes.reduce((s, f) => s + facturaTotal(f), 0)
-    const totalUnidades = facturas.reduce((s, f) => s + f.compras.reduce((ss: number, c: { cantidad_inicial?: number }) => ss + (c.cantidad_inicial ?? 0), 0), 0)
-    return { total, totalItems, count: facturas.length, totalMes, esMes: esMes.length, totalUnidades }
-  }, [facturas])
+  // ── Stats (del endpoint /invoices/stats — exactos sin importar paginación) ────
+  const stats = useMemo(() => ({
+    total: statsData?.total_invertido ?? 0,
+    count: statsData?.facturas ?? 0,
+    totalMes: statsData?.total_mes ?? 0,
+    esMes: statsData?.facturas_mes ?? 0,
+    totalUnidades: statsData?.unidades ?? 0,
+  }), [statsData])
 
   // ── Filtrado ─────────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {

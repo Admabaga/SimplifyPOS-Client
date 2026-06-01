@@ -42,7 +42,15 @@ export default function ExpensesPage() {
 
   const { data: gastos = [], isLoading } = useQuery({
     queryKey: ['expenses'],
-    queryFn: () => gastosApi.getAll({ limit: 500 }),
+    queryFn: () => gastosApi.getAll({ limit: 100 }),
+    refetchOnMount: 'always',
+  })
+
+  // Stats EXACTOS del tenant (agregados SQL, no dependen de paginación)
+  const { data: statsData } = useQuery({
+    queryKey: ['expenses', 'stats'],
+    queryFn: gastosApi.stats,
+    refetchOnMount: 'always',
   })
 
   const createMutation = useMutation({
@@ -51,6 +59,7 @@ export default function ExpensesPage() {
       qc.setQueryData(['expenses'], (old: Gasto[] | undefined) =>
         old ? [newGasto, ...old] : [newGasto]
       )
+      qc.invalidateQueries({ queryKey: ['expenses', 'stats'] })
       toast.success('Gasto registrado')
       setShowCreate(false)
     },
@@ -63,6 +72,7 @@ export default function ExpensesPage() {
       qc.setQueryData(['expenses'], (old: Gasto[] | undefined) =>
         old ? old.map((g) => g.id === updated.id ? updated : g) : old
       )
+      qc.invalidateQueries({ queryKey: ['expenses', 'stats'] })
       toast.success('Gasto actualizado')
       setEditItem(null)
     },
@@ -84,7 +94,7 @@ export default function ExpensesPage() {
       toast.error(apiError(err, 'Error al eliminar'))
     },
     onSuccess: () => { toast.success('Gasto eliminado'); setDeleteId(null) },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['expenses'] }),  // incluye ['expenses','stats']
   })
 
   // Compute stats & categories
@@ -93,15 +103,13 @@ export default function ExpensesPage() {
     return ['todas', ...Array.from(cats).sort()]
   }, [gastos])
 
-  const stats = useMemo(() => {
-    const total = gastos.reduce((s, g) => s + parseFloat(String(g.monto)), 0)
-    const hoy = new Date().toISOString().slice(0, 10)
-    const mesActual = hoy.slice(0, 7)
-    const estesMes = gastos.filter((g) => g.fecha?.startsWith(mesActual))
-    const totalMes = estesMes.reduce((s, g) => s + parseFloat(String(g.monto)), 0)
-    const maxGasto = gastos.reduce((max, g) => Math.max(max, parseFloat(String(g.monto))), 0)
-    return { total, totalMes, count: gastos.length, maxGasto }
-  }, [gastos])
+  // Stats del endpoint /expenses/stats — exactos sin importar paginación
+  const stats = useMemo(() => ({
+    total: statsData?.total ?? 0,
+    totalMes: statsData?.total_mes ?? 0,
+    count: statsData?.count ?? 0,
+    maxGasto: statsData?.max_gasto ?? 0,
+  }), [statsData])
 
   const filtered = useMemo(() => {
     let result = [...gastos].sort((a, b) => b.fecha.localeCompare(a.fecha))
