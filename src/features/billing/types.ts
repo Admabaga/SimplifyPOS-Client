@@ -110,6 +110,7 @@ export interface TicketItem {
   valor_iva_linea: number
   subtotal_linea: number
   total_linea: number
+  descuento_linea?: number  // descuento aplicado a esta línea (0 si no hubo)
 }
 
 export interface Ticket {

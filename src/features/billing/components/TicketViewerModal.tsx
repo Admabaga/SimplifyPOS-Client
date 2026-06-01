@@ -306,14 +306,11 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {ticket.items.map((it, idx) => {
-                    // Fórmula correcta:
-                    // subtotal_linea = qty × precio_base_sin_iva_sin_descuento
-                    // originalTotal  = lo que hubiera costado la línea SIN descuento, CON IVA
-                    // descMonto      = ahorro real del cliente (incluye IVA)
-                    // Umbral > 1 para absorber redondeos del backend
-                    const originalTotal = Math.round(it.subtotal_linea * (1 + it.tarifa_iva / 100))
-                    const tieneDesc = originalTotal - it.total_linea > 1
-                    const descMonto = tieneDesc ? originalTotal - it.total_linea : 0
+                    // descuento_linea (con IVA) viene del backend — fuente única de verdad.
+                    // total_linea ya es NETO. Precio sin descuento = total_linea + descuento.
+                    const descMonto = Math.round(it.descuento_linea ?? 0)
+                    const tieneDesc = descMonto > 0
+                    const originalTotal = it.total_linea + descMonto
                     const descPct = tieneDesc && originalTotal > 0
                       ? Math.round((descMonto / originalTotal) * 100) : 0
                     // Precio original por unidad CON IVA (para mostrar tachado)
@@ -641,10 +638,7 @@ function ThermalContent({ ticket, pagos }: { ticket: Ticket; pagos?: Pago[] }) {
   // originalTotal = subtotal_linea × (1 + tarifa_iva/100) = precio sin descuento, con IVA
   // descMonto = originalTotal - total_linea = lo que el cliente ahorra (incluye IVA)
   // Umbral > 1 para absorber redondeos
-  const lineasConDesc = ticket.items.filter((it) => {
-    const ot = it.subtotal_linea * (1 + it.tarifa_iva / 100)
-    return ot - it.total_linea > 1
-  })
+  const lineasConDesc = ticket.items.filter((it) => (it.descuento_linea ?? 0) > 0)
 
   const ivaPorTarifa = new Map<number, { base: number; iva: number }>()
   ticket.items.forEach((it) => {
@@ -727,9 +721,9 @@ function ThermalContent({ ticket, pagos }: { ticket: Ticket; pagos?: Pago[] }) {
       <div className="pt-sep">{SEP}</div>
       <div className="pt-section">DETALLE DE PRODUCTOS</div>
       {ticket.items.map((it) => {
-        const originalTotalThermal = Math.round(it.subtotal_linea * (1 + it.tarifa_iva / 100))
-        const tieneDesc = originalTotalThermal - it.total_linea > 1
-        const descMonto = tieneDesc ? originalTotalThermal - it.total_linea : 0
+        const descMonto = Math.round(it.descuento_linea ?? 0)
+        const tieneDesc = descMonto > 0
+        const originalTotalThermal = it.total_linea + descMonto
         const descPct = tieneDesc && originalTotalThermal > 0
           ? Math.round((descMonto / originalTotalThermal) * 100) : 0
         // Precio unitario original CON IVA (para mostrar en el ticket)
