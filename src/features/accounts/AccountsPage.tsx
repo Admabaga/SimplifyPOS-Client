@@ -26,34 +26,43 @@ export default function AccountsPage() {
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState<'todas' | '7d' | '30d' | '90d'>('todas')
 
+  // Lista para mostrar. La pestaña "Abiertas" trae TODAS las abiertas (el back
+  // no pagina find_abiertas); "Pagadas/Todas" trae las más recientes paginadas.
   const { data: cuentas = [], isLoading } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => cuentasApi.getAll({ limit: 500 }),
+    queryKey: ['accounts', tab],
+    queryFn: () =>
+      cuentasApi.getAll(
+        tab === 'abiertas' ? { solo_abiertas: true } : { limit: 100 },
+      ),
     refetchOnMount: 'always',   // siempre refresca al volver de AccountDetail
+  })
+
+  // Stats EXACTOS del tenant (agregados SQL, no dependen de paginación).
+  const { data: statsData } = useQuery({
+    queryKey: ['accounts', 'stats'],
+    queryFn: cuentasApi.stats,
+    refetchOnMount: 'always',
   })
 
   const createMutation = useMutation({
     mutationFn: (dto: { nombre: string; cliente_id?: number }) => cuentasApi.create(dto),
     onSuccess: (newCuenta) => {
-      qc.setQueryData(['accounts'], (old: Cuenta[] | undefined) =>
-        old ? [newCuenta, ...old] : [newCuenta]
-      )
       qc.setQueryData(['accounts', newCuenta.id], newCuenta)
+      // Refrescar lista (por pestaña) y stats al volver
+      qc.invalidateQueries({ queryKey: ['accounts'] })
       toast.success('Cuenta creada')
       navigate(`/accounts/${newCuenta.id}`)
     },
     onError: (err: unknown) => toast.error(apiError(err, 'Error al crear cuenta')),
   })
 
-  // ── Stats globales ──────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const abiertas   = cuentas.filter((c) => !c.esta_pagada)
-    const pagadas    = cuentas.filter((c) => c.esta_pagada)
-    const deudaTotal = abiertas.reduce((s, c) => s + (c.valor_pendiente ?? 0), 0)
-    const recaudado  = pagadas.reduce((s, c) => s + c.total, 0)
-    const totalBruto = cuentas.reduce((s, c) => s + c.total, 0)
-    return { abiertas: abiertas.length, pagadas: pagadas.length, deudaTotal, recaudado, totalBruto }
-  }, [cuentas])
+  // ── Stats globales (del endpoint /accounts/stats — exactos) ──────────────────
+  const stats = useMemo(() => ({
+    abiertas: statsData?.abiertas ?? 0,
+    pagadas: statsData?.pagadas ?? 0,
+    deudaTotal: statsData?.deuda_total ?? 0,
+    recaudado: statsData?.recaudado ?? 0,
+  }), [statsData])
 
   // ── Filtros ─────────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {

@@ -28,9 +28,20 @@ export interface AsignarClienteDto {
   email?: string | null
 }
 
+export interface CuentasStats {
+  abiertas: number
+  pagadas: number
+  deuda_total: number
+  recaudado: number
+}
+
 export const cuentasApi = {
-  getAll: (params?: PaginationParams) =>
+  getAll: (params?: PaginationParams & { solo_abiertas?: boolean }) =>
     apiClient.get<Cuenta[]>('/accounts', { params }).then((r) => r.data),
+
+  /** Agregados exactos del tenant (no dependen de paginación). */
+  stats: () =>
+    apiClient.get<CuentasStats>('/accounts/stats').then((r) => r.data),
 
   getById: (id: number) =>
     apiClient.get<Cuenta>(`/accounts/${id}`).then((r) => r.data),
