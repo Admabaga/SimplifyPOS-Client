@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import Sidebar from './Sidebar'
@@ -41,6 +41,10 @@ function useIdleTimer() {
 export default function Layout() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const { theme, fontSize } = useThemeStore()
+  const { pathname } = useLocation()
+  // /accounts usa app-shell full-bleed en desktop (lista pegada al borde, scroll
+  // interno propio). En mobile conserva el padding estándar.
+  const fullBleed = pathname === '/accounts'
   useIdleTimer()
   useGlobalShortcuts()
   const { open: wizardOpen, dismiss: wizardDismiss } = useSetupWizard()
@@ -60,7 +64,12 @@ export default function Layout() {
       )}>
         <div>
           <Topbar />
-          <main className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto w-full overflow-x-hidden">
+          <main className={clsx(
+            'w-full overflow-x-hidden',
+            fullBleed
+              ? 'p-3 sm:p-4 md:p-6 lg:p-0'        // desktop: sin márgenes → borde a borde
+              : 'p-3 sm:p-4 md:p-6 max-w-7xl mx-auto',
+          )}>
             <Outlet />
           </main>
         </div>

@@ -50,8 +50,10 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<Usuario | null>(null)
   const [confirmReset, setConfirmReset] = useState<Usuario | null>(null)
+  const [confirmLock, setConfirmLock] = useState<Usuario | null>(null)
   const [tempResult, setTempResult] = useState<{ nombre: string; email: string; password: string } | null>(null)
   const [search, setSearch] = useState('')
+  const [estado, setEstado] = useState<'activos' | 'bloqueados' | 'todos'>('activos')
   const [copied, setCopied] = useState(false)
 
   const { data: users = [], isLoading } = useQuery({
@@ -135,12 +137,24 @@ export default function UsersPage() {
   })
 
   const filtered = useMemo(() => {
-    if (!search) return users
     const q = search.toLowerCase()
-    return users.filter((u) =>
-      u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
-    )
-  }, [users, search])
+    return users.filter((u) => {
+      const matchEstado =
+        estado === 'todos' || (estado === 'activos' ? u.activo : !u.activo)
+      const matchSearch =
+        !q || u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      return matchEstado && matchSearch
+    })
+  }, [users, search, estado])
+
+  const counts = useMemo(
+    () => ({
+      activos: users.filter((u) => u.activo).length,
+      bloqueados: users.filter((u) => !u.activo).length,
+      todos: users.length,
+    }),
+    [users],
+  )
 
   const handleCopy = async (text: string) => {
     await navigator.clipboard.writeText(text)
@@ -160,9 +174,33 @@ export default function UsersPage() {
         }
       />
 
-      {/* Search */}
-      <div className="mb-4 max-w-xs">
-        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre o email..." />
+      {/* Filtros + búsqueda */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+          {([
+            { id: 'activos', label: 'Activos' },
+            { id: 'bloqueados', label: 'Bloqueados' },
+            { id: 'todos', label: 'Todos' },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setEstado(t.id)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                estado === t.id
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {t.label}
+              <span className={`ml-1.5 text-xs ${estado === t.id ? 'text-white/80' : 'text-gray-400'}`}>
+                {counts[t.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="max-w-xs flex-1 min-w-48">
+          <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nombre o email..." />
+        </div>
       </div>
 
       <Card padding={false}>
@@ -234,7 +272,7 @@ export default function UsersPage() {
                         {u.role_name !== 'master' && (
                           <button
                             title={u.activo ? 'Bloquear' : 'Desbloquear'}
-                            onClick={() => lockMut.mutate({ id: u.id, lock: u.activo })}
+                            onClick={() => setConfirmLock(u)}
                             className={`p-1.5 rounded-lg transition-colors ${
                               u.activo
                                 ? 'text-slate-400 hover:bg-red-50 hover:text-red-500'
@@ -409,6 +447,19 @@ export default function UsersPage() {
         message={`¿Resetear la contraseña de ${confirmReset?.nombre}? Se generará una temporal.`}
         confirmLabel="Resetear"
         loading={resetMut.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!confirmLock}
+        onCancel={() => setConfirmLock(null)}
+        onConfirm={() => { confirmLock && lockMut.mutate({ id: confirmLock.id, lock: confirmLock.activo }); setConfirmLock(null) }}
+        title={confirmLock?.activo ? 'Bloquear usuario' : 'Desbloquear usuario'}
+        message={confirmLock?.activo
+          ? `¿Bloquear a ${confirmLock?.nombre}? No podrá iniciar sesión hasta que lo reactives.`
+          : `¿Desbloquear a ${confirmLock?.nombre}? Recuperará acceso al sistema.`}
+        confirmLabel={confirmLock?.activo ? 'Bloquear' : 'Desbloquear'}
+        danger={confirmLock?.activo}
+        loading={lockMut.isPending}
       />
     </div>
   )

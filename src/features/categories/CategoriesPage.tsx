@@ -53,7 +53,7 @@ export default function CategoriesPage() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [editItem,   setEditItem]   = useState<Categoria | null>(null)
-  const [deleteId,   setDeleteId]   = useState<number | null>(null)
+  const [deleteCat,  setDeleteCat]  = useState<Categoria | null>(null)
 
   const { data: categorias = [], isLoading } = useQuery({
     queryKey: ['categories'],
@@ -99,7 +99,7 @@ export default function CategoriesPage() {
       qc.setQueryData(['categories'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
-    onSuccess: () => { toast.success('Categoría eliminada'); setDeleteId(null) },
+    onSuccess: () => { toast.success('Categoría eliminada'); setDeleteCat(null) },
     onSettled: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   })
 
@@ -182,7 +182,7 @@ export default function CategoriesPage() {
                         </Can>
                         <Can permission="categorias:delete">
                           <Button size="sm" variant="ghost" icon={<Trash2 size={14} />}
-                            onClick={() => setDeleteId(cat.id)}
+                            onClick={() => setDeleteCat(cat)}
                             className="text-red-500 hover:text-red-700" />
                         </Can>
                       </div>
@@ -217,14 +217,29 @@ export default function CategoriesPage() {
       )}
 
       <ConfirmDialog
-        open={deleteId !== null}
+        open={!!deleteCat}
         title="Eliminar categoría"
-        message="¿Eliminar esta categoría? Los productos asociados quedarán sin categoría."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Los productos asociados perderán su categoría y quedarán sin tarifa IVA asignada.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Categoría</span>
+                <span className="font-medium">{deleteCat?.nombre}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">IVA</span>
+                <span className="font-medium">{deleteCat?.iva} %</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">Esta acción no se puede deshacer.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
+        onConfirm={() => deleteCat && deleteMutation.mutate(deleteCat.id)}
+        onCancel={() => setDeleteCat(null)}
       />
     </div>
   )

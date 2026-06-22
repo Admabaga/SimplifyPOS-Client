@@ -628,7 +628,7 @@ interface ConfirmDialogProps {
   onConfirm: () => void
   onCancel: () => void
   title: string
-  message: string
+  message: ReactNode
   confirmLabel?: string
   danger?: boolean
   loading?: boolean
@@ -648,7 +648,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+      <div className="text-sm text-slate-600 leading-relaxed">{message}</div>
     </Modal>
   )
 }

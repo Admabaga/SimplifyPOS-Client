@@ -25,7 +25,7 @@ import { cuentasApi } from './api'
 import type { AddVentaDto, AddPagoDto, AsignarClienteDto } from './api'
 import { productsApi } from '@/features/products/api'
 import { apiClient } from '@/shared/api/client'
-import type { Cuenta, MedioPago, Venta } from '@/shared/types'
+import type { Cuenta, MedioPago, Venta, Pago } from '@/shared/types'
 import { useCajaGuard } from '@/shared/hooks/useCajaGuard'
 import EmitirTicketModal, { type ClienteForm } from '@/features/billing/components/EmitirTicketModal'
 import TicketViewerModal from '@/features/billing/components/TicketViewerModal'
@@ -86,20 +86,26 @@ interface VentaAgrupada {
   expandido: boolean
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Panel (embebible: master-detail inline o página /accounts/:id) ────────────
 
-export default function AccountDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const cuentaId = Number(id)
-  const navigate = useNavigate()
+interface AccountDetailPanelProps {
+  /** Id de la cuenta a mostrar. */
+  cuentaId: number
+  /** Volver / deseleccionar (mobile: vuelve a la lista; desktop: limpia ?id). */
+  onBack: () => void
+  /** Embebido en el app-shell (oculta el botón "Cuentas" redundante en desktop). */
+  embedded?: boolean
+}
+
+export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: AccountDetailPanelProps) {
   const qc = useQueryClient()
   const { requireCaja } = useCajaGuard()
 
   const [showAddVenta, setShowAddVenta] = useState(false)
   const [showAddPago, setShowAddPago] = useState(false)
   const [showTicket, setShowTicket] = useState(false)
-  const [deleteVentaId, setDeleteVentaId] = useState<number | null>(null)
-  const [deletePagoId, setDeletePagoId] = useState<number | null>(null)
+  const [deleteVenta, setDeleteVenta] = useState<Venta | null>(null)
+  const [deletePago, setDeletePago] = useState<Pago | null>(null)
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set())
   const [barcodeProductId, setBarcodeProductId] = useState<number | null>(null)
   const [showClienteModal, setShowClienteModal] = useState(false)
@@ -172,7 +178,7 @@ export default function AccountDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Venta eliminada')
-      setDeleteVentaId(null)
+      setDeleteVenta(null)
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['accounts', cuentaId] }),
   })
@@ -266,7 +272,7 @@ export default function AccountDetailPage() {
       qc.setQueryData(['accounts', cuentaId], ctx?.prev)
       toast.error(apiError(err))
     },
-    onSuccess: () => { toast.success('Pago eliminado'); setDeletePagoId(null) },
+    onSuccess: () => { toast.success('Pago eliminado'); setDeletePago(null) },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
       qc.invalidateQueries({ queryKey: ['accounts'] })
@@ -319,8 +325,13 @@ export default function AccountDetailPage() {
     <div className="space-y-5 animate-fade-in">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" icon={<ArrowLeft size={16} />} onClick={() => navigate('/accounts')}>
-          Cuentas
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={embedded ? <X size={16} /> : <ArrowLeft size={16} />}
+          onClick={onBack}
+        >
+          <span className={embedded ? 'lg:sr-only' : ''}>{embedded ? 'Cerrar' : 'Cuentas'}</span>
         </Button>
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold text-slate-900 truncate">{cuenta.nombre}</h1>
@@ -568,7 +579,7 @@ export default function AccountDetailPage() {
                         {g.ventas.length === 1 && (
                           <button
                             aria-label="Eliminar venta"
-                            onClick={(e) => { e.stopPropagation(); setDeleteVentaId(g.ventas[0]!.id) }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteVenta(g.ventas[0]!) }}
                             className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
                           >
                             <Trash2 size={13} />
@@ -612,7 +623,7 @@ export default function AccountDetailPage() {
                             <Can permission="ventas:delete">
                               <button
                                 aria-label="Eliminar venta"
-                                onClick={() => setDeleteVentaId(v.id)}
+                                onClick={() => setDeleteVenta(v)}
                                 className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded"
                               >
                                 <Trash2 size={12} />
@@ -847,7 +858,7 @@ export default function AccountDetailPage() {
                 <Can permission="pagos:delete">
                   <button
                     aria-label="Eliminar pago"
-                    onClick={() => setDeletePagoId(p.id)}
+                    onClick={() => setDeletePago(p)}
                     className="p-1 text-slate-300 hover:text-red-400 transition-colors rounded shrink-0"
                   >
                     <Trash2 size={13} />
@@ -885,25 +896,63 @@ export default function AccountDetailPage() {
       />
 
       <ConfirmDialog
-        open={deleteVentaId !== null}
+        open={!!deleteVenta}
         title="Eliminar venta"
-        message="¿Eliminar esta venta de la cuenta? El stock será revertido."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Se eliminará esta venta de la cuenta y el stock del producto será revertido.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Producto</span>
+                <span className="font-medium">{deleteVenta?.producto_nombre ?? `#${deleteVenta?.producto_id}`}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Cantidad</span>
+                <span className="font-medium">{deleteVenta?.cantidad_unidades} u.</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Precio</span>
+                <span className="font-medium">{deleteVenta ? formatCOP(deleteVenta.precio_venta) : ''}</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">El stock será revertido al eliminar.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteVentaMutation.isPending}
-        onConfirm={() => deleteVentaId !== null && deleteVentaMutation.mutate(deleteVentaId)}
-        onCancel={() => setDeleteVentaId(null)}
+        onConfirm={() => deleteVenta && deleteVentaMutation.mutate(deleteVenta.id)}
+        onCancel={() => setDeleteVenta(null)}
       />
 
       <ConfirmDialog
-        open={deletePagoId !== null}
+        open={!!deletePago}
         title="Eliminar pago"
-        message="¿Eliminar este pago? Solo es posible si fue registrado hace menos de 24 horas."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Se eliminará este pago de la cuenta. La cuenta volverá a quedar con saldo pendiente.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Medio de pago</span>
+                <span className="font-medium">{deletePago?.nombre_medio_pago}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Total</span>
+                <span className="font-medium">{deletePago ? formatCOP(deletePago.sub_total) : ''}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Fecha</span>
+                <span className="font-medium">{deletePago?.fecha_pago ? formatDate(deletePago.fecha_pago) : '—'}</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">Solo eliminable si fue registrado hace menos de 24 horas.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deletePagoMutation.isPending}
-        onConfirm={() => deletePagoId !== null && deletePagoMutation.mutate(deletePagoId)}
-        onCancel={() => setDeletePagoId(null)}
+        onConfirm={() => deletePago && deletePagoMutation.mutate(deletePago.id)}
+        onCancel={() => setDeletePago(null)}
       />
 
       {/* Emitir documento manual */}
@@ -1664,4 +1713,14 @@ function AsignarClienteModal({ open, onClose, cuentaId, initialValues, onAssigne
       </form>
     </Modal>
   )
+}
+
+// ─── Page wrapper — ruta /accounts/:id (deep-link / compatibilidad) ────────────
+// Mantiene la ruta clásica funcionando reutilizando exactamente el mismo panel
+// embebido que usa el app-shell master-detail de AccountsPage.
+
+export default function AccountDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  return <AccountDetailPanel cuentaId={Number(id)} onBack={() => navigate('/accounts')} />
 }

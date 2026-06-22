@@ -35,4 +35,23 @@ export const authApi = {
 
   refresh: () =>
     apiClient.post<{ access_token: string }>('/auth/refresh').then((r) => r.data),
+
+  // ── 2FA ──
+  twofaSetup: () =>
+    apiClient
+      .post<{ secret: string; otpauth_uri: string }>('/auth/2fa/setup')
+      .then((r) => r.data),
+
+  twofaEnable: (code: string) =>
+    apiClient
+      .post<{ recovery_codes: string[] }>('/auth/2fa/enable', { code })
+      .then((r) => r.data),
+
+  twofaDisable: (password: string, code: string) =>
+    apiClient.post('/auth/2fa/disable', { password, code }).then(() => undefined),
+
+  twofaRegenerateCodes: (code: string) =>
+    apiClient
+      .post<{ recovery_codes: string[] }>('/auth/2fa/recovery-codes', { code })
+      .then((r) => r.data),
 }

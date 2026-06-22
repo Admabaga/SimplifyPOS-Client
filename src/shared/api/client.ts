@@ -98,6 +98,15 @@ apiClient.interceptors.response.use(
       _retryCount?: number
     }
 
+    // ── 402: suscripción inactiva (impago) → avisar al SubscriptionGate ─────
+    if (error.response?.status === 402) {
+      const detail = (error.response?.data as { detail?: { code?: string } } | undefined)?.detail
+      if (detail?.code === 'subscription_inactive') {
+        window.dispatchEvent(new CustomEvent('simplifypos:subscription-required'))
+      }
+      return Promise.reject(enrichError(error))
+    }
+
     // ── Retry automático en 503 / 504 (servidor no disponible o timeout) ───
     const retryableStatuses = [503, 504]
     const maxRetries = 2

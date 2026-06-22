@@ -35,7 +35,7 @@ export default function PaymentMethodsPage() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [editItem, setEditItem] = useState<MedioPago | null>(null)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [deleteMP, setDeleteMP] = useState<MedioPago | null>(null)
 
   const { data: medios = [], isLoading } = useQuery({
     queryKey: ['payment-methods'],
@@ -81,7 +81,7 @@ export default function PaymentMethodsPage() {
       qc.setQueryData(['payment-methods'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
-    onSuccess: () => { toast.success('Eliminado'); setDeleteId(null) },
+    onSuccess: () => { toast.success('Eliminado'); setDeleteMP(null) },
     onSettled: () => qc.invalidateQueries({ queryKey: ['payment-methods'] }),
   })
 
@@ -122,7 +122,7 @@ export default function PaymentMethodsPage() {
                     key={mp.id}
                     mp={mp}
                     onEdit={() => setEditItem(mp)}
-                    onDelete={() => setDeleteId(mp.id)}
+                    onDelete={() => setDeleteMP(mp)}
                   />
                 ))}
               </div>
@@ -139,7 +139,7 @@ export default function PaymentMethodsPage() {
                     key={mp.id}
                     mp={mp}
                     onEdit={() => setEditItem(mp)}
-                    onDelete={() => setDeleteId(mp.id)}
+                    onDelete={() => setDeleteMP(mp)}
                   />
                 ))}
               </div>
@@ -174,14 +174,29 @@ export default function PaymentMethodsPage() {
       )}
 
       <ConfirmDialog
-        open={deleteId !== null}
+        open={!!deleteMP}
         title="Eliminar medio de pago"
-        message="¿Eliminar este medio de pago? Se desactivará si hay pagos asociados."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Los pagos existentes que usen este medio quedarán sin medio de pago asignado.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nombre</span>
+                <span className="font-medium">{deleteMP?.nombre}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Tipo</span>
+                <span className="font-medium">{tipoLabel(deleteMP?.tipo)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">Esta acción no se puede deshacer.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
+        onConfirm={() => deleteMP && deleteMutation.mutate(deleteMP.id)}
+        onCancel={() => setDeleteMP(null)}
       />
     </div>
   )

@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { authApi } from './api'
 import { apiError } from '@/shared/lib/apiError'
 import { PageHeader, Card, Button, Badge } from '@/shared/components/ui'
+import TwoFactorCard from './TwoFactorCard'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -245,6 +246,9 @@ export default function ProfilePage() {
           </form>
         )}
       </Card>
+
+      {/* ── Verificación en dos pasos ────────────────────────────────────── */}
+      <TwoFactorCard />
     </div>
   )
 }

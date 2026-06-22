@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
-  ScrollText, Building2, XCircle, BarChart3, Server, Brain, Palette, Sunrise,
+  ScrollText, Building2, XCircle, BarChart3, Server, Brain, Palette, Sunrise, Gem,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -16,12 +16,16 @@ import { authApi } from '@/features/auth/api'
 import Logo from '@/assets/IconChart.png'
 import { useQuery } from '@tanstack/react-query'
 import { notificationsApi } from '@/features/notifications/api'
+import { subscriptionApi } from '@/features/subscription/api'
 
 interface NavItem {
   label: string
   to: string
   icon: React.ReactNode
   permission?: string
+  /** Funcionalidad del plan requerida (ej: 'crm_clientes', 'gastos'). Si el plan
+   *  del tenant no la incluye, el item se oculta. */
+  feature?: string
 }
 interface NavGroup {
   label: string
@@ -35,7 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Dashboard',     to: '/dashboard',      icon: <LayoutDashboard size={17} /> },
       { label: 'Cuentas',       to: '/accounts',       icon: <Users size={17} />,         permission: 'cuentas:read' },
-      { label: 'Clientes',      to: '/clients',        icon: <UserCog size={17} />,        permission: 'cuentas:read' },
+      { label: 'Clientes',      to: '/clients',        icon: <UserCog size={17} />,        permission: 'cuentas:read', feature: 'crm_clientes' },
       { label: 'Caja',          to: '/caja',           icon: <Landmark size={17} />,      permission: 'cuentas:read' },
       { label: 'Facturas',      to: '/invoices',       icon: <FileText size={17} />,      permission: 'facturas:read' },
       { label: 'Ventas',        to: '/sales',          icon: <Receipt size={17} />,       permission: 'ventas:read' },
@@ -53,10 +57,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Finanzas',
     items: [
-      { label: 'Gastos',        to: '/expenses',       icon: <Wallet size={17} />,        permission: 'gastos:read' },
+      { label: 'Gastos',        to: '/expenses',       icon: <Wallet size={17} />,        permission: 'gastos:read', feature: 'gastos' },
       { label: 'Medios de pago',to: '/payment-methods',icon: <CreditCard size={17} />,   permission: 'medios_pago:read' },
       { label: 'Reportes',      to: '/reports',        icon: <TrendingUp size={17} />,    permission: 'reportes:read' },
       { label: 'Facturación',   to: '/admin/billing',  icon: <ScrollText size={17} />,    permission: 'facturacion:read' },
+      { label: 'Suscripción',   to: '/cuenta/suscripcion', icon: <Gem size={17} />,       permission: 'suscripcion:read' },
     ],
   },
   {
@@ -87,6 +92,18 @@ function NavContent({ collapsed, onNavigate, can, role }: {
   })
   const notifCount = notifData?.count ?? 0
   const notifCritical = (notifData?.critical ?? 0) > 0
+
+  // Features del plan del tenant: ocultan items que el plan no incluye (ej: Emprende
+  // sin CRM ni Gastos). Fail-open: si aún no carga, no se oculta nada.
+  const { data: subMe } = useQuery({
+    queryKey: ['subscription', 'me', 'features'],
+    queryFn: () => subscriptionApi.getMe(),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    enabled: can('suscripcion:read'),
+  })
+  const planFeatures = subMe?.plan.features ?? null
+  const hasFeature = (f?: string) => !f || planFeatures === null || planFeatures.includes(f)
   return (
     <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto py-2 px-2">
 
@@ -131,6 +148,7 @@ function NavContent({ collapsed, onNavigate, can, role }: {
             { to: '/master/today',     label: 'Mi día',    icon: <Sunrise size={17} />,   title: 'Lo que importa HOY — alertas y contactos prioritarios' },
             { to: '/master/analytics', label: 'Analytics', icon: <BarChart3 size={17} />, title: 'Métricas cross-tenant del ecosistema' },
             { to: '/master',           label: 'Negocios',  icon: <Building2 size={17} />, title: 'Gestión de tenants' },
+            { to: '/master/suscripciones', label: 'Suscripciones', icon: <Gem size={17} />, title: 'Pagos, planes, promos y cuentas bloqueadas' },
             { to: '/master/infra',     label: 'Infra',     icon: <Server size={17} />,    title: 'Salud técnica e infraestructura' },
             { to: '/master/ai',        label: 'IA Center', icon: <Brain size={17} />,     title: 'Centro de Inteligencia IA' },
           ].map((item) => (
@@ -203,7 +221,9 @@ function NavContent({ collapsed, onNavigate, can, role }: {
 
       {NAV_GROUPS.map((group) => {
         if (group.permission && !can(group.permission)) return null
-        const items = group.items.filter((i) => !i.permission || can(i.permission))
+        const items = group.items.filter(
+          (i) => (!i.permission || can(i.permission)) && hasFeature(i.feature),
+        )
         if (items.length === 0) return null
         return (
           <div key={group.label} className="mb-1">

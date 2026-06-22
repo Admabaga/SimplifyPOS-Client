@@ -757,12 +757,15 @@ export function GettingStartedChecklist() {
     staleTime: 60_000,
   })
 
-  const { data: cajaStatus } = useQuery({
-    queryKey: ['caja', 'estado'],
-    queryFn: () => apiClient.get<{ estado: string } | null>('/caja/estado').then((r) => r.data),
+  // El paso de caja se completa cuando el negocio ya abrió caja al menos una vez
+  // (≥1 registro en el historial), no solo si está abierta justo ahora.
+  const { data: cajaHistorial = [] } = useQuery({
+    queryKey: ['caja', 'historial-onboarding'],
+    queryFn: () =>
+      apiClient.get<unknown[]>('/caja/historial?limit=1&offset=0').then((r) => r.data).catch(() => []),
     enabled: isAdmin,
     staleTime: 0,
-    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   })
 
   if (!isAdmin) return null
@@ -796,7 +799,7 @@ export function GettingStartedChecklist() {
     {
       label:     'Abre la caja para empezar a vender',
       desc:      'Requerida antes de registrar cualquier pago',
-      done:      cajaStatus?.estado === 'abierta',
+      done:      cajaHistorial.length > 0,
       icon:      <Wallet size={16} />,
       action:    () => navigate('/caja'),
       actionLabel: 'Ir a Caja',

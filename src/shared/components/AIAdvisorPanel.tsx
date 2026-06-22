@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { Bot, ChevronRight, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from './ui'
+import { boldToSafeHtml } from '@/shared/lib/safeMarkdown'
 
 interface Props {
   /** Título del panel */
@@ -39,20 +40,17 @@ function renderAnalysis(text: string) {
           <span
             key={i}
             className="text-xs leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: clean.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
-            }}
+            dangerouslySetInnerHTML={{ __html: boldToSafeHtml(clean) }}
           />
         </div>
       )
     }
     // inline bold
-    const withBold = trimmed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     return (
       <p
         key={i}
         className="text-xs leading-relaxed mb-1"
-        dangerouslySetInnerHTML={{ __html: withBold }}
+        dangerouslySetInnerHTML={{ __html: boldToSafeHtml(trimmed) }}
       />
     )
   })

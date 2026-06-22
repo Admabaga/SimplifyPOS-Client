@@ -36,15 +36,15 @@ describe('useGlobalShortcuts', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/accounts')
   })
 
-  it('F4 navega a /caja', () => {
+  it('F3 navega a /caja', () => {
     renderHook(() => useGlobalShortcuts(), { wrapper })
-    fireKey('F4')
+    fireKey('F3')
     expect(mockNavigate).toHaveBeenCalledWith('/caja')
   })
 
-  it('F8 navega a /dashboard', () => {
+  it('F1 navega a /dashboard', () => {
     renderHook(() => useGlobalShortcuts(), { wrapper })
-    fireKey('F8')
+    fireKey('F1')
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
   })
 

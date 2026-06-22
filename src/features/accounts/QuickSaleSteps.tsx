@@ -278,7 +278,7 @@ function ProductResultRow({ product, onAdd }: { product: Producto; onAdd: (p: Pr
 // ─── Step 2: Payment ──────────────────────────────────────────────────────────
 
 export function StepPayment({
-  cart, total, medios, selectedMedio, setSelectedMedio, montoInput,
+  cart, total, medios, selectedMedio, setSelectedMedio, montoInput, compact = false,
 }: {
   cart: CartItem[]
   total: number
@@ -286,6 +286,8 @@ export function StepPayment({
   selectedMedio: MedioPago | null
   setSelectedMedio: (m: MedioPago) => void
   montoInput: ReturnType<typeof useCurrencyInput>
+  /** Oculta el bloque "Resumen del pedido" (cuando el carrito ya se ve al lado). */
+  compact?: boolean
 }) {
   const montoRecibido = montoInput.numericValue()
   const comision = selectedMedio
@@ -305,29 +307,41 @@ export function StepPayment({
   return (
     <div className="space-y-4">
       {/* ── Resumen del pedido ── */}
-      <div className="bg-slate-50 rounded-2xl p-4 space-y-2">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Resumen</p>
-        {cart.map((item) => (
-          <div key={`${item.producto.id}-${item.precio.id}`} className="flex justify-between items-center text-sm">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="shrink-0 text-[11px] font-bold text-slate-500 bg-slate-200 rounded-md px-1.5 py-0.5 tabular-nums">
-                ×{item.cantidad}
-              </span>
-              <span className="text-slate-700 truncate">{item.producto.nombre}</span>
-              {item.precio.nombre !== 'Unidad' && (
-                <span className="text-[10px] text-slate-400 shrink-0">({item.precio.nombre})</span>
-              )}
-            </div>
-            <span className="font-semibold tabular-nums text-slate-800 shrink-0 ml-2">
-              {formatCOP(item.precio.precio * item.cantidad)}
+      {compact ? (
+        <div className="flex items-center justify-between rounded-2xl t-bg-xlt border t-border px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold t-text uppercase tracking-wide">Total a cobrar</span>
+            <span className="text-[11px] text-slate-400">
+              · {cart.reduce((s, i) => s + i.cantidad, 0)} u.
             </span>
           </div>
-        ))}
-        <div className="border-t border-slate-200 pt-2 mt-1 flex justify-between items-center">
-          <span className="text-sm font-bold text-slate-800">Total a cobrar</span>
-          <span className="text-lg font-extrabold text-slate-900 tabular-nums">{formatCOP(total)}</span>
+          <span className="text-xl font-extrabold t-text-dk tabular-nums">{formatCOP(total)}</span>
         </div>
-      </div>
+      ) : (
+        <div className="bg-slate-50 rounded-2xl p-4 space-y-2">
+          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Resumen</p>
+          {cart.map((item) => (
+            <div key={`${item.producto.id}-${item.precio.id}`} className="flex justify-between items-center text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="shrink-0 text-[11px] font-bold text-slate-500 bg-slate-200 rounded-md px-1.5 py-0.5 tabular-nums">
+                  ×{item.cantidad}
+                </span>
+                <span className="text-slate-700 truncate">{item.producto.nombre}</span>
+                {item.precio.nombre !== 'Unidad' && (
+                  <span className="text-[10px] text-slate-400 shrink-0">({item.precio.nombre})</span>
+                )}
+              </div>
+              <span className="font-semibold tabular-nums text-slate-800 shrink-0 ml-2">
+                {formatCOP(item.precio.precio * item.cantidad)}
+              </span>
+            </div>
+          ))}
+          <div className="border-t border-slate-200 pt-2 mt-1 flex justify-between items-center">
+            <span className="text-sm font-bold text-slate-800">Total a cobrar</span>
+            <span className="text-lg font-extrabold text-slate-900 tabular-nums">{formatCOP(total)}</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Medio de pago — radio cards ── */}
       <div className="space-y-2">

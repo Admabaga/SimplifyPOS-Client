@@ -36,7 +36,7 @@ export default function ExpensesPage() {
   const { requireCaja } = useCajaGuard()
   const [showCreate, setShowCreate] = useState(false)
   const [editItem, setEditItem] = useState<{ id: number } & FormData | null>(null)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [deleteGasto, setDeleteGasto] = useState<Gasto | null>(null)
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('todas')
 
@@ -93,7 +93,7 @@ export default function ExpensesPage() {
       qc.setQueryData(['expenses'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
-    onSuccess: () => { toast.success('Gasto eliminado'); setDeleteId(null) },
+    onSuccess: () => { toast.success('Gasto eliminado'); setDeleteGasto(null) },
     onSettled: () => qc.invalidateQueries({ queryKey: ['expenses'] }),  // incluye ['expenses','stats']
   })
 
@@ -275,7 +275,7 @@ export default function ExpensesPage() {
                             <Button
                               size="sm" variant="ghost"
                               icon={<Trash2 size={14} />}
-                              onClick={() => setDeleteId(g.id)}
+                              onClick={() => setDeleteGasto(g)}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
                             />
                           </Can>
@@ -316,14 +316,39 @@ export default function ExpensesPage() {
         )}
 
         <ConfirmDialog
-          open={deleteId !== null}
+          open={!!deleteGasto}
           title="Eliminar gasto"
-          message="¿Eliminar este gasto permanentemente?"
+          message={
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">Se eliminará este gasto del registro contable permanentemente.</p>
+              <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Descripción</span>
+                  <span className="font-medium">{deleteGasto?.descripcion}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Monto</span>
+                  <span className="font-medium">{deleteGasto ? formatCOP(parseFloat(String(deleteGasto.monto))) : ''}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Fecha</span>
+                  <span className="font-medium">{deleteGasto ? formatDate(deleteGasto.fecha) : ''}</span>
+                </div>
+                {deleteGasto?.categoria && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Categoría</span>
+                    <span className="font-medium">{deleteGasto.categoria}</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-red-600 font-medium">Esta acción no se puede deshacer.</p>
+            </div>
+          }
           confirmLabel="Eliminar"
           danger
           loading={deleteMutation.isPending}
-          onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-          onCancel={() => setDeleteId(null)}
+          onConfirm={() => deleteGasto && deleteMutation.mutate(deleteGasto.id)}
+          onCancel={() => setDeleteGasto(null)}
         />
       </Can>
     </div>

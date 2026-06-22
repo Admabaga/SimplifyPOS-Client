@@ -30,7 +30,7 @@ type FormData = z.infer<typeof schema>
 export default function ResolucionesTab() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [deleteRes, setDeleteRes] = useState<ResolucionDian | null>(null)
 
   const { data: resoluciones = [], isLoading } = useQuery({
     queryKey: ['billing', 'resoluciones'],
@@ -61,7 +61,7 @@ export default function ResolucionesTab() {
     onSuccess: () => {
       toast.success('Resolución eliminada')
       qc.invalidateQueries({ queryKey: ['billing', 'resoluciones'] })
-      setDeleteId(null)
+      setDeleteRes(null)
     },
     onError: (e) => toast.error(apiError(e)),
   })
@@ -148,7 +148,7 @@ export default function ResolucionesTab() {
                         )}
                         <Button
                           size="sm" variant="ghost" icon={<Trash2 size={12} />}
-                          onClick={() => setDeleteId(r.id)}
+                          onClick={() => setDeleteRes(r)}
                           title="Eliminar"
                         />
                       </div>
@@ -169,14 +169,37 @@ export default function ResolucionesTab() {
       />
 
       <ConfirmDialog
-        open={deleteId !== null}
+        open={!!deleteRes}
         title="Eliminar resolución"
-        message="¿Eliminar esta resolución? No se podrá deshacer si no tiene tickets emitidos."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Se eliminará esta resolución DIAN. No se puede deshacer si tiene tickets emitidos.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Número</span>
+                <span className="font-medium">{deleteRes?.numero_resolucion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Prefijo</span>
+                <span className="font-medium">{deleteRes?.prefijo || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Rango</span>
+                <span className="font-medium">{deleteRes?.rango_desde} – {deleteRes?.rango_hasta}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vigencia hasta</span>
+                <span className="font-medium">{deleteRes ? formatDate(deleteRes.fecha_vigencia_hasta) : ''}</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">Esta acción no se puede deshacer.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
+        onConfirm={() => deleteRes && deleteMutation.mutate(deleteRes.id)}
+        onCancel={() => setDeleteRes(null)}
       />
     </div>
   )

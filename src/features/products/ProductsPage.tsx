@@ -158,7 +158,7 @@ export default function ProductsPage() {
   const [catFilter, setCatFilter] = useState<number | 'todas'>('todas')
   const [stockFilter, setStockFilter] = useState<'todos' | 'con-stock' | 'sin-stock' | 'bajo-stock'>('todos')
   const [editProduct, setEditProduct]       = useState<Producto | null>(null)
-  const [deleteId, setDeleteId]             = useState<number | null>(null)
+  const [deleteProd, setDeleteProd]         = useState<Producto | null>(null)
   const [pricesProduct, setPricesProduct]   = useState<Producto | null>(null)
   const [showCreate, setShowCreate]         = useState(false)
   const [showAddPrice, setShowAddPrice]     = useState(false)
@@ -220,7 +220,7 @@ export default function ProductsPage() {
       qc.setQueryData(['products'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
-    onSuccess: () => { toast.success('Producto eliminado'); setDeleteId(null) },
+    onSuccess: () => { toast.success('Producto eliminado'); setDeleteProd(null) },
     onSettled: () => qc.invalidateQueries({ queryKey: ['products'] }),
   })
 
@@ -390,7 +390,7 @@ export default function ProductsPage() {
               catName={catName(p.categoria_id ?? undefined)}
               catIva={categorias.find((c) => c.id === p.categoria_id)?.iva}
               onEdit={() => setEditProduct(p)}
-              onDelete={() => setDeleteId(p.id)}
+              onDelete={() => setDeleteProd(p)}
               onPrices={() => setPricesProduct(p)}
             />
           ))}
@@ -516,7 +516,7 @@ export default function ProductsPage() {
                           <Button size="sm" variant="ghost" aria-label="Editar producto" icon={<Pencil size={13} />} onClick={() => setEditProduct(p)} />
                         </Can>
                         <Can permission="productos:delete">
-                          <Button size="sm" variant="ghost" aria-label="Eliminar producto" icon={<Trash2 size={13} />} onClick={() => setDeleteId(p.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+                          <Button size="sm" variant="ghost" aria-label="Eliminar producto" icon={<Trash2 size={13} />} onClick={() => setDeleteProd(p)} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
                         </Can>
                       </div>
                     </Td>
@@ -551,14 +551,33 @@ export default function ProductsPage() {
       )}
 
       <ConfirmDialog
-        open={deleteId !== null}
+        open={!!deleteProd}
         title="Eliminar producto"
-        message="¿Eliminar este producto? Se quitará del inventario permanentemente."
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Se eliminará el producto y todas sus presentaciones de precio del inventario.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Producto</span>
+                <span className="font-medium">{deleteProd?.nombre}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Stock total</span>
+                <span className="font-medium">{deleteProd?.stock_total ?? 0} u.</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Precio base</span>
+                <span className="font-medium">{deleteProd ? formatCOP(parseFloat(String(deleteProd.precio_ponderado))) : ''}</span>
+              </div>
+            </div>
+            <p className="text-xs text-red-600 font-medium">Se eliminará del inventario permanentemente.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
+        onConfirm={() => deleteProd && deleteMutation.mutate(deleteProd.id)}
+        onCancel={() => setDeleteProd(null)}
       />
 
       {/* Precios modal */}

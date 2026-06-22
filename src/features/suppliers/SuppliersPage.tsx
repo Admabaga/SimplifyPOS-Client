@@ -28,7 +28,7 @@ export default function SuppliersPage() {
   const qc = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [editItem, setEditItem] = useState<{ id: number } & FormData | null>(null)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [deleteSupplier, setDeleteSupplier] = useState<Proveedor | null>(null)
 
   const { data: proveedores = [], isLoading } = useQuery({
     queryKey: ['suppliers'],
@@ -73,7 +73,7 @@ export default function SuppliersPage() {
       qc.setQueryData(['suppliers'], ctx?.prev)
       toast.error(apiError(err, 'Error al eliminar'))
     },
-    onSuccess: () => { toast.success('Proveedor eliminado'); setDeleteId(null) },
+    onSuccess: () => { toast.success('Proveedor eliminado'); setDeleteSupplier(null) },
     onSettled: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
   })
 
@@ -124,7 +124,7 @@ export default function SuppliersPage() {
                         <Button size="sm" variant="ghost" icon={<Pencil size={14} />} onClick={() => setEditItem({ id: p.id, nombre: p.nombre, telefono: p.telefono ?? '', email: p.email ?? '', direccion: p.direccion ?? '', ciudad: (p as any).ciudad ?? '' })} />
                       </Can>
                       <Can permission="proveedores:delete">
-                        <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setDeleteId(p.id)} className="text-red-500 hover:text-red-700" />
+                        <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={() => setDeleteSupplier(p)} className="text-red-500 hover:text-red-700" />
                       </Can>
                     </div>
                   </Td>
@@ -155,14 +155,37 @@ export default function SuppliersPage() {
       )}
 
       <ConfirmDialog
-        open={deleteId !== null}
+        open={!!deleteSupplier}
         title="Eliminar proveedor"
-        message="¿Eliminar este proveedor?"
+        message={
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">Se eliminará el proveedor del sistema. Las compras asociadas no se verán afectadas.</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nombre</span>
+                <span className="font-medium">{deleteSupplier?.nombre}</span>
+              </div>
+              {deleteSupplier?.email && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Email</span>
+                  <span className="font-medium">{deleteSupplier.email}</span>
+                </div>
+              )}
+              {(deleteSupplier as any)?.ciudad && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Ciudad</span>
+                  <span className="font-medium">{(deleteSupplier as any).ciudad}</span>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-red-600 font-medium">Esta acción no se puede deshacer.</p>
+          </div>
+        }
         confirmLabel="Eliminar"
         danger
         loading={deleteMutation.isPending}
-        onConfirm={() => deleteId !== null && deleteMutation.mutate(deleteId)}
-        onCancel={() => setDeleteId(null)}
+        onConfirm={() => deleteSupplier && deleteMutation.mutate(deleteSupplier.id)}
+        onCancel={() => setDeleteSupplier(null)}
       />
     </div>
   )

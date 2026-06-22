@@ -19,6 +19,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui'
+import { boldToSafeHtml } from '@/shared/lib/safeMarkdown'
 import { aiApi } from '@/shared/api/aiApi'
 import { masterApi } from './api'
 import { formatRelativeTime, usePersistedAnalysis } from './usePersistedAnalysis'
@@ -44,19 +45,16 @@ function renderAnalysis(text: string) {
           <ChevronRight size={12} className="text-violet-500 shrink-0 mt-1" />
           <span
             className="text-xs leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: clean.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'),
-            }}
+            dangerouslySetInnerHTML={{ __html: boldToSafeHtml(clean) }}
           />
         </div>
       )
     }
-    const withBold = trimmed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     return (
       <p
         key={i}
         className="text-xs leading-relaxed mb-1"
-        dangerouslySetInnerHTML={{ __html: withBold }}
+        dangerouslySetInnerHTML={{ __html: boldToSafeHtml(trimmed) }}
       />
     )
   })

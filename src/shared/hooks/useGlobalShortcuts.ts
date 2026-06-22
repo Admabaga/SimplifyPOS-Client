@@ -4,11 +4,14 @@
  * Los atajos solo actúan cuando ningún input/textarea/select tiene foco
  * (para no interferir con la escritura normal).
  *
+ * F1  → /dashboard       (inicio)
  * F2  → /accounts        (nueva cuenta / buscar cliente)
- * F4  → /caja            (abrir/cerrar caja)
- * F5  → /products        (productos)
- * F6  → /sales           (historial de ventas)
- * F8  → /dashboard       (inicio)
+ * F3  → /caja            (abrir/cerrar caja)
+ * F4  → /admin/billing   (facturación)
+ * F6  → /reports         (reportes)
+ * F7  → /notifications   (notificaciones)
+ * F8  → /sales           (historial de ventas)
+ * F9  → /products        (productos)
  */
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -31,7 +34,7 @@ export function useGlobalShortcuts() {
 
     const handler = (e: KeyboardEvent) => {
       // No actuar si el usuario está escribiendo en un input
-      // if (isTypingTarget(document.activeElement)) return
+      if (isTypingTarget(document.activeElement)) return
 
       // No actuar si hay un modal abierto (dialog presente en DOM)
       if (document.querySelector('[role="dialog"]')) return

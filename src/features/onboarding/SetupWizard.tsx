@@ -73,7 +73,8 @@ export function useSetupWizard() {
         .then((r) => r.data)
         .catch(() => []),
     enabled: isAdmin,
-    staleTime: 300_000,
+    staleTime: 0, // refrescar al volver del módulo de caja para detectar la 1ª apertura
+    refetchOnMount: 'always',
   })
 
   const isReady = productsSuccess && cajaSuccess
@@ -81,23 +82,28 @@ export function useSetupWizard() {
   useEffect(() => {
     if (!isAdmin || !isReady) return
 
-    const done = localStorage.getItem(storageKey)
-    if (done) return
-
-    // Si ya tiene productos O historial de caja → negocio activo, auto-completar wizard
-    const hasActivity = products.length > 0 || cajaHistorial.length > 0
-
-    if (hasActivity) {
+    // El onboarding se considera COMPLETO solo cuando el negocio ya abrió caja
+    // al menos una vez (hay ≥1 registro en el historial de caja). Tener productos
+    // no basta: sin caja no se registran ventas, por eso el paso sigue pendiente.
+    if (cajaHistorial.length > 0) {
       localStorage.setItem(storageKey, '1')
       return
     }
 
+    // Sin caja todavía → onboarding incompleto. Si quedó marcado como hecho por
+    // error (versión anterior), lo limpiamos para volver a recordar abrir la caja.
+    localStorage.removeItem(storageKey)
+
+    // Respetamos un "cerrar por ahora" dentro de la misma sesión (no molestar en
+    // cada navegación), pero reaparece en el próximo ingreso hasta abrir la caja.
+    if (sessionStorage.getItem(`${storageKey}_dismissed`)) return
+
     const t = setTimeout(() => setOpen(true), 600)
     return () => clearTimeout(t)
-  }, [isAdmin, isReady, products.length, cajaHistorial.length, storageKey])
+  }, [isAdmin, isReady, cajaHistorial.length, storageKey])
 
   const dismiss = () => {
-    localStorage.setItem(storageKey, '1')
+    sessionStorage.setItem(`${storageKey}_dismissed`, '1')
     setOpen(false)
   }
 
@@ -132,11 +138,11 @@ export default function SetupWizard({ open, onDismiss }: Props) {
   const skip     = () => { markDone(step); next() }
 
   const finish = () => {
-    const user = useAuthStore.getState().user
-    const storageKey = `simplifypos_setup_complete_${user?.id ?? 'unknown'}`
-    localStorage.setItem(storageKey, '1')
+    // No marcamos "completo" aquí: el onboarding se da por terminado cuando el
+    // negocio abre su primera caja (≥1 registro en el historial). Solo cerramos;
+    // si aún no abrió caja, el paso reaparecerá en el próximo ingreso.
     onDismiss()
-    toast.success('¡Listo! Tu negocio está configurado 🎉')
+    toast.success('¡Listo! Abre tu primera caja para empezar a vender 🎉')
   }
 
   const isLast = step === STEPS.length - 1

@@ -2,10 +2,14 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import ProtectedRoute from './ProtectedRoute'
 import Layout from '@/shared/components/Layout'
+import SubscriptionGate from '@/features/subscription/SubscriptionGate'
 import { Spinner } from '@/shared/components/ui'
 
 // Lazy imports
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'))
+const PlansPage = lazy(() => import('@/features/subscription/PlansPage'))
+const SignupPage = lazy(() => import('@/features/subscription/SignupPage'))
+const SubscriptionPage = lazy(() => import('@/features/subscription/SubscriptionPage'))
 const DashboardPage = lazy(() => import('@/features/reports/DashboardPage'))
 const ProductsPage = lazy(() => import('@/features/products/ProductsPage'))
 const CategoriesPage = lazy(() => import('@/features/categories/CategoriesPage'))
@@ -30,6 +34,7 @@ const MasterTodayPage = lazy(() => import('@/features/master/MasterTodayPage'))
 const MasterAnalyticsPage = lazy(() => import('@/features/master/MasterAnalyticsPage'))
 const MasterInfraPage = lazy(() => import('@/features/master/MasterInfraPage'))
 const MasterAIPage = lazy(() => import('@/features/master/MasterAIPage'))
+const MasterSubscriptionsPage = lazy(() => import('@/features/master/MasterSubscriptionsPage'))
 
 function Loading() {
   return (
@@ -56,12 +61,14 @@ export default function AppRoutes() {
       <Routes>
         {/* Públicas */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/planes" element={<PlansPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/403" element={<Forbidden />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Protegidas — con layout sidebar */}
+        {/* Protegidas — con layout sidebar + guard de suscripción */}
         <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
+          <Route element={<SubscriptionGate><Layout /></SubscriptionGate>}>
             <Route path="/dashboard" element={<DashboardPage />} />
 
             {/* Notificaciones */}
@@ -108,6 +115,11 @@ export default function AppRoutes() {
               {/* Perfil */}
             <Route path="/profile" element={<ProfilePage />} />
 
+            {/* Suscripción (admin) */}
+            <Route element={<ProtectedRoute permission="suscripcion:read" />}>
+              <Route path="/cuenta/suscripcion" element={<SubscriptionPage />} />
+            </Route>
+
             {/* Admin — usuarios (admin + master) */}
             <Route path="/admin/users" element={<UsersPage />} />
 
@@ -127,6 +139,7 @@ export default function AppRoutes() {
               <Route path="/master/analytics" element={<MasterAnalyticsPage />} />
               <Route path="/master/infra" element={<MasterInfraPage />} />
               <Route path="/master/ai" element={<MasterAIPage />} />
+              <Route path="/master/suscripciones" element={<MasterSubscriptionsPage />} />
             </Route>
           </Route>
         </Route>
