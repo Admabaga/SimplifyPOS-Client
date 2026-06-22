@@ -2,12 +2,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import {
   Loader2, LogIn, Eye, EyeOff,
   Package, Zap, BarChart3, Shield, Receipt, Users, Wallet,
-  TrendingUp, Sparkles,
+  TrendingUp, Sparkles, ShieldCheck, ArrowLeft, KeyRound,
 } from 'lucide-react'
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
@@ -197,9 +197,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('simplifypos_remember') === '1')
   const [showPwd, setShowPwd] = useState(false)
-  // 2FA: el backend responde 428 cuando la cuenta exige código de verificación
+  // 2FA: el backend responde 428 → mostramos pantalla dedicada
   const [totpRequired, setTotpRequired] = useState(false)
   const [totpCode, setTotpCode] = useState('')
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
+  const totpRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
@@ -210,15 +212,13 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setLoading(true)
     try {
-      const result = await authApi.login(
-        totpRequired ? { ...data, totp_code: totpCode.trim() } : data
-      )
+      const result = await authApi.login(data)
       setUser(
         {
           id: result.user_id,
           email: result.email,
           nombre: result.nombre,
-          role: result.role.toLowerCase(),   // normalizar: DB devuelve uppercase
+          role: result.role.toLowerCase(),
           permissions: result.permissions,
           must_change_password: result.must_change_password,
         },
@@ -230,13 +230,44 @@ export default function LoginPage() {
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 428) {
-        // Credenciales OK pero la cuenta tiene 2FA: pedir el código
+        setCredentials(data)
         setTotpRequired(true)
-        toast('Ingresa el código de tu app de autenticación', { icon: '🔐' })
-      } else if (totpRequired && status === 401) {
-        toast.error('Código de verificación inválido')
+        setTimeout(() => totpRef.current?.focus(), 100)
       } else {
         toast.error(apiError(err, 'Credenciales incorrectas'))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onSubmitTotp = async () => {
+    if (!credentials || totpCode.trim().length < 6) return
+    setLoading(true)
+    try {
+      const result = await authApi.login({ ...credentials, totp_code: totpCode.trim() })
+      setUser(
+        {
+          id: result.user_id,
+          email: result.email,
+          nombre: result.nombre,
+          role: result.role.toLowerCase(),
+          permissions: result.permissions,
+          must_change_password: result.must_change_password,
+        },
+        result.access_token,
+        rememberMe
+      )
+      toast.success(`¡Bienvenido, ${result.nombre}!`)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 401) {
+        toast.error('Código inválido. Verifica tu app o usa un código de recuperación.')
+        setTotpCode('')
+        setTimeout(() => totpRef.current?.focus(), 50)
+      } else {
+        toast.error(apiError(err, 'Error al verificar. Intenta de nuevo.'))
       }
     } finally {
       setLoading(false)
@@ -590,13 +621,94 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Formulario derecho ── */}
+      {/* ── Panel derecho ── */}
       <div
         id="login-form"
         className="flex-1 flex items-center justify-center px-5 sm:px-6 py-10 sm:py-12 lg:min-h-screen scroll-mt-4"
         style={{ background: 'var(--t-primary-xlight)' }}
       >
         <div className="w-full max-w-md">
+
+          {/* ── Pantalla 2FA dedicada ── */}
+          {totpRequired ? (
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              {/* Icono + encabezado */}
+              <div className="flex flex-col items-center text-center mb-6">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-inner"
+                  style={{ background: 'var(--t-primary-xlight)' }}
+                >
+                  <ShieldCheck size={32} style={{ color: 'var(--t-primary)' }} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Verificación en dos pasos</h2>
+                <p className="text-sm text-gray-500 mt-1.5 max-w-xs leading-relaxed">
+                  Ingresa el código de 6 dígitos de tu app de autenticación
+                  <br />(Google Authenticator, Authy, 1Password…)
+                </p>
+              </div>
+
+              {/* Input grande OTP */}
+              <div className="mb-4">
+                <input
+                  ref={totpRef}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={8}
+                  value={totpCode}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\s/g, '')
+                    setTotpCode(v)
+                    if (v.length >= 6) setTimeout(() => onSubmitTotp(), 0)
+                  }}
+                  placeholder="000000"
+                  className="w-full text-center text-3xl font-bold tracking-[0.4em] px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-[var(--t-primary)] focus:outline-none transition"
+                />
+                <p className="mt-2 text-xs text-gray-400 text-center">
+                  El código cambia cada 30 segundos
+                </p>
+              </div>
+
+              {/* Botón verificar */}
+              <button
+                type="button"
+                onClick={onSubmitTotp}
+                disabled={loading || totpCode.trim().length < 6}
+                className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3 rounded-xl transition-all mb-3"
+                style={{
+                  background: (loading || totpCode.trim().length < 6) ? 'var(--t-primary-dark)' : 'var(--t-primary)',
+                  opacity: (loading || totpCode.trim().length < 6) ? 0.6 : 1,
+                }}
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck size={16} />}
+                {loading ? 'Verificando...' : 'Verificar'}
+              </button>
+
+              {/* Código de recuperación */}
+              <details className="mb-4 group">
+                <summary className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none list-none justify-center hover:text-gray-700">
+                  <KeyRound size={13} />
+                  ¿No tienes acceso a tu app? Usa un código de recuperación
+                </summary>
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 leading-relaxed">
+                  Ingresa uno de los <strong>10 códigos de recuperación</strong> que recibiste al activar 2FA.
+                  Cada código es de un solo uso. Si los perdiste, contacta al administrador.
+                </div>
+              </details>
+
+              {/* Volver */}
+              <button
+                type="button"
+                onClick={() => { setTotpRequired(false); setTotpCode(''); setCredentials(null) }}
+                className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
+              >
+                <ArrowLeft size={14} />
+                Volver al inicio de sesión
+              </button>
+            </div>
+          ) : (
+
+          /* ── Formulario de login normal ── */
           <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-1">Iniciar sesión</h2>
             <p className="text-gray-500 text-sm mb-6">Ingresa tus credenciales para continuar</p>
@@ -645,29 +757,6 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Código 2FA — aparece solo si la cuenta lo exige */}
-              {totpRequired && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Código de verificación
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    placeholder="123456 o código de recuperación"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm transition tracking-widest"
-                  />
-                  <p className="mt-1.5 text-xs text-gray-500">
-                    Abre tu app de autenticación (Google Authenticator, 1Password…) o usa uno
-                    de tus códigos de recuperación.
-                  </p>
-                </div>
-              )}
-
               {/* Recordarme */}
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <input
@@ -711,6 +800,7 @@ export default function LoginPage() {
               <p className="mt-2 text-xs text-gray-400">1 mes gratis · sin permanencia</p>
             </div>
           </div>
+          )}
 
           <p className="text-center text-xs text-gray-400 mt-6">
             SimplifyPOS v1.0 · {new Date().getFullYear()}
