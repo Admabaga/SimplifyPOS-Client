@@ -710,7 +710,7 @@ export default function LoginPage() {
                   ¿No tienes acceso a tu app? Usa un código de recuperación
                 </summary>
                 <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 leading-relaxed">
-                  Ingresa uno de los <strong>10 códigos de recuperación</strong> que recibiste al activar 2FA.
+                  Ingresa uno de los <strong>códigos de recuperación</strong> que recibiste al activar 2FA.
                   Cada código es de un solo uso. Si los perdiste, contacta al administrador.
                 </div>
               </details>

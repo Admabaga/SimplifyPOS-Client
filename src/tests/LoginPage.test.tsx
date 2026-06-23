@@ -17,7 +17,13 @@ vi.mock('react-hot-toast', () => ({
 vi.mock('@/features/auth/api', () => ({
   authApi: {
     login: vi.fn(),
+    passkeyLoginBegin: vi.fn(),
+    passkeyLoginFinish: vi.fn(),
   },
+}))
+
+vi.mock('@simplewebauthn/browser', () => ({
+  startAuthentication: vi.fn(),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -27,6 +33,7 @@ vi.mock('@/stores/auth', () => ({
 
 // Importamos DESPUÉS del mock para obtener la referencia mockeada
 import { authApi } from '@/features/auth/api'
+import { startAuthentication } from '@simplewebauthn/browser'
 import toast from 'react-hot-toast'
 
 function renderLogin() {
@@ -41,6 +48,9 @@ describe('LoginPage', () => {
   beforeEach(() => {
     mockNavigate.mockClear()
     vi.mocked(authApi.login).mockClear()
+    vi.mocked(authApi.passkeyLoginBegin).mockClear()
+    vi.mocked(authApi.passkeyLoginFinish).mockClear()
+    vi.mocked(startAuthentication).mockClear()
     vi.mocked(toast.success).mockClear()
     vi.mocked(toast.error).mockClear()
   })
@@ -129,6 +139,51 @@ describe('LoginPage', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Credenciales incorrectas')
+    })
+  })
+
+  it('muestra la pantalla dedicada de 2FA cuando el backend responde 428', async () => {
+    vi.mocked(authApi.login).mockRejectedValueOnce({ response: { status: 428 } })
+
+    renderLogin()
+    fireEvent.change(screen.getByPlaceholderText('usuario@empresa.com'), {
+      target: { value: 'admin@pos.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret' } })
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Verificación en dos pasos')).toBeInTheDocument()
+    })
+    // El campo de correo ya no se muestra: estamos en el paso 2FA
+    expect(screen.queryByPlaceholderText('usuario@empresa.com')).not.toBeInTheDocument()
+  })
+
+  it('login con passkey: ejecuta la ceremonia y navega al dashboard', async () => {
+    vi.mocked(authApi.passkeyLoginBegin).mockResolvedValueOnce({
+      options: {} as never,
+      ticket: 'tk1',
+    })
+    vi.mocked(startAuthentication).mockResolvedValueOnce({ id: 'cred' } as never)
+    vi.mocked(authApi.passkeyLoginFinish).mockResolvedValueOnce({
+      user_id: 1,
+      email: 'admin@pos.com',
+      nombre: 'Admin',
+      role: 'ADMIN',
+      permissions: [],
+      must_change_password: false,
+      access_token: 'tokpk',
+    })
+
+    renderLogin()
+    fireEvent.click(screen.getByRole('button', { name: /entrar con passkey/i }))
+
+    await waitFor(() => {
+      expect(authApi.passkeyLoginFinish).toHaveBeenCalledWith({
+        ticket: 'tk1',
+        credential: { id: 'cred' },
+      })
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true })
     })
   })
 })
