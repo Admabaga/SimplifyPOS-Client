@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,7 +6,7 @@ import type { Resolver } from 'react-hook-form'
 import { z } from 'zod'
 import {
   Plus, Trash2, FileText, DollarSign, ShoppingCart, Package,
-  ChevronDown, ChevronUp, Upload, AlertCircle,
+  ChevronDown, ChevronUp, Upload, AlertCircle, ScanLine,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
@@ -349,7 +349,7 @@ interface FacturaModalProps {
   open: boolean
   onClose: () => void
   proveedores: { id: number; nombre: string }[]
-  products: { id: number; nombre: string }[]
+  products: { id: number; nombre: string; codigo?: string | null }[]
   onSubmit: (dto: CreateFacturaDto) => void
   loading: boolean
   uploadedFiles?: File[]
@@ -396,6 +396,42 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
   const removeItem = (id: string) => setItems((p) => p.filter((it) => it.id !== id))
   const patchItem  = (id: string, patch: Partial<Omit<ItemState, 'id'>>) =>
     setItems((p) => p.map((it) => it.id === id ? { ...it, ...patch } : it))
+
+  // ── Escaneo con pistola de barras ──────────────────────────────────────────
+  const [scanCode, setScanCode] = useState('')
+  const scanRef = useRef<HTMLInputElement>(null)
+
+  const handleScan = () => {
+    const code = scanCode.trim()
+    if (!code) return
+    const prod = products.find((p) => p.codigo?.toLowerCase() === code.toLowerCase())
+    if (!prod) {
+      toast.error(`Sin producto con código "${code}"`)
+      setScanCode('')
+      return
+    }
+    setItems((prev) => {
+      // Si el producto ya está en un ítem, suma 1 a la cantidad
+      const existing = prev.find((it) => it.producto_id === prod.id)
+      if (existing) {
+        const nuevaCant = (parseNum(existing.cantDisplay) || 0) + 1
+        return prev.map((it) =>
+          it.id === existing.id ? { ...it, cantDisplay: nuevaCant.toLocaleString('es-CO') } : it,
+        )
+      }
+      // Si hay un ítem vacío (sin producto), lo llena; si no, agrega uno nuevo
+      const empty = prev.find((it) => it.producto_id === 0)
+      if (empty) {
+        return prev.map((it) =>
+          it.id === empty.id ? { ...it, producto_id: prod.id, cantDisplay: '1' } : it,
+        )
+      }
+      return [...prev, { id: crypto.randomUUID(), producto_id: prod.id, cantDisplay: '1', precioDisplay: '' }]
+    })
+    toast.success(`${prod.nombre} agregado`)
+    setScanCode('')
+    scanRef.current?.focus()
+  }
 
   const totalFactura = items.reduce((s, it) => s + parseNum(it.precioDisplay), 0)
 
@@ -477,6 +513,21 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
               <Button size="sm" variant="outline" icon={<Plus size={12} />} type="button" onClick={addItem}>
                 Añadir ítem
               </Button>
+            </div>
+
+            {/* Escaneo con pistola de barras — trae el producto automáticamente */}
+            <div className="relative mb-3">
+              <ScanLine size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                ref={scanRef}
+                type="text"
+                value={scanCode}
+                onChange={(e) => setScanCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScan() } }}
+                placeholder="Escanea el código de barras (o escríbelo y Enter)..."
+                autoComplete="off"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 bg-white"
+              />
             </div>
 
             {/* Header — hidden on mobile, shown sm+ */}
