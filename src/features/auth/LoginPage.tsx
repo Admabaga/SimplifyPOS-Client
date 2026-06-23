@@ -295,7 +295,12 @@ export default function LoginPage() {
     } catch (err) {
       const name = (err as { name?: string })?.name
       if (name === 'NotAllowedError' || name === 'AbortError') {
-        // El usuario canceló el diálogo del navegador — no es un error real
+        // Canceló el diálogo, o no hay ninguna passkey en este equipo.
+        // Lo guiamos: la passkey se crea entrando con contraseña.
+        toast(
+          'Aún no tienes una passkey aquí. Inicia sesión con tu contraseña y créala en un toque.',
+          { icon: '🔑', duration: 5000 }
+        )
         return
       }
       toast.error(apiError(err, 'No se pudo iniciar con passkey. Usa tu contraseña.'))
