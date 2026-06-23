@@ -128,7 +128,7 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
     queryFn: () => apiClient.get<MedioPago[]>('/payment-methods').then((r) => r.data),
   })
 
-  // Tickets emitidos para esta cuenta (factura / POS / recibo informal)
+  // Tickets emitidos para esta cuenta (factura / factura electrónica)
   const { data: ticketsCuenta = [] } = useQuery({
     queryKey: ['billing', 'cuenta-tickets', cuentaId],
     queryFn: () => billingApi.listByCuenta(cuentaId),
@@ -739,9 +739,9 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
               {ticketsCuenta.map((t) => {
                 const isAnulada = t.estado === 'ANULADA'
                 const tipoLabel =
-                  t.tipo_documento === 'FACTURA_VENTA' ? 'Factura de venta' :
-                    t.tipo_documento === 'POS' ? 'Documento POS' :
-                      'Recibo informal'
+                  t.tipo_documento === 'FACTURA_VENTA' ? 'Factura electrónica' :
+                    t.tipo_documento === 'POS' ? 'Factura electrónica' :
+                      'Factura'
                 const tipoColor =
                   t.tipo_documento === 'FACTURA_VENTA' ? 'bg-purple-100 text-purple-700 border-purple-200' :
                     t.tipo_documento === 'POS' ? 'bg-blue-100 text-blue-700 border-blue-200' :

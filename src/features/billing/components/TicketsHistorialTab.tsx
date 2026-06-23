@@ -73,7 +73,7 @@ export default function TicketsHistorialTab() {
           <SubTabBtn
             active={subTab === 'recibos'}
             icon={<Receipt size={13} />}
-            label="Recibos informales"
+            label="Facturas"
             count={recibos.length}
             onClick={() => setSubTab('recibos')}
           />
@@ -89,10 +89,10 @@ export default function TicketsHistorialTab() {
         {lista.length === 0 ? (
           <EmptyState
             icon={<ScrollText size={32} />}
-            title={subTab === 'recibos' ? 'Sin recibos informales' : 'Sin documentos DIAN emitidos'}
+            title={subTab === 'recibos' ? 'Sin facturas' : 'Sin facturas electrónicas emitidas'}
             description={
               subTab === 'dian'
-                ? 'Configura una resolución DIAN activa para emitir documentos POS o facturas de venta.'
+                ? 'Configura una resolución DIAN activa para emitir facturas electrónicas.'
                 : undefined
             }
           />
@@ -220,9 +220,9 @@ export default function TicketsHistorialTab() {
               <div className="flex justify-between">
                 <span className="text-slate-500">Tipo</span>
                 <span className="font-semibold text-slate-800">
-                  {annulTarget.tipo_documento === 'INFORMAL'      ? 'Recibo informal'
-                   : annulTarget.tipo_documento === 'FACTURA_VENTA' ? 'Factura de venta'
-                   : 'Documento POS'}
+                  {annulTarget.tipo_documento === 'INFORMAL'      ? 'Factura'
+                   : annulTarget.tipo_documento === 'FACTURA_VENTA' ? 'Factura electrónica'
+                   : 'Factura electrónica'}
                 </span>
               </div>
               <div className="flex justify-between">

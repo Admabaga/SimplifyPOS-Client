@@ -2,7 +2,7 @@
  * EmitirTicketModal — UX de emisión de documento.
  *
  * Flujo en 2 pasos:
- *  1. Selector de tipo: 3 cards grandes (Informal / POS / Factura)
+ *  1. Selector de tipo: 2 cards grandes (Factura / Factura electrónica)
  *     con explicación clara de cuándo usar cada uno.
  *  2. Form de cliente (solo si POS o FACTURA_VENTA):
  *     - POS: datos opcionales
@@ -139,12 +139,12 @@ function SelectorTipo({
         <TipoCard
           icon={<Receipt size={20} />}
           color="slate"
-          title="Recibo informal"
-          subtitle="Para clientes que NO piden factura"
+          title="Factura"
+          subtitle="Comprobante de venta rápido"
           bullets={[
-            'No tiene valor fiscal',
+            'Entrega inmediata al cliente',
             'No requiere datos del cliente',
-            'Útil como comprobante interno',
+            'Ideal para el día a día',
           ]}
           onClick={() => onSelect('INFORMAL')}
           disabled={loading}
@@ -153,8 +153,8 @@ function SelectorTipo({
         <TipoCard
           icon={<FileText size={20} />}
           color="purple"
-          title="Factura de venta"
-          subtitle="Cuando el cliente solicita documento fiscal"
+          title="Factura electrónica"
+          subtitle="Validada por la DIAN"
           bullets={[
             'Documento fiscal formal (Art. 617 ET)',
             'Requiere datos del cliente',
@@ -296,8 +296,8 @@ function FormCliente({
 
 function tituloTipo(t: TipoDocumento): string {
   switch (t) {
-    case 'INFORMAL': return 'Recibo'
-    case 'FACTURA_VENTA': return 'Factura'
+    case 'INFORMAL': return 'Factura'
+    case 'FACTURA_VENTA': return 'Factura electrónica'
     default: return 'Documento'
   }
 }

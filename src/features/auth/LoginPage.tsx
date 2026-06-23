@@ -491,7 +491,7 @@ export default function LoginPage() {
             {[
               { icon: '⚡', title: 'Venta en 8 segundos', desc: 'Busca, agrega y cobra sin fricciones' },
               { icon: '📊', title: 'Reportes en tiempo real', desc: 'KPIs, caja y stock siempre actualizados' },
-              { icon: '🧾', title: 'Facturación DIAN', desc: 'Facturas POS e informales con un click' },
+              { icon: '🧾', title: 'Facturación DIAN', desc: 'Factura y factura electrónica con un click' },
             ].map((f, i) => (
               <div
                 key={i}

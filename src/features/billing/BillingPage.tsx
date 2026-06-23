@@ -155,7 +155,7 @@ export default function BillingPage() {
           />
           <ResumenCard
             icon={<ScrollText size={18} />}
-            label="Recibos informales"
+            label="Facturas"
             loading={loadingResumen}
             ok
             okText={`${recibos.length} total · ${emitidasMes} este mes`}

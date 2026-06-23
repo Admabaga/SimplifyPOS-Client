@@ -93,9 +93,9 @@ const REGIMEN_LABEL = {
 }
 
 const TIPO_DOC_TITLE: Record<string, string> = {
-  INFORMAL: 'RECIBO INFORMAL',
-  POS: 'FACTURA DE VENTA',        // legacy
-  FACTURA_VENTA: 'FACTURA DE VENTA',
+  INFORMAL: 'FACTURA',
+  POS: 'FACTURA ELECTRÓNICA',        // legacy
+  FACTURA_VENTA: 'FACTURA ELECTRÓNICA',
 }
 
 const TIPO_DOC_CLIENTE_LABEL = {
@@ -128,8 +128,11 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
       qc.invalidateQueries({ queryKey: ['billing', 'cuenta-tickets'] })
     },
     onError: (e: unknown) => {
-      const err = e as { response?: { data?: { detail?: string } } }
-      toast.error(err?.response?.data?.detail || 'Error al enviar a DIAN')
+      const err = e as { response?: { data?: { detail?: string | { message?: string } } } }
+      const detail = err?.response?.data?.detail
+      // El 402 de cupo agotado (plan Emprende) trae detail como objeto con .message
+      const msg = typeof detail === 'string' ? detail : detail?.message
+      toast.error(msg || 'Error al enviar a DIAN')
     },
   })
 

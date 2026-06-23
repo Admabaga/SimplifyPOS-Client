@@ -148,7 +148,9 @@ export default function PlansPage() {
                     {p.limite_documentos_mes !== null && (
                       <li className="flex items-center gap-2 text-gray-500">
                         <Check size={16} className="text-emerald-600 shrink-0" />
-                        Excedente {formatCOP(p.precio_excedente)} c/u
+                        {p.precio_excedente > 0
+                          ? `Adicionales ${formatCOP(p.precio_excedente)} c/u, sin tope`
+                          : 'Al agotar el cupo, sigues con factura normal'}
                       </li>
                     )}
                     <li className="flex items-center gap-2 text-gray-700">
