@@ -12,6 +12,16 @@ export interface CreateProductoDto {
   codigo_arancelario?: string
 }
 
+export interface UpdateProductoDto {
+  nombre?: string
+  codigo?: string
+  descripcion?: string
+  categoria_id?: number
+  activo?: boolean
+  codigo_arancelario?: string
+  stock_ajuste?: number
+}
+
 export interface CreateProductoPrecioDto {
   nombre: string
   precio: number
@@ -35,7 +45,7 @@ export const productsApi = {
   create: (dto: CreateProductoDto) =>
     apiClient.post<Producto>('/products', dto).then((r) => r.data),
 
-  update: (id: number, dto: Partial<CreateProductoDto>) =>
+  update: (id: number, dto: UpdateProductoDto) =>
     apiClient.patch<Producto>(`/products/${id}`, dto).then((r) => r.data),
 
   remove: (id: number) =>

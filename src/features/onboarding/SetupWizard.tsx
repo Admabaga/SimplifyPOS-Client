@@ -41,8 +41,9 @@ const empresaSchema = z.object({
 })
 
 const productoSchema = z.object({
-  nombre: z.string().min(2, 'Requerido'),
-  precio: z.coerce.number().min(1, 'Precio requerido'),
+  nombre:         z.string().min(2, 'Requerido'),
+  precio:         z.coerce.number().min(1, 'Precio requerido'),
+  stock_inicial:  z.coerce.number().min(0).optional(),
 })
 
 type EmpresaForm  = z.infer<typeof empresaSchema>
@@ -335,7 +336,8 @@ function StepProducto({ onDone, onSkip, qc }: {
   onSkip: () => void
   qc: ReturnType<typeof useQueryClient>
 }) {
-  const [precioDisplay, setPrecioDisplay] = useState('')
+  const [precioDisplay, setPrecioDisplay]  = useState('')
+  const [stockDisplay,  setStockDisplay]   = useState('')
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProductoForm>({
     resolver: zodResolver(productoSchema) as unknown as Resolver<any>,
   })
@@ -344,7 +346,7 @@ function StepProducto({ onDone, onSkip, qc }: {
     mutationFn: async (data: ProductoForm) => {
       const prod = await apiClient.post<{ id: number }>('/products', {
         nombre: data.nombre,
-        stock_inicial: 0,
+        stock_inicial: data.stock_inicial ?? 0,
         precio_costo_inicial: 0,
       })
       await apiClient.post(`/products/${prod.data.id}/prices`, {
@@ -390,6 +392,23 @@ function StepProducto({ onDone, onSkip, qc }: {
             />
           </div>
           {errors.precio && <p className="text-xs text-red-600">{errors.precio.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-slate-700">Cantidad inicial (opcional)</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="0 unidades"
+            value={stockDisplay}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, '')
+              const n   = raw ? parseInt(raw, 10) : 0
+              setStockDisplay(n > 0 ? n.toLocaleString('es-CO') : '')
+              setValue('stock_inicial', n || undefined, { shouldValidate: true })
+            }}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)] focus:border-transparent"
+          />
+          <p className="text-[11px] text-slate-400">¿Cuántas unidades tienes ahora? Puedes ajustarlo después en Productos.</p>
         </div>
         <div className="flex gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onSkip} className="flex-1">Omitir por ahora</Button>

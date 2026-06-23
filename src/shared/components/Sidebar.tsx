@@ -41,7 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Cuentas',       to: '/accounts',       icon: <Users size={17} />,         permission: 'cuentas:read' },
       { label: 'Clientes',      to: '/clients',        icon: <UserCog size={17} />,        permission: 'cuentas:read', feature: 'crm_clientes' },
       { label: 'Caja',          to: '/caja',           icon: <Landmark size={17} />,      permission: 'cuentas:read' },
-      { label: 'Facturas',      to: '/invoices',       icon: <FileText size={17} />,      permission: 'facturas:read' },
+      { label: 'Facturas compra', to: '/invoices',       icon: <FileText size={17} />,      permission: 'facturas:read' },
       { label: 'Ventas',        to: '/sales',          icon: <Receipt size={17} />,       permission: 'ventas:read' },
     ],
   },

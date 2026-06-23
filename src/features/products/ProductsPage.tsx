@@ -20,7 +20,7 @@ import { formatCOP } from '@/shared/lib/formatters'
 import { apiError } from '@/shared/lib/apiError'
 import type { Producto, ProductoPrecio } from '@/shared/types'
 import { productsApi } from './api'
-import type { CreateProductoDto, CreateProductoPrecioDto, UpdateProductoPrecioDto } from './api'
+import type { CreateProductoDto, UpdateProductoDto, CreateProductoPrecioDto, UpdateProductoPrecioDto } from './api'
 import { categoriasApi } from '@/features/categories/api'
 import { useCurrencyInput } from '@/shared/hooks/useCurrencyInput'
 
@@ -204,7 +204,7 @@ export default function ProductsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, dto }: { id: number; dto: Partial<CreateProductoDto> }) => productsApi.update(id, dto),
+    mutationFn: ({ id, dto }: { id: number; dto: UpdateProductoDto }) => productsApi.update(id, dto),
     onSuccess: (updated) => {
       qc.setQueryData(['products'], (old: Producto[] | undefined) =>
         old ? old.map((p) => p.id === updated.id ? updated : p) : old
@@ -552,8 +552,22 @@ export default function ProductsPage() {
           open={!!editProduct}
           onClose={() => setEditProduct(null)}
           categorias={categorias}
-          defaultValues={{ nombre: editProduct.nombre, activo: editProduct.activo, codigo: editProduct.codigo ?? undefined, descripcion: editProduct.descripcion ?? undefined, categoria_id: editProduct.categoria_id ?? undefined, codigo_arancelario: (editProduct as any).codigo_arancelario ?? undefined }}
-          onSubmit={({ precio_venta: _pv, ...dto }) => updateMutation.mutate({ id: editProduct.id, dto })}
+          defaultValues={{
+            nombre: editProduct.nombre,
+            activo: editProduct.activo,
+            codigo: editProduct.codigo ?? undefined,
+            descripcion: editProduct.descripcion ?? undefined,
+            categoria_id: editProduct.categoria_id ?? undefined,
+            codigo_arancelario: (editProduct as any).codigo_arancelario ?? undefined,
+            stock_inicial: editProduct.stock_total ?? 0,
+          }}
+          stockActual={editProduct.stock_total ?? 0}
+          onSubmit={({ precio_venta: _pv, stock_inicial, precio_costo_inicial: _pc, ...rest }) =>
+            updateMutation.mutate({
+              id: editProduct.id,
+              dto: { ...rest, ...(stock_inicial !== undefined ? { stock_ajuste: stock_inicial } : {}) },
+            })
+          }
           loading={updateMutation.isPending}
           title="Editar producto"
         />
@@ -701,10 +715,11 @@ interface ProductFormModalProps {
   onSubmit: (dto: CreateProductoDto & { precio_venta?: number }) => void
   loading: boolean
   title: string
-  showStock?: boolean  // true al crear, false al editar
+  showStock?: boolean   // true al crear → muestra precio + stock inicial
+  stockActual?: number  // si se pasa → modo edición: muestra campo de ajuste de stock
 }
 
-function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, loading, title, showStock = false }: ProductFormModalProps) {
+function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, loading, title, showStock = false, stockActual }: ProductFormModalProps) {
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<ProductForm>({
     resolver: zodResolver(productSchema) as unknown as Resolver<any>,
     defaultValues: {
@@ -733,12 +748,12 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
         categoria_id:         defaultValues?.categoria_id,
         activo:               defaultValues?.activo              ?? true,
         precio_venta:         undefined,
-        stock_inicial:        undefined,
+        stock_inicial:        stockActual ?? undefined,
         precio_costo_inicial: undefined,
         codigo_arancelario:   (defaultValues as any)?.codigo_arancelario ?? '',
       })
       precioVentaInput.setFromNumber(0)
-      stockInicialInput.setFromNumber(0)
+      stockInicialInput.setFromNumber(stockActual ?? 0)
       costoPrecioInput.setFromNumber(0)
     }
   }, [open, reset]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -783,6 +798,27 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
           <input type="checkbox" {...register('activo')} className="w-4 h-4 rounded" />
           <span className="text-slate-700 group-hover:text-slate-900">Activo</span>
         </label>
+
+        {/* Ajuste de stock — solo en modo edición */}
+        {stockActual !== undefined && (
+          <div className="pt-3 border-t border-slate-100 space-y-1.5">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inventario</p>
+            <label className="block text-sm font-medium text-slate-700">Cantidad en stock</label>
+            <input
+              {...stockInicialInput.inputProps}
+              placeholder="0"
+              onChange={(e) => {
+                stockInicialInput.inputProps.onChange(e)
+                const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
+                setValue('stock_inicial', n, { shouldValidate: true })
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
+            />
+            <p className="text-[11px] text-slate-400">
+              Ajusta las unidades disponibles (valor actual: {stockActual}).
+            </p>
+          </div>
+        )}
 
         {showStock && (
           <div className="pt-3 border-t border-slate-100 space-y-2">

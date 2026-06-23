@@ -4,9 +4,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver } from 'react-hook-form'
 import { z } from 'zod'
+import { useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, FileText, DollarSign, ShoppingCart, Package,
-  ChevronDown, ChevronUp, Upload, AlertCircle, ScanLine,
+  ChevronDown, ChevronUp, Upload, AlertCircle, ScanLine, ArrowRight,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
@@ -355,6 +356,28 @@ interface FacturaModalProps {
   uploadedFiles?: File[]
 }
 
+// ── Aviso sin proveedores ───────────────────────────────────────────────────────
+function NoProveedoresAlert({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate()
+  return (
+    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+      <p className="text-sm font-semibold text-amber-800 mb-1">
+        No tienes proveedores registrados
+      </p>
+      <p className="text-xs text-amber-700 mb-3">
+        Para crear una factura de compra necesitas al menos un proveedor. Créalo primero en <strong>Proveedores</strong>.
+      </p>
+      <button
+        type="button"
+        onClick={() => { onClose(); navigate('/suppliers') }}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 underline"
+      >
+        Ir a Proveedores <ArrowRight size={12} />
+      </button>
+    </div>
+  )
+}
+
 // ── helpers locales ─────────────────────────────────────────────────────────────
 const parseNum = (s: string) => { const n = parseInt(s.replace(/\D/g, '') || '0', 10); return isNaN(n) ? 0 : n }
 const fmtNum   = (s: string) => { const n = parseNum(s); return n > 0 ? n.toLocaleString('es-CO') : '' }
@@ -485,6 +508,11 @@ function FacturaModal({ open, onClose, proveedores, products, onSubmit, loading,
         }
       >
         <div className="space-y-5">
+          {/* Sin proveedores — aviso */}
+          {proveedores.length === 0 && (
+            <NoProveedoresAlert onClose={onClose} />
+          )}
+
           {/* Archivos adjuntos */}
           {uploadedFiles.length > 0 && (
             <InfoBanner icon={<Upload size={14} />} variant="info">
