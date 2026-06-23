@@ -61,13 +61,19 @@ export function useQuickSale(onDone: () => void) {
     () => new Fuse(activeProducts, { keys: ['nombre', 'codigo', 'codigo_interno'], threshold: 0.35 }),
     [activeProducts],
   )
-  const results = useMemo(
-    () =>
-      search.trim().length > 0
-        ? fuse.search(search).slice(0, 8).map((r) => r.item)
-        : activeProducts.slice(0, 8),
-    [search, fuse, activeProducts],
-  )
+  const results = useMemo(() => {
+    const trimmed = search.trim()
+    if (!trimmed) return activeProducts.slice(0, 8)
+    const fuzzy = fuse.search(trimmed).slice(0, 8).map((r) => r.item)
+    // Exact code match siempre primero → pistola de barras funciona sin falla
+    const exactCode = activeProducts.find(
+      (p) => p.codigo?.toLowerCase() === trimmed.toLowerCase(),
+    )
+    if (exactCode && !fuzzy.find((p) => p.id === exactCode.id)) {
+      return [exactCode, ...fuzzy].slice(0, 8)
+    }
+    return fuzzy
+  }, [search, fuse, activeProducts])
 
   const addToCart = useCallback((producto: Producto, precio: ProductoPrecio) => {
     setCart((prev) => {

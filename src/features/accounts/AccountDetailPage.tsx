@@ -1029,7 +1029,7 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
 interface AddVentaModalProps {
   open: boolean
   onClose: () => void
-  products: { id: number; nombre: string; precios: { id: number; nombre: string; precio: number; cantidad: number; activo: boolean }[]; stock_total?: number }[]
+  products: { id: number; nombre: string; codigo?: string | null; precios: { id: number; nombre: string; precio: number; cantidad: number; activo: boolean }[]; stock_total?: number }[]
   onSubmit: (dto: AddVentaDto) => void
   loading: boolean
   initialProductId?: number
@@ -1063,12 +1063,19 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
 
   // Fuzzy search con Fuse.js
   const fuse = useMemo(
-    () => new Fuse(products, { keys: ['nombre'], threshold: 0.35, includeScore: true }),
+    () => new Fuse(products, { keys: ['nombre', 'codigo'], threshold: 0.35, includeScore: true }),
     [products]
   )
   const filtered = useMemo(() => {
     if (!search) return products.slice(0, 12)
-    return fuse.search(search).slice(0, 10).map((r) => r.item)
+    const trimmed = search.trim()
+    const fuzzy = fuse.search(trimmed).slice(0, 10).map((r) => r.item)
+    // Exact code match primero para pistola de barras
+    const exactCode = products.find((p) => p.codigo?.toLowerCase() === trimmed.toLowerCase())
+    if (exactCode && !fuzzy.find((p) => p.id === exactCode.id)) {
+      return [exactCode, ...fuzzy].slice(0, 10)
+    }
+    return fuzzy
   }, [products, search, fuse])
 
   const handleSearchKey = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1143,7 +1150,7 @@ function AddVentaModal({ open, onClose, products, onSubmit, loading, initialProd
               <input
                 ref={searchRef}
                 type="text"
-                placeholder="Buscar producto por nombre..."
+                placeholder="Buscar por nombre o código de barras..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={handleSearchKey}
