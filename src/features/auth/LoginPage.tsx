@@ -7,8 +7,9 @@ import toast from 'react-hot-toast'
 import {
   Loader2, LogIn, Eye, EyeOff,
   Package, Zap, BarChart3, Shield, Receipt, Users, Wallet,
-  TrendingUp, Sparkles, ShieldCheck, ArrowLeft, KeyRound,
+  TrendingUp, Sparkles, ShieldCheck, ArrowLeft, KeyRound, Fingerprint,
 } from 'lucide-react'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
@@ -201,7 +202,45 @@ export default function LoginPage() {
   const [totpRequired, setTotpRequired] = useState(false)
   const [totpCode, setTotpCode] = useState('')
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const totpRef = useRef<HTMLInputElement>(null)
+
+  const finalizarSesion = (result: import('@/shared/types').TokenResponse) => {
+    setUser(
+      {
+        id: result.user_id,
+        email: result.email,
+        nombre: result.nombre,
+        role: result.role.toLowerCase(),
+        permissions: result.permissions,
+        must_change_password: result.must_change_password,
+      },
+      result.access_token,
+      rememberMe
+    )
+    toast.success(`¡Bienvenido, ${result.nombre}!`)
+    navigate('/dashboard', { replace: true })
+  }
+
+  const onPasskeyLogin = async () => {
+    setPasskeyLoading(true)
+    try {
+      const emailVal = (document.querySelector<HTMLInputElement>('input[type=email]')?.value || '').trim()
+      const { options, ticket } = await authApi.passkeyLoginBegin(emailVal || undefined)
+      const credential = await startAuthentication({ optionsJSON: options })
+      const result = await authApi.passkeyLoginFinish({ ticket, credential })
+      finalizarSesion(result)
+    } catch (err) {
+      const name = (err as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'AbortError') {
+        // El usuario canceló el diálogo del navegador — no es un error real
+        return
+      }
+      toast.error(apiError(err, 'No se pudo iniciar con passkey. Usa tu contraseña.'))
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
 
   const {
     register,
@@ -213,20 +252,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await authApi.login(data)
-      setUser(
-        {
-          id: result.user_id,
-          email: result.email,
-          nombre: result.nombre,
-          role: result.role.toLowerCase(),
-          permissions: result.permissions,
-          must_change_password: result.must_change_password,
-        },
-        result.access_token,
-        rememberMe
-      )
-      toast.success(`¡Bienvenido, ${result.nombre}!`)
-      navigate('/dashboard', { replace: true })
+      finalizarSesion(result)
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 428) {
@@ -246,20 +272,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await authApi.login({ ...credentials, totp_code: totpCode.trim() })
-      setUser(
-        {
-          id: result.user_id,
-          email: result.email,
-          nombre: result.nombre,
-          role: result.role.toLowerCase(),
-          permissions: result.permissions,
-          must_change_password: result.must_change_password,
-        },
-        result.access_token,
-        rememberMe
-      )
-      toast.success(`¡Bienvenido, ${result.nombre}!`)
-      navigate('/dashboard', { replace: true })
+      finalizarSesion(result)
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 401) {
@@ -659,7 +672,13 @@ export default function LoginPage() {
                   onChange={(e) => {
                     const v = e.target.value.replace(/\s/g, '')
                     setTotpCode(v)
-                    if (v.length >= 6) setTimeout(() => onSubmitTotp(), 0)
+                    if (v.length === 6 && /^\d{6}$/.test(v)) setTimeout(() => onSubmitTotp(), 0)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      onSubmitTotp()
+                    }
                   }}
                   placeholder="000000"
                   className="w-full text-center text-3xl font-bold tracking-[0.4em] px-4 py-4 rounded-xl border-2 border-gray-200 focus:border-[var(--t-primary)] focus:outline-none transition"
@@ -786,6 +805,29 @@ export default function LoginPage() {
                 {loading ? 'Ingresando...' : 'Ingresar'}
               </button>
             </form>
+
+            {/* Divisor + login con passkey */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400 font-medium">o</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <button
+              type="button"
+              onClick={onPasskeyLogin}
+              disabled={passkeyLoading}
+              className="w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-lg border-2 border-gray-200 text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {passkeyLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Fingerprint className="w-4 h-4" style={{ color: 'var(--t-primary)' }} />
+              )}
+              {passkeyLoading ? 'Verificando…' : 'Entrar con passkey'}
+            </button>
+            <p className="mt-2 text-xs text-gray-400 text-center">
+              Usa tu huella, Face ID o llave de seguridad
+            </p>
 
             {/* CTA de registro / planes */}
             <div className="mt-6 pt-5 border-t border-gray-100 text-center">

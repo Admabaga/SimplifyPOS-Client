@@ -1,5 +1,9 @@
 import apiClient from '@/shared/api/client'
 import type { TokenResponse, User } from '@/shared/types'
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser'
 
 export interface LoginPayload {
   email: string
@@ -54,4 +58,40 @@ export const authApi = {
     apiClient
       .post<{ recovery_codes: string[] }>('/auth/2fa/recovery-codes', { code })
       .then((r) => r.data),
+
+  // ── Passkeys (WebAuthn) ──
+  passkeyRegisterBegin: () =>
+    apiClient
+      .post<{ options: PublicKeyCredentialCreationOptionsJSON; ticket: string }>(
+        '/auth/passkey/register/begin'
+      )
+      .then((r) => r.data),
+
+  passkeyRegisterFinish: (payload: { ticket: string; nombre: string; credential: unknown }) =>
+    apiClient.post<PasskeyInfo>('/auth/passkey/register/finish', payload).then((r) => r.data),
+
+  passkeyList: () =>
+    apiClient.get<PasskeyInfo[]>('/auth/passkey').then((r) => r.data),
+
+  passkeyDelete: (id: number) =>
+    apiClient.delete(`/auth/passkey/${id}`).then(() => undefined),
+
+  passkeyLoginBegin: (email?: string) =>
+    apiClient
+      .post<{ options: PublicKeyCredentialRequestOptionsJSON; ticket: string }>(
+        '/auth/passkey/login/begin',
+        { email: email || null }
+      )
+      .then((r) => r.data),
+
+  passkeyLoginFinish: (payload: { ticket: string; credential: unknown }) =>
+    apiClient.post<TokenResponse>('/auth/passkey/login/finish', payload).then((r) => r.data),
+}
+
+export interface PasskeyInfo {
+  id: number
+  nombre: string
+  transports: string | null
+  last_used: string | null
+  created_at: string
 }

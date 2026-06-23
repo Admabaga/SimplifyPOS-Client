@@ -9,6 +9,7 @@ import { authApi } from './api'
 import { apiError } from '@/shared/lib/apiError'
 import { PageHeader, Card, Button, Badge } from '@/shared/components/ui'
 import TwoFactorCard from './TwoFactorCard'
+import PasskeysCard from './PasskeysCard'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -249,6 +250,9 @@ export default function ProfilePage() {
 
       {/* ── Verificación en dos pasos ────────────────────────────────────── */}
       <TwoFactorCard />
+
+      {/* ── Passkeys (login sin contraseña) ──────────────────────────────── */}
+      <PasskeysCard />
     </div>
   )
 }
