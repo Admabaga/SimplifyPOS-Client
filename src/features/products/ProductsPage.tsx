@@ -415,7 +415,7 @@ export default function ProductsPage() {
                 <Th className="hidden sm:table-cell">Código</Th>
                 <Th>Presentaciones</Th>
                 <Th className="hidden sm:table-cell">Stock</Th>
-                <Th className="hidden md:table-cell">Precio base</Th>
+                <Can permission="users:create_supervisor"><Th className="hidden md:table-cell">Precio base</Th></Can>
                 <Th className="hidden lg:table-cell">Categoría</Th>
                 <Th className="hidden sm:table-cell">Estado</Th>
                 <Th>Acciones</Th>
@@ -490,7 +490,7 @@ export default function ProductsPage() {
                       </div>
                     </Td>
                     <Td className="hidden sm:table-cell"><StockBadge stock={stock} /></Td>
-                    <Td className="font-semibold text-slate-700 tabular-nums hidden md:table-cell">{formatCOP(p.precio_ponderado)}</Td>
+                    <Can permission="users:create_supervisor"><Td className="font-semibold text-slate-700 tabular-nums hidden md:table-cell">{formatCOP(p.precio_ponderado)}</Td></Can>
                     <Td className="hidden lg:table-cell">
                       {cat ? (
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -705,7 +705,7 @@ interface ProductFormModalProps {
 }
 
 function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, loading, title, showStock = false }: ProductFormModalProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<ProductForm>({
+  const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<ProductForm>({
     resolver: zodResolver(productSchema) as unknown as Resolver<any>,
     defaultValues: {
       nombre:               defaultValues?.nombre              ?? '',
@@ -719,6 +719,29 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
       codigo_arancelario:   (defaultValues as any)?.codigo_arancelario ?? '',
     },
   })
+
+  const precioVentaInput  = useCurrencyInput(0)
+  const stockInicialInput = useCurrencyInput(0)
+  const costoPrecioInput  = useCurrencyInput(0)
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        nombre:               defaultValues?.nombre              ?? '',
+        codigo:               defaultValues?.codigo              ?? '',
+        descripcion:          defaultValues?.descripcion         ?? '',
+        categoria_id:         defaultValues?.categoria_id,
+        activo:               defaultValues?.activo              ?? true,
+        precio_venta:         undefined,
+        stock_inicial:        undefined,
+        precio_costo_inicial: undefined,
+        codigo_arancelario:   (defaultValues as any)?.codigo_arancelario ?? '',
+      })
+      precioVentaInput.setFromNumber(0)
+      stockInicialInput.setFromNumber(0)
+      costoPrecioInput.setFromNumber(0)
+    }
+  }, [open, reset]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Modal open={open} onClose={onClose} title={title}
@@ -763,13 +786,23 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
         {showStock && (
           <div className="pt-3 border-t border-slate-100 space-y-2">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Precio de venta</p>
-            <Input
-              label="Valor de venta unitaria ($)"
-              type="number"
-              {...register('precio_venta')}
-              placeholder="0"
-              error={errors.precio_venta?.message}
-            />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Valor de venta unitaria ($)</label>
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-slate-400 pointer-events-none">$</span>
+                <input
+                  {...precioVentaInput.inputProps}
+                  placeholder="0"
+                  onChange={(e) => {
+                    precioVentaInput.inputProps.onChange(e)
+                    const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
+                    setValue('precio_venta', n || undefined, { shouldValidate: true })
+                  }}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
+                />
+              </div>
+              {errors.precio_venta && <p className="text-xs text-red-600">{errors.precio_venta.message}</p>}
+            </div>
             <p className="text-[11px] text-slate-400">
               Se crea automáticamente la presentación <span className="font-medium">«Unidad»</span> con
               este precio. Luego puedes añadir más presentaciones (paca, media, etc.) en «Precios».
@@ -781,20 +814,37 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
           <div className="pt-3 border-t border-slate-100 space-y-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock inicial (opcional)</p>
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Unidades"
-                type="number"
-                {...register('stock_inicial')}
-                placeholder="0"
-                error={errors.stock_inicial?.message}
-              />
-              <Input
-                label="Costo total ($)"
-                type="number"
-                {...register('precio_costo_inicial')}
-                placeholder="0"
-                error={errors.precio_costo_inicial?.message}
-              />
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">Unidades</label>
+                <input
+                  {...stockInicialInput.inputProps}
+                  placeholder="0"
+                  onChange={(e) => {
+                    stockInicialInput.inputProps.onChange(e)
+                    const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
+                    setValue('stock_inicial', n || undefined, { shouldValidate: true })
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
+                />
+                {errors.stock_inicial && <p className="text-xs text-red-600">{errors.stock_inicial.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-700">Costo total ($)</label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-slate-400 pointer-events-none">$</span>
+                  <input
+                    {...costoPrecioInput.inputProps}
+                    placeholder="0"
+                    onChange={(e) => {
+                      costoPrecioInput.inputProps.onChange(e)
+                      const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
+                      setValue('precio_costo_inicial', n || undefined, { shouldValidate: true })
+                    }}
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
+                  />
+                </div>
+                {errors.precio_costo_inicial && <p className="text-xs text-red-600">{errors.precio_costo_inicial.message}</p>}
+              </div>
             </div>
             <p className="text-[11px] text-slate-400">
               Si ingresas unidades, se registra una compra de apertura para inicializar el inventario.

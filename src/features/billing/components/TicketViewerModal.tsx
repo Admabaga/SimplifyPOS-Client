@@ -12,6 +12,7 @@
  * Impresión: misma estrategia visibility-hidden con ID único por ticket.
  */
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Printer, X, FileMinus, RefreshCw, CreditCard, Banknote, Smartphone, Repeat2, CheckCircle2 } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
@@ -159,14 +160,17 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
 
   return (
     <>
-      {/* Versión imprimible (térmica) */}
-      <div
-        id={printRootId}
-        style={{ position: 'fixed', left: '-9999px', top: 0, width: '72mm', pointerEvents: 'none' }}
-        aria-hidden="true"
-      >
-        <ThermalContent ticket={ticket} pagos={pagos} />
-      </div>
+      {/* Versión imprimible (térmica) — portal al body para evitar clip por overflow-x-hidden del layout */}
+      {createPortal(
+        <div
+          id={printRootId}
+          style={{ position: 'fixed', left: '-9999px', top: 0, width: '72mm', pointerEvents: 'none' }}
+          aria-hidden="true"
+        >
+          <ThermalContent ticket={ticket} pagos={pagos} />
+        </div>,
+        document.body,
+      )}
 
       <Modal open={open} onClose={onClose} title={TIPO_DOC_TITLE[ticket.tipo_documento] ?? ticket.tipo_documento} size="2xl">
 
