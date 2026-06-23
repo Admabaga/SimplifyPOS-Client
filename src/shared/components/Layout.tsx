@@ -10,7 +10,10 @@ import { useThemeStore, applyTheme } from '@/stores/theme'
 import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
 import SetupWizard, { useSetupWizard } from '@/features/onboarding/SetupWizard'
 
-const IDLE_TIMEOUT_MS = 60 * 60 * 1000 // 1 hora
+// Minutos de inactividad antes de cerrar sesión por seguridad.
+// Configurable por env (Render → Static Site → VITE_IDLE_TIMEOUT_MIN). Default 120.
+const IDLE_TIMEOUT_MIN = Number(import.meta.env.VITE_IDLE_TIMEOUT_MIN) || 120
+const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MIN * 60 * 1000
 
 function useIdleTimer() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

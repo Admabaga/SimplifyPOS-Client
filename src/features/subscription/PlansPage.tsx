@@ -139,30 +139,38 @@ export default function PlansPage() {
                   </button>
 
                   <ul className="mt-6 space-y-2.5 text-sm">
+                    {/* Ventas / facturas normales SIEMPRE ilimitadas — el cupo es solo DIAN */}
                     <li className="flex items-center gap-2 text-gray-700 font-medium">
                       <Check size={16} className="text-emerald-600 shrink-0" />
-                      {p.limite_documentos_mes === null
-                        ? 'Facturas electrónicas DIAN ilimitadas'
-                        : `${p.limite_documentos_mes} facturas electrónicas DIAN / mes`}
+                      Ventas y facturas ilimitadas
                     </li>
-                    {p.limite_documentos_mes !== null && (
-                      <li className="flex items-center gap-2 text-gray-500">
-                        <Check size={16} className="text-emerald-600 shrink-0" />
-                        {p.precio_excedente > 0
-                          ? `Adicionales ${formatCOP(p.precio_excedente)} c/u, sin tope`
-                          : 'Al agotar el cupo, sigues con factura normal'}
-                      </li>
-                    )}
+                    <li className="flex items-start gap-2 text-gray-700 font-medium">
+                      <Check size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <span>
+                        {p.limite_documentos_mes === null
+                          ? 'Facturas electrónicas DIAN ilimitadas'
+                          : `${p.limite_documentos_mes} facturas electrónicas DIAN / mes`}
+                        {p.limite_documentos_mes !== null && (
+                          <span className="block text-xs font-normal text-gray-400 mt-0.5">
+                            {p.precio_excedente > 0
+                              ? `¿Necesitas más? ${formatCOP(p.precio_excedente)} por factura adicional, sin tope`
+                              : 'Al agotar el cupo sigues facturando normal, sin costo extra'}
+                          </span>
+                        )}
+                      </span>
+                    </li>
                     <li className="flex items-center gap-2 text-gray-700">
                       <Check size={16} className="text-emerald-600 shrink-0" />
                       {p.max_usuarios === null ? 'Usuarios ilimitados' : `Hasta ${p.max_usuarios} usuarios`}
                     </li>
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-gray-700">
-                        <Check size={16} className="text-emerald-600 shrink-0" />
-                        {FEATURE_LABELS[f] ?? f}
-                      </li>
-                    ))}
+                    {p.features
+                      .filter((f) => f !== 'dian_electronica') // ya explicado arriba con su cupo
+                      .map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-gray-700">
+                          <Check size={16} className="text-emerald-600 shrink-0" />
+                          {FEATURE_LABELS[f] ?? f}
+                        </li>
+                      ))}
                   </ul>
                 </div>
               )

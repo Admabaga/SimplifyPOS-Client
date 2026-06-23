@@ -111,7 +111,7 @@ export default function SignupPage() {
                 </span>
               </div>
               <p className="flex items-center gap-1.5 text-xs text-emerald-700 mt-1">
-                <Check size={13} /> Primer mes gratis · luego se cobra automáticamente
+                <Check size={13} /> 30 días gratis desde hoy · luego se cobra automáticamente
               </p>
             </div>
           )}

@@ -43,7 +43,7 @@ const PLAN_META: Record<string, {
     activeBg: 'bg-violet-50/50',
     check: 'text-violet-500',
     pill: 'text-violet-700 bg-violet-100',
-    highlights: ['POS completo', 'Inventario', 'Caja', 'Comprobante POS'],
+    highlights: ['POS completo', 'Ventas ilimitadas', 'E-factura DIAN incluida', 'Caja e inventario'],
   },
   PRO: {
     icon: <Star size={17} />,
@@ -55,7 +55,7 @@ const PLAN_META: Record<string, {
     check: 'text-emerald-500',
     pill: 'text-emerald-700 bg-emerald-100',
     badge: 'Más popular',
-    highlights: ['Todo Emprende', 'Factura DIAN', 'Clientes / CRM', 'Asesor IA'],
+    highlights: ['Todo Emprende', 'E-factura DIAN ampliada', 'Clientes / CRM', 'Asesor IA'],
   },
   PREMIUM: {
     icon: <Crown size={17} />,
