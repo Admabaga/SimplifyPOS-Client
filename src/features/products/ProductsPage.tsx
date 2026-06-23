@@ -752,7 +752,8 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
         </>
       }
     >
-      <form className="space-y-4">
+      {/* onSubmit preventDefault: pistola de barras envía Enter — evita submit prematuro */}
+      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
         <Input label="Nombre *"      {...register('nombre')}      error={errors.nombre?.message} autoFocus />
         <div className="grid grid-cols-2 gap-3">
           <Input label="Código interno" {...register('codigo')}      placeholder="Ej: AGU001" />
