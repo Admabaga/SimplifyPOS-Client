@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, LogIn, Loader2, Eye, EyeOff } from 'lucide-react'
+import { Lock, LogIn, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { authApi } from '@/features/auth/api'
 import { useAuthStore } from '@/stores/auth'
 import Logo from '@/assets/IconChart.png'
@@ -10,6 +11,7 @@ export default function SessionExpiredModal() {
   const [visible, setVisible] = useState(false)
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
   const { user, setUser, clearAuth } = useAuthStore()
   const navigate = useNavigate()
@@ -104,6 +106,35 @@ export default function SessionExpiredModal() {
     }
   }, [])
 
+  const handlePasskey = async () => {
+    if (!user) return
+    setPasskeyLoading(true)
+    try {
+      const { options, ticket } = await authApi.passkeyLoginBegin(user.email)
+      const credential = await startAuthentication({ optionsJSON: options })
+      const result = await authApi.passkeyLoginFinish({ ticket, credential })
+      setUser(
+        {
+          id: result.user_id,
+          email: result.email,
+          nombre: result.nombre,
+          role: result.role,
+          permissions: result.permissions,
+          must_change_password: result.must_change_password,
+        },
+        result.access_token
+      )
+      setVisible(false)
+      toast.success('Sesión restaurada con passkey')
+    } catch (err) {
+      const name = (err as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'AbortError') return
+      toast.error('No se pudo autenticar con passkey. Usa tu contraseña.')
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
   const handleRelogin = async () => {
     if (!user || !password) return
     setLoading(true)
@@ -168,6 +199,25 @@ export default function SessionExpiredModal() {
             </div>
           </div>
 
+          {/* Passkey */}
+          <button
+            onClick={handlePasskey}
+            disabled={passkeyLoading || loading}
+            className="w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl border-2 transition-all text-sm disabled:opacity-50"
+            style={{ borderColor: 'var(--t-primary)', color: 'var(--t-primary)' }}
+          >
+            {passkeyLoading
+              ? <><Loader2 size={15} className="animate-spin" /> Verificando...</>
+              : <><Fingerprint size={16} /> Continuar con passkey</>
+            }
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400">o con contraseña</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+
           {/* Password */}
           <div className="relative">
             <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -177,7 +227,6 @@ export default function SessionExpiredModal() {
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRelogin()}
               placeholder="Contraseña"
-              autoFocus
               className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:border-[--t-primary]"
               style={{ '--t-primary': 'var(--t-primary)' } as React.CSSProperties}
             />
