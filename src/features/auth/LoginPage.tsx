@@ -9,7 +9,11 @@ import {
   Package, Zap, BarChart3, Shield, Receipt, Users, Wallet,
   TrendingUp, Sparkles, ShieldCheck, ArrowLeft, KeyRound, Fingerprint,
 } from 'lucide-react'
-import { startAuthentication } from '@simplewebauthn/browser'
+import {
+  startAuthentication,
+  startRegistration,
+  platformAuthenticatorIsAvailable,
+} from '@simplewebauthn/browser'
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
@@ -203,9 +207,12 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState('')
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
   const [passkeyLoading, setPasskeyLoading] = useState(false)
+  const [enrollPrompt, setEnrollPrompt] = useState(false)
+  const [enrolling, setEnrolling] = useState(false)
+  const [enrollNombre, setEnrollNombre] = useState('')
   const totpRef = useRef<HTMLInputElement>(null)
 
-  const finalizarSesion = (result: import('@/shared/types').TokenResponse) => {
+  const aplicarSesion = (result: import('@/shared/types').TokenResponse) => {
     setUser(
       {
         id: result.user_id,
@@ -218,8 +225,63 @@ export default function LoginPage() {
       result.access_token,
       rememberMe
     )
-    toast.success(`¡Bienvenido, ${result.nombre}!`)
+  }
+
+  const irAlDashboard = (nombre: string) => {
+    toast.success(`¡Bienvenido, ${nombre}!`)
     navigate('/dashboard', { replace: true })
+  }
+
+  // Login con passkey: el usuario ya tiene una → entra directo
+  const finalizarSesion = (result: import('@/shared/types').TokenResponse) => {
+    aplicarSesion(result)
+    irAlDashboard(result.nombre)
+  }
+
+  // Login con contraseña: si no hay passkey y el equipo soporta Touch ID/Face ID,
+  // ofrecemos crearla en el momento (como Google/GitHub). Si no, al dashboard.
+  const finalizarLoginPassword = async (result: import('@/shared/types').TokenResponse) => {
+    aplicarSesion(result)
+    try {
+      const [lista, soporta] = await Promise.all([
+        authApi.passkeyList().catch(() => []),
+        platformAuthenticatorIsAvailable().catch(() => false),
+      ])
+      if (lista.length === 0 && soporta) {
+        setEnrollNombre(result.nombre)
+        setEnrollPrompt(true)
+        return
+      }
+    } catch {
+      /* si la verificación falla, no bloqueamos el login */
+    }
+    irAlDashboard(result.nombre)
+  }
+
+  const onEnroll = async () => {
+    setEnrolling(true)
+    try {
+      const { options, ticket } = await authApi.passkeyRegisterBegin()
+      const credential = await startRegistration({ optionsJSON: options })
+      await authApi.passkeyRegisterFinish({ ticket, nombre: 'Mi dispositivo', credential })
+      toast.success('¡Passkey creada! La próxima vez entra con tu huella o Face ID.')
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const name = (err as { name?: string })?.name
+      if (name === 'NotAllowedError' || name === 'AbortError') {
+        // canceló el diálogo: lo dejamos entrar igual
+        irAlDashboard(enrollNombre)
+        return
+      }
+      toast.error(apiError(err, 'No se pudo crear la passkey'))
+    } finally {
+      setEnrolling(false)
+    }
+  }
+
+  const omitirEnroll = () => {
+    setEnrollPrompt(false)
+    irAlDashboard(enrollNombre)
   }
 
   const onPasskeyLogin = async () => {
@@ -252,7 +314,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await authApi.login(data)
-      finalizarSesion(result)
+      await finalizarLoginPassword(result)
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 428) {
@@ -272,7 +334,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await authApi.login({ ...credentials, totp_code: totpCode.trim() })
-      finalizarSesion(result)
+      await finalizarLoginPassword(result)
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       if (status === 401) {
@@ -642,8 +704,60 @@ export default function LoginPage() {
       >
         <div className="w-full max-w-md">
 
-          {/* ── Pantalla 2FA dedicada ── */}
-          {totpRequired ? (
+          {/* ── Pantalla: ofrecer crear passkey tras login con contraseña ── */}
+          {enrollPrompt ? (
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-inner"
+                  style={{ background: 'var(--t-primary-xlight)' }}
+                >
+                  <Fingerprint size={32} style={{ color: 'var(--t-primary)' }} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Entra más rápido la próxima vez</h2>
+                <p className="text-sm text-gray-500 mt-1.5 max-w-xs leading-relaxed">
+                  Crea una passkey en este dispositivo y entra con tu huella o Face ID,
+                  sin escribir contraseña.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 mb-5 space-y-2">
+                {[
+                  'Más seguro que una contraseña',
+                  'No hay nada que recordar',
+                  'Se queda solo en este equipo',
+                ].map((t) => (
+                  <div key={t} className="flex items-center gap-2 text-sm text-gray-600">
+                    <ShieldCheck size={15} style={{ color: 'var(--t-primary)' }} />
+                    {t}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={onEnroll}
+                disabled={enrolling}
+                className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3 rounded-xl transition-all mb-3"
+                style={{
+                  background: enrolling ? 'var(--t-primary-dark)' : 'var(--t-primary)',
+                  opacity: enrolling ? 0.7 : 1,
+                }}
+              >
+                {enrolling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint size={16} />}
+                {enrolling ? 'Creando…' : 'Crear passkey'}
+              </button>
+              <button
+                type="button"
+                onClick={omitirEnroll}
+                disabled={enrolling}
+                className="w-full text-sm text-gray-500 hover:text-gray-700 py-2 transition-colors"
+              >
+                Ahora no, gracias
+              </button>
+            </div>
+          ) : /* ── Pantalla 2FA dedicada ── */
+          totpRequired ? (
             <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
               {/* Icono + encabezado */}
               <div className="flex flex-col items-center text-center mb-6">

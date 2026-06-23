@@ -19,11 +19,16 @@ vi.mock('@/features/auth/api', () => ({
     login: vi.fn(),
     passkeyLoginBegin: vi.fn(),
     passkeyLoginFinish: vi.fn(),
+    passkeyList: vi.fn(),
+    passkeyRegisterBegin: vi.fn(),
+    passkeyRegisterFinish: vi.fn(),
   },
 }))
 
 vi.mock('@simplewebauthn/browser', () => ({
   startAuthentication: vi.fn(),
+  startRegistration: vi.fn(),
+  platformAuthenticatorIsAvailable: vi.fn(),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -33,7 +38,11 @@ vi.mock('@/stores/auth', () => ({
 
 // Importamos DESPUÉS del mock para obtener la referencia mockeada
 import { authApi } from '@/features/auth/api'
-import { startAuthentication } from '@simplewebauthn/browser'
+import {
+  startAuthentication,
+  startRegistration,
+  platformAuthenticatorIsAvailable,
+} from '@simplewebauthn/browser'
 import toast from 'react-hot-toast'
 
 function renderLogin() {
@@ -50,7 +59,13 @@ describe('LoginPage', () => {
     vi.mocked(authApi.login).mockClear()
     vi.mocked(authApi.passkeyLoginBegin).mockClear()
     vi.mocked(authApi.passkeyLoginFinish).mockClear()
+    vi.mocked(authApi.passkeyList).mockReset().mockResolvedValue([])
+    vi.mocked(authApi.passkeyRegisterBegin).mockReset()
+    vi.mocked(authApi.passkeyRegisterFinish).mockReset()
     vi.mocked(startAuthentication).mockClear()
+    vi.mocked(startRegistration).mockReset()
+    // Por defecto sin soporte de plataforma → no se ofrece crear passkey
+    vi.mocked(platformAuthenticatorIsAvailable).mockReset().mockResolvedValue(false)
     vi.mocked(toast.success).mockClear()
     vi.mocked(toast.error).mockClear()
   })
@@ -157,6 +172,33 @@ describe('LoginPage', () => {
     })
     // El campo de correo ya no se muestra: estamos en el paso 2FA
     expect(screen.queryByPlaceholderText('usuario@empresa.com')).not.toBeInTheDocument()
+  })
+
+  it('tras login con contraseña, si no hay passkey y hay soporte, ofrece crearla', async () => {
+    vi.mocked(authApi.login).mockResolvedValueOnce({
+      user_id: 1,
+      email: 'admin@pos.com',
+      nombre: 'Admin',
+      role: 'ADMIN',
+      permissions: [],
+      must_change_password: false,
+      access_token: 'tok',
+    })
+    vi.mocked(authApi.passkeyList).mockResolvedValueOnce([])
+    vi.mocked(platformAuthenticatorIsAvailable).mockResolvedValueOnce(true)
+
+    renderLogin()
+    fireEvent.change(screen.getByPlaceholderText('usuario@empresa.com'), {
+      target: { value: 'admin@pos.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret' } })
+    fireEvent.click(screen.getByRole('button', { name: /ingresar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Entra más rápido la próxima vez')).toBeInTheDocument()
+    })
+    // No navegó todavía: está en el prompt
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('login con passkey: ejecuta la ceremonia y navega al dashboard', async () => {
