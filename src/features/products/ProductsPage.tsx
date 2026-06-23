@@ -32,6 +32,7 @@ const productSchema = z.object({
   descripcion:          z.string().optional(),
   categoria_id:         z.coerce.number().optional(),
   activo:               z.boolean().default(true),
+  precio_venta:         z.coerce.number().min(0).optional(),
   stock_inicial:        z.coerce.number().min(0).optional(),
   precio_costo_inicial: z.coerce.number().min(0).optional(),
   codigo_arancelario:   z.string().optional(),
@@ -183,11 +184,19 @@ export default function ProductsPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: productsApi.create,
-    onSuccess: (newProduct) => {
-      qc.setQueryData(['products'], (old: Producto[] | undefined) =>
-        old ? [...old, newProduct] : [newProduct]
-      )
+    mutationFn: async (dto: CreateProductoDto & { precio_venta?: number }) => {
+      const { precio_venta, ...productoDto } = dto
+      const nuevo = await productsApi.create(productoDto)
+      // Crea la presentación de venta unitaria automáticamente (ahorra el paso
+      // de ir a "Precios" → añadir "Unidad" manualmente).
+      if (precio_venta != null && precio_venta > 0) {
+        await productsApi.addPrice(nuevo.id, { nombre: 'Unidad', precio: precio_venta, cantidad: 1 })
+      }
+      return nuevo
+    },
+    onSuccess: () => {
+      // Invalidamos para refrescar precio_ponderado/presentaciones del producto nuevo.
+      qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Producto creado')
       setShowCreate(false)
     },
@@ -544,7 +553,7 @@ export default function ProductsPage() {
           onClose={() => setEditProduct(null)}
           categorias={categorias}
           defaultValues={{ nombre: editProduct.nombre, activo: editProduct.activo, codigo: editProduct.codigo ?? undefined, descripcion: editProduct.descripcion ?? undefined, categoria_id: editProduct.categoria_id ?? undefined, codigo_arancelario: (editProduct as any).codigo_arancelario ?? undefined }}
-          onSubmit={(dto) => updateMutation.mutate({ id: editProduct.id, dto })}
+          onSubmit={({ precio_venta: _pv, ...dto }) => updateMutation.mutate({ id: editProduct.id, dto })}
           loading={updateMutation.isPending}
           title="Editar producto"
         />
@@ -689,7 +698,7 @@ interface ProductFormModalProps {
   onClose: () => void
   categorias: { id: number; nombre: string; iva?: number }[]
   defaultValues?: Partial<ProductForm>
-  onSubmit: (dto: CreateProductoDto) => void
+  onSubmit: (dto: CreateProductoDto & { precio_venta?: number }) => void
   loading: boolean
   title: string
   showStock?: boolean  // true al crear, false al editar
@@ -704,6 +713,7 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
       descripcion:          defaultValues?.descripcion         ?? '',
       categoria_id:         defaultValues?.categoria_id,
       activo:               defaultValues?.activo              ?? true,
+      precio_venta:         undefined,
       stock_inicial:        undefined,
       precio_costo_inicial: undefined,
       codigo_arancelario:   (defaultValues as any)?.codigo_arancelario ?? '',
@@ -749,6 +759,23 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
           <input type="checkbox" {...register('activo')} className="w-4 h-4 rounded" />
           <span className="text-slate-700 group-hover:text-slate-900">Activo</span>
         </label>
+
+        {showStock && (
+          <div className="pt-3 border-t border-slate-100 space-y-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Precio de venta</p>
+            <Input
+              label="Valor de venta unitaria ($)"
+              type="number"
+              {...register('precio_venta')}
+              placeholder="0"
+              error={errors.precio_venta?.message}
+            />
+            <p className="text-[11px] text-slate-400">
+              Se crea automáticamente la presentación <span className="font-medium">«Unidad»</span> con
+              este precio. Luego puedes añadir más presentaciones (paca, media, etc.) en «Precios».
+            </p>
+          </div>
+        )}
 
         {showStock && (
           <div className="pt-3 border-t border-slate-100 space-y-3">
