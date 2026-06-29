@@ -12,3 +12,32 @@ const localStorageMock = (() => {
 })()
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+
+// ─── Browser APIs que jsdom no implementa (necesarias para render de páginas) ──
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+;(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub
+;(globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
+  ResizeObserverStub
+
+if (!window.matchMedia) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+}
+
+// scrollTo / matchMedia usados por algunos componentes
+window.scrollTo = window.scrollTo ?? (() => {})

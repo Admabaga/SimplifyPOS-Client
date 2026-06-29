@@ -42,5 +42,27 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['src/tests/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'text', 'html'],
+      all: true,
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/tests/**',
+        'src/main.tsx',
+        'src/routes/**',
+        'src/**/*.d.ts',
+        'src/vite-env.d.ts',
+        'src/assets/**',
+      ],
+      // Gate por capa: la lógica (stores/hooks/api/lib) es donde viven los bugs
+      // que cuestan dinero → umbral alto. Las páginas se cubren con smoke + e2e.
+      thresholds: {
+        'src/stores/**': { statements: 85, functions: 85, lines: 85 },
+        'src/shared/lib/**': { statements: 85, lines: 85 },
+        'src/shared/api/**': { statements: 70, lines: 70 },
+        'src/shared/hooks/**': { statements: 70, lines: 70 },
+      },
+    },
   },
 })
