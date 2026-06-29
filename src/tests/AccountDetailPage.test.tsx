@@ -11,7 +11,7 @@ const h = vi.hoisted(() => ({
   },
   products: { getAll: vi.fn() },
   billing: { listByCuenta: vi.fn(), emitir: vi.fn() },
-  apiClient: { get: vi.fn(() => Promise.resolve({ data: [] })) },
+  apiClient: { get: vi.fn() as ReturnType<typeof vi.fn> },
 }))
 vi.mock('@/features/accounts/api', () => ({ cuentasApi: h.cuentas }))
 vi.mock('@/features/products/api', () => ({ productsApi: h.products }))
