@@ -39,5 +39,7 @@ if (!window.matchMedia) {
   })
 }
 
-// scrollTo / matchMedia usados por algunos componentes
+// scrollTo / scrollIntoView usados por algunos componentes (jsdom no los implementa)
 window.scrollTo = window.scrollTo ?? (() => {})
+Element.prototype.scrollIntoView = function () {}
+HTMLElement.prototype.scrollIntoView = function () {}
