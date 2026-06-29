@@ -63,7 +63,7 @@ describe('ui primitives', () => {
   })
 
   it('EmptyState con acción', () => {
-    render(<EmptyState title="Vacío" message="nada aquí" action={<Button>Crear</Button>} />)
+    render(<EmptyState title="Vacío" description="nada aquí" action={<Button>Crear</Button>} />)
     expect(screen.getByText('Vacío')).toBeInTheDocument()
   })
 
