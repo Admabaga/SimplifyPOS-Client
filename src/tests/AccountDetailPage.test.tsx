@@ -76,4 +76,21 @@ describe('AccountDetailPage', () => {
     // El saldo pendiente $6.000 aparece en pantalla
     expect((await screen.findAllByText(/6\.000/)).length).toBeGreaterThan(0)
   })
+
+  it('rework: panel financiero + actividad con nuevo layout', async () => {
+    wrap(<AccountDetailPage />)
+    await screen.findByText('Mesa 5')
+    // Resumen financiero (columna izquierda)
+    expect(screen.getByText('Saldo pendiente')).toBeInTheDocument()
+    expect(screen.getByText('Total facturado')).toBeInTheDocument()
+    expect(screen.getByText('Pagado')).toBeInTheDocument()
+    expect(screen.getByText('Progreso de pago')).toBeInTheDocument()
+    // Actividad de la cuenta (columna derecha)
+    expect(screen.getByText('Actividad de la cuenta')).toBeInTheDocument()
+    expect(screen.getByText('Ventas registradas')).toBeInTheDocument()
+    expect(screen.getByText('Productos distintos')).toBeInTheDocument()
+    expect(screen.getByText('Pagos realizados')).toBeInTheDocument()
+    // Ya no hay bloque "Resumen financiero" con SectionHeader antiguo
+    expect(screen.queryByText('Resumen financiero')).not.toBeInTheDocument()
+  })
 })

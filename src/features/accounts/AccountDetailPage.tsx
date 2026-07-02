@@ -11,12 +11,12 @@ import { z } from 'zod'
 import {
   ArrowLeft, Plus, Trash2, ShoppingCart, CreditCard, ChevronDown, ChevronUp,
   CheckCircle2, AlertCircle, Search, Package, X, Receipt,
-  FileText, Eye, Hash, Calendar, TrendingUp, Wallet,
+  FileText, Eye, Hash, Calendar, Wallet,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
   Button, Card, Badge, Spinner, EmptyState, Modal, ConfirmDialog,
-  ProgressBar, SectionHeader, InfoBanner, Input, Select,
+  SectionHeader, InfoBanner, Input, Select,
 } from '@/shared/components/ui'
 import Can from '@/shared/components/Can'
 import { formatCOP, formatDate, formatDateTime } from '@/shared/lib/formatters'
@@ -348,168 +348,106 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
         </InfoBanner>
       )}
 
-      {/* ── Actividad + Resumen financiero — 2 columnas en desktop ───────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+      {/* ── Resumen financiero + Actividad — 2 columnas (sin tarjetas de color) ─ */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4 items-stretch">
 
-        {/* Actividad de la cuenta */}
-        <Card padding={false} className="h-full flex flex-col">
-          <div className="p-5 flex-1 flex flex-col">
-            <SectionHeader
-              title="Actividad de la cuenta"
-              icon={<TrendingUp size={15} />}
-            />
+        {/* Resumen financiero (izquierda, protagonista) */}
+        <div
+          className="bg-white rounded-[18px] border p-6 flex flex-col"
+          style={{ borderColor: '#e7ece9' }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Saldo pendiente
+          </p>
+          <p className="mt-1 text-[42px] leading-none font-bold text-slate-900 tabular-nums">
+            {formatCOP(cuenta.valor_pendiente ?? 0)}
+          </p>
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
-              {/* Ventas */}
-              <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30 p-4 flex flex-col justify-between min-h-[110px]">
-                <div className="flex items-start justify-between">
-                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <ShoppingCart size={16} className="text-blue-600" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{cuenta.ventas.length}</p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Ventas registradas</p>
-                </div>
-              </div>
-
-              {/* Productos */}
-              <div className="relative overflow-hidden rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-purple-50/30 p-4 flex flex-col justify-between min-h-[110px]">
-                <div className="flex items-start justify-between">
-                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <Package size={16} className="text-purple-600" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{ventasAgrupadas.length}</p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Productos distintos</p>
-                </div>
-              </div>
-
-              {/* Pagos */}
-              <div className="relative overflow-hidden rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-green-50/30 p-4 flex flex-col justify-between min-h-[110px]">
-                <div className="flex items-start justify-between">
-                  <div className="w-9 h-9 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <CreditCard size={16} className="text-green-600" />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{cuenta.pagos.length}</p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1.5 leading-tight">Pagos realizados</p>
-                </div>
-              </div>
+          {/* Filas tipo tabla */}
+          <div className="mt-6 text-sm">
+            <div className="flex items-center justify-between py-2.5">
+              <span className="text-slate-500">Total facturado</span>
+              <span className="font-semibold text-slate-800 tabular-nums">{formatCOP(cuenta.total)}</span>
             </div>
-
-            {/* Mini-insight footer */}
-            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
-              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-              <p className="text-[11px] text-slate-500">
-                Promedio por venta:{' '}
-                <span className="font-semibold text-slate-700 tabular-nums">
-                  {formatCOP(cuenta.ventas.length > 0 ? cuenta.total / cuenta.ventas.length : 0)}
-                </span>
-              </p>
+            <div className="flex items-center justify-between py-2.5">
+              <span className="text-slate-500">Pagado</span>
+              <span className="font-semibold text-slate-800 tabular-nums">{formatCOP(pagadoTotal)}</span>
+            </div>
+            <div
+              className="flex items-center justify-between py-2.5 border-t"
+              style={{ borderColor: '#eef2f0' }}
+            >
+              <span className="text-slate-500">Apertura</span>
+              <span className="font-semibold text-slate-800 tabular-nums">{formatDate(cuenta.fecha_creacion)}</span>
             </div>
           </div>
-        </Card>
 
-        {/* Resumen financiero */}
-        <Card padding={false} className="h-full flex flex-col">
-          <div className="p-5 flex-1 flex flex-col">
-            <SectionHeader
-              title="Resumen financiero"
-              icon={<Wallet size={15} />}
-            />
-
-            {/* Grid de métricas */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {/* Total */}
-              <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <Receipt size={13} className="text-slate-600" />
-                  </div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Total</p>
-                </div>
-                <p className="text-lg font-bold text-slate-900 tabular-nums leading-tight">{formatCOP(cuenta.total)}</p>
-              </div>
-
-              {/* Pendiente */}
-              <div className={`relative overflow-hidden rounded-xl border p-4 ${
-                cuenta.esta_pagada
-                  ? 'border-slate-200 bg-gradient-to-br from-slate-50 to-white'
-                  : 'border-red-100 bg-gradient-to-br from-red-50 to-red-50/30'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <AlertCircle size={13} className={cuenta.esta_pagada ? 'text-slate-400' : 'text-red-600'} />
-                  </div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Pendiente</p>
-                </div>
-                <p className={`text-lg font-bold tabular-nums leading-tight ${cuenta.esta_pagada ? 'text-slate-300' : 'text-red-600'}`}>
-                  {formatCOP(cuenta.valor_pendiente ?? 0)}
-                </p>
-              </div>
-
-              {/* Pagado */}
-              <div className="relative overflow-hidden rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-green-50/30 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <CheckCircle2 size={13} className="text-green-600" />
-                  </div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Pagado</p>
-                </div>
-                <p className="text-lg font-bold text-green-600 tabular-nums leading-tight">{formatCOP(pagadoTotal)}</p>
-              </div>
-
-              {/* Apertura */}
-              <div className="relative overflow-hidden rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-amber-50/30 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center">
-                    <Calendar size={13} className="text-amber-600" />
-                  </div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Apertura</p>
-                </div>
-                <p className="text-sm font-semibold text-slate-700 leading-tight mt-0.5">{formatDate(cuenta.fecha_creacion)}</p>
-              </div>
+          {/* Barra de progreso fina */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-medium text-slate-500">Progreso de pago</span>
+              <span className="text-[11px] font-semibold text-slate-600 tabular-nums">{pctPagado}%</span>
             </div>
-
-            {/* Barra de progreso */}
-            <div className="mt-4">
-              <ProgressBar
-                value={pctPagado}
-                color={cuenta.esta_pagada ? 't-bg' : pctPagado > 50 ? 'bg-yellow-400' : 'bg-red-400'}
-                size="md"
-                showValue
-                label="Progreso de pago"
+            <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pctPagado}%`, background: 'var(--t-primary)' }}
               />
             </div>
           </div>
 
-          {/* Botón pago prominente */}
-          {!cuenta.esta_pagada && (
-            <div className="px-5 pb-5">
+          {/* Acción */}
+          <div className="mt-6">
+            {!cuenta.esta_pagada ? (
               <Can permission="cuentas:pay">
                 <Button
                   className="w-full"
                   icon={<CreditCard size={16} />}
                   onClick={() => requireCaja('registrar un pago') && setShowAddPago(true)}
                 >
-                  Registrar pago — {formatCOP(cuenta.valor_pendiente ?? 0)} pendiente
+                  Registrar pago — {formatCOP(cuenta.valor_pendiente ?? 0)}
                 </Button>
               </Can>
-            </div>
-          )}
-
-          {cuenta.esta_pagada && (
-            <div className="px-5 pb-5">
+            ) : (
               <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
                 <CheckCircle2 size={16} className="text-green-600 shrink-0" />
                 <p className="text-sm font-medium text-green-700">Cuenta completamente pagada</p>
               </div>
-            </div>
-          )}
-        </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Actividad de la cuenta (derecha) */}
+        <div
+          className="bg-white rounded-[18px] border p-6"
+          style={{ borderColor: '#e7ece9' }}
+        >
+          <p className="font-bold text-slate-800">Actividad de la cuenta</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Promedio por venta ·{' '}
+            <span className="tabular-nums">
+              {formatCOP(cuenta.ventas.length > 0 ? cuenta.total / cuenta.ventas.length : 0)}
+            </span>
+          </p>
+
+          <div className="mt-5">
+            {[
+              { icon: <ShoppingCart size={17} />, label: 'Ventas registradas', value: cuenta.ventas.length, danger: false },
+              { icon: <Package size={17} />, label: 'Productos distintos', value: ventasAgrupadas.length, danger: false },
+              { icon: <CreditCard size={17} />, label: 'Pagos realizados', value: cuenta.pagos.length, danger: cuenta.pagos.length === 0 },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center gap-3 py-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                  {row.icon}
+                </div>
+                <span className="flex-1 text-sm text-slate-600">{row.label}</span>
+                <span className={`text-2xl font-bold tabular-nums ${row.danger ? 'text-red-500' : 'text-slate-900'}`}>
+                  {row.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
       {/* ── Ventas — full width centrado ──────────────────────────────────── */}
       <Card padding={false}>
