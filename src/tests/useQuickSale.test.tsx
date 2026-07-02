@@ -21,9 +21,9 @@ import type { Producto, ProductoPrecio, MedioPago } from '@/shared/types'
 const PROD: Producto = {
   id: 1, nombre: 'Gaseosa', codigo: 'G1', activo: true, stock_total: 5,
   categoria_id: 1, precio_ponderado: 1000, descripcion: '',
-} as Producto
-const PRECIO: ProductoPrecio = { id: 1, producto_id: 1, nombre: 'Unidad', precio: 2000, cantidad: 1, activo: true } as ProductoPrecio
-const MEDIO: MedioPago = { id: 1, nombre: 'Efectivo', tipo: 'EFECTIVO', activo: true, comision_porcentaje: 0 } as MedioPago
+} as unknown as Producto
+const PRECIO: ProductoPrecio = { id: 1, producto_id: 1, nombre: 'Unidad', precio: 2000, cantidad: 1, activo: true } as unknown as ProductoPrecio
+const MEDIO: MedioPago = { id: 1, nombre: 'Efectivo', tipo: 'EFECTIVO', activo: true, comision_porcentaje: '0' } as unknown as MedioPago
 
 function wrapper() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
