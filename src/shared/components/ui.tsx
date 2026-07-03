@@ -302,7 +302,8 @@ export function StatCard({ label, value, subValue, icon, iconBg: _iconBg, trend,
         </div>
       )}
       <div className={clsx(icon && 'mt-3')}>
-        <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums leading-none truncate">{value}</p>
+        {/* Número protagonista — genera interés visual en las métricas clave */}
+        <p className="text-[26px] sm:text-[32px] font-bold text-slate-900 tabular-nums leading-[1.05] tracking-tight truncate">{value}</p>
         <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1.5 leading-tight">{label}</p>
         {subValue && <p className="text-[10px] text-slate-400 mt-1 leading-tight">{subValue}</p>}
         {trend !== undefined && (
