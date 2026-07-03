@@ -83,12 +83,12 @@ function NavContent({ collapsed, onNavigate, can, role }: {
 }) {
   const { activeTenantId, activeTenantName, clearActiveTenant } = useMasterStore()
   const { data: notifData } = useQuery({
-    queryKey: ['notifications', 'stock'],
-    queryFn: () => notificationsApi.getStockAlerts(),
+    queryKey: ['notifications', 'feed'],
+    queryFn: () => notificationsApi.getAll(),
     refetchInterval: 60 * 60 * 1000,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
-    enabled: can('productos:read'),
+    enabled: can('cuentas:read'),
   })
   const notifCount = notifData?.count ?? 0
   const notifCritical = (notifData?.critical ?? 0) > 0

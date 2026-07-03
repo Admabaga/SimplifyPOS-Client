@@ -82,7 +82,7 @@ export default function InvoicesPage() {
       qc.invalidateQueries({ queryKey: ['invoices', 'stats'] })  // stats SQL exactos
       // Products stock changed — must refetch
       qc.invalidateQueries({ queryKey: ['products'] })
-      qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
+      qc.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Factura creada y stock actualizado')
       setShowCreate(false)
     },

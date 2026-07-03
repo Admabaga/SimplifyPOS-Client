@@ -2,8 +2,8 @@ import { useRef, useEffect, useState } from 'react'
 import { useLocation, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth'
-import { Bell, AlertTriangle, PackageX, ArrowRight, CheckCircle2, Palette } from 'lucide-react'
-import { notificationsApi, type StockNotification } from '@/features/notifications/api'
+import { Bell, AlertTriangle, PackageX, ArrowRight, CheckCircle2, Palette, CreditCard, FileText, Landmark, Info } from 'lucide-react'
+import { notificationsApi, type AppNotification } from '@/features/notifications/api'
 import ThemePanel from './ThemePanel'
 
 const ROUTE_NAMES: Record<string, string> = {
@@ -71,59 +71,57 @@ function Breadcrumbs() {
 
 // ─── Ítem del dropdown ─────────────────────────────────────────────────────────
 
+// Config visual por severidad (color del chip/icono).
+function sevStyle(sev: AppNotification['severity']) {
+  if (sev === 'critical') return { bg: 'bg-red-100', text: 'text-red-500', chip: 'bg-red-100 text-red-600' }
+  if (sev === 'warning')  return { bg: 'bg-yellow-100', text: 'text-yellow-500', chip: 'bg-yellow-100 text-yellow-600' }
+  return { bg: 'bg-blue-100', text: 'text-blue-500', chip: 'bg-blue-100 text-blue-600' }
+}
+
+// Ícono por tipo de notificación.
+function typeIcon(n: AppNotification, cls: string) {
+  const size = 14
+  if (n.type === 'subscription') return <CreditCard size={size} className={cls} />
+  if (n.type === 'dian_quota')   return <FileText size={size} className={cls} />
+  if (n.type === 'caja')         return <Landmark size={size} className={cls} />
+  // low_stock
+  return n.severity === 'critical'
+    ? <PackageX size={size} className={cls} />
+    : n.severity === 'info' ? <Info size={size} className={cls} /> : <AlertTriangle size={size} className={cls} />
+}
+
 function NotifDropdownItem({
   n,
   onClose,
 }: {
-  n: StockNotification
+  n: AppNotification
   onClose: () => void
 }) {
   const navigate = useNavigate()
-  const isCritical = n.severity === 'critical'
+  const s = sevStyle(n.severity)
+  const destino = n.action_url ?? (n.product_id ? `/products?highlight=${n.product_id}` : '/notifications')
 
   return (
     <button
       onClick={() => {
         onClose()
-        navigate(`/products?highlight=${n.product_id}`)
+        navigate(destino)
       }}
-      className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 group`}
+      className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 group"
     >
-      {/* Icono */}
-      <div
-        className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center ${
-          isCritical ? 'bg-red-100' : 'bg-yellow-100'
-        }`}
-      >
-        {isCritical ? (
-          <PackageX size={14} className="text-red-500" />
-        ) : (
-          <AlertTriangle size={14} className="text-yellow-500" />
-        )}
+      <div className={`shrink-0 mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center ${s.bg}`}>
+        {typeIcon(n, s.text)}
       </div>
 
-      {/* Texto */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span
-            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-              isCritical ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
-            }`}
-          >
-            {isCritical ? 'Agotado' : 'Poco stock'}
-          </span>
-        </div>
         <p className="text-sm font-semibold text-slate-700 truncate leading-snug">
-          {n.product_nombre}
+          {n.titulo}
         </p>
         <p className="text-xs text-slate-400 mt-0.5 leading-snug line-clamp-2">
-          {n.stock_actual === 0
-            ? `Sin unidades — vendes ~${n.avg_semanal}/semana`
-            : `${n.stock_actual} uds • ~${n.dias_restantes} días de stock`}
+          {n.mensaje}
         </p>
       </div>
 
-      {/* Flecha */}
       <ArrowRight
         size={13}
         className="shrink-0 mt-1 text-slate-300 group-hover:text-slate-500 transition-colors"
@@ -140,11 +138,10 @@ function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['notifications', 'stock'],
-    queryFn: () => notificationsApi.getStockAlerts(),
-    // Caché del backend se invalida en cada venta/reposición.
-    // refetchOnWindowFocus: true → al volver a la app tras registrar una venta,
-    // la campana se actualiza automáticamente si el caché cambió.
+    queryKey: ['notifications', 'feed'],
+    queryFn: () => notificationsApi.getAll(),
+    // Feed unificado (stock + suscripción + cupo DIAN + caja). Se refresca al
+    // volver a la app y en cada cambio que invalide ['notifications'].
     refetchInterval: 60 * 60 * 1000,
     staleTime: 0,               // siempre refetch desde server al montar/volver
     refetchOnMount: 'always',

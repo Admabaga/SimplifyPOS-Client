@@ -152,7 +152,7 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
         return { ...old, ventas: [...old.ventas, newVenta] }
       })
       qc.invalidateQueries({ queryKey: ['accounts', cuentaId] })
-      qc.invalidateQueries({ queryKey: ['notifications', 'stock'] })
+      qc.invalidateQueries({ queryKey: ['notifications'] })
       qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Venta añadida')
       setShowAddVenta(false)
