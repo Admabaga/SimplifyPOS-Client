@@ -25,7 +25,10 @@ export function httpErrorMessage(status: number | undefined, serverDetail?: stri
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 15_000, // 15 s — evita requests colgados
+  // 30 s: da margen a un "cold start" del backend en Render free (el servicio
+  // se suspende tras 15 min de inactividad y tarda en despertar). Con el
+  // keep-alive activo esto casi nunca ocurre, pero es una red de seguridad.
+  timeout: 30_000,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true, // envía la cookie httpOnly del refresh token
 })
@@ -107,15 +110,27 @@ apiClient.interceptors.response.use(
       return Promise.reject(enrichError(error))
     }
 
-    // ── Retry automático en 503 / 504 (servidor no disponible o timeout) ───
-    const retryableStatuses = [503, 504]
+    // ── Retry automático en fallos transitorios ───────────────────────────
+    // Incluye 502/503/504 (backend arrancando) y errores de red/timeout SIN
+    // respuesta (cold start de Render: el servicio despierta en la 1ª petición).
+    // No reintenta métodos no idempotentes salvo GET/HEAD para no duplicar
+    // efectos (una venta/pago no se reintenta en silencio).
+    const retryableStatuses = [502, 503, 504]
+    const isNetworkOrTimeout =
+      !error.response &&
+      (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || error.message === 'Network Error')
+    const method = (original.method ?? 'get').toLowerCase()
+    const safeToRetry = method === 'get' || method === 'head'
     const maxRetries = 2
     if (
-      retryableStatuses.includes(error.response?.status ?? 0) &&
+      (retryableStatuses.includes(error.response?.status ?? 0) ||
+        (isNetworkOrTimeout && safeToRetry)) &&
       (original._retryCount ?? 0) < maxRetries
     ) {
       original._retryCount = (original._retryCount ?? 0) + 1
-      await new Promise((r) => setTimeout(r, 500 * original._retryCount!))
+      // Backoff más largo para cold starts (el servicio puede tardar en subir).
+      const delay = isNetworkOrTimeout ? 3000 * original._retryCount! : 500 * original._retryCount!
+      await new Promise((r) => setTimeout(r, delay))
       return apiClient(original)
     }
 
