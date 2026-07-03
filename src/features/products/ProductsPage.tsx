@@ -860,13 +860,16 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
                     stockInicialInput.inputProps.onChange(e)
                     const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
                     setValue('stock_inicial', n || undefined, { shouldValidate: true })
+                    // Total = costo unitario × unidades
+                    const costoUnit = costoPrecioInput.numericValue()
+                    setValue('precio_costo_inicial', costoUnit * n || undefined, { shouldValidate: true })
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
                 />
                 {errors.stock_inicial && <p className="text-xs text-red-600">{errors.stock_inicial.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Costo total ($)</label>
+                <label className="block text-sm font-medium text-slate-700">Costo unitario ($)</label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3 text-slate-400 pointer-events-none">$</span>
                   <input
@@ -875,7 +878,9 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
                     onChange={(e) => {
                       costoPrecioInput.inputProps.onChange(e)
                       const n = parseInt(e.target.value.replace(/\D/g, '') || '0', 10)
-                      setValue('precio_costo_inicial', n || undefined, { shouldValidate: true })
+                      // Guardamos el TOTAL (costo unitario × unidades) que espera el backend
+                      const unidades = stockInicialInput.numericValue()
+                      setValue('precio_costo_inicial', n * unidades || undefined, { shouldValidate: true })
                     }}
                     className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none bg-white"
                   />
@@ -883,8 +888,19 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
                 {errors.precio_costo_inicial && <p className="text-xs text-red-600">{errors.precio_costo_inicial.message}</p>}
               </div>
             </div>
+            {stockInicialInput.numericValue() > 0 && costoPrecioInput.numericValue() > 0 && (
+              <div className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-100 px-3 py-2">
+                <span className="text-xs text-slate-500">
+                  {stockInicialInput.numericValue().toLocaleString('es-CO')} uds × ${costoPrecioInput.numericValue().toLocaleString('es-CO')}
+                </span>
+                <span className="text-sm font-semibold text-slate-800">
+                  Costo total: ${(stockInicialInput.numericValue() * costoPrecioInput.numericValue()).toLocaleString('es-CO')}
+                </span>
+              </div>
+            )}
             <p className="text-[11px] text-slate-400">
-              Si ingresas unidades, se registra una compra de apertura para inicializar el inventario.
+              Ingresa el costo <span className="font-medium">por unidad</span>. Se multiplica por las unidades
+              y se registra una compra de apertura para inicializar el inventario.
             </p>
           </div>
         )}
