@@ -41,9 +41,14 @@ export function useQuickSale(onDone: () => void) {
     montoInput.setFromNumber(0)
   }, [montoInput])
 
+  // Mismo queryKey y params que ProductsPage: comparten una sola caché, así
+  // que crear/editar un producto ahí invalida también esta lista (antes,
+  // con 'products-all' sin límite, el backend devolvía solo los primeros 25
+  // productos —default del endpoint— y los creados después nunca aparecían
+  // en el buscador de venta rápida aunque sí existieran en Productos).
   const { data: productos = [] } = useQuery({
-    queryKey: ['products-all'],
-    queryFn: () => productsApi.getAll(),
+    queryKey: ['products'],
+    queryFn: () => productsApi.getAll({ limit: 500 }),
     staleTime: 30_000,
   })
 
@@ -142,7 +147,7 @@ export function useQuickSale(onDone: () => void) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['accounts'] })
-      qc.invalidateQueries({ queryKey: ['products-all'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
       toast.success('Venta registrada')
       reset()
       onDone()

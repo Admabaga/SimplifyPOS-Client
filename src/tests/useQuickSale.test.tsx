@@ -47,6 +47,13 @@ describe('useQuickSale', () => {
     await waitFor(() => expect(result.current.results.length).toBe(1))
   })
 
+  it('pide productos con límite alto (no el default de 25 del backend)', async () => {
+    // Bug real: sin { limit: 500 }, el backend devuelve solo los primeros 25
+    // productos y los creados después nunca aparecían en la venta rápida.
+    renderHook(() => useQuickSale(() => {}), { wrapper: wrapper() })
+    await waitFor(() => expect(products.getAll).toHaveBeenCalledWith({ limit: 500 }))
+  })
+
   it('addToCart agrega e incrementa (hasta stock), total refleja precio', async () => {
     const { result } = renderHook(() => useQuickSale(() => {}), { wrapper: wrapper() })
     await waitFor(() => expect(result.current.results.length).toBe(1))
