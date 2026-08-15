@@ -7,22 +7,34 @@ import { queryClient } from '@/shared/api/queryClient'
 const TOKEN_KEY = 'simplifypos_token'
 const REMEMBER_KEY = 'simplifypos_remember'
 
-/** Lee el token del almacén correcto (localStorage si rememberMe, sino sessionStorage) */
+/**
+ * El access token vive SOLO en memoria.
+ *
+ * Antes se guardaba en localStorage/sessionStorage, que es legible por
+ * cualquier JavaScript de la página: un XSS se llevaba la sesión entera y
+ * cerrar sesión no la invalidaba. Ahora la persistencia entre recargas la da la
+ * cookie httpOnly del refresh, que el JavaScript no puede leer: al recargar,
+ * el interceptor pide /auth/refresh y recupera la sesión sola.
+ *
+ * "Recordarme" sigue funcionando — lo sostiene la cookie de refresh (7 días),
+ * no el token.
+ */
+let tokenEnMemoria: string | null = null
+
 export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
+  return tokenEnMemoria
 }
 
 function saveToken(token: string, remember: boolean) {
-  if (remember) {
-    localStorage.setItem(TOKEN_KEY, token)
-    sessionStorage.removeItem(TOKEN_KEY)
-  } else {
-    sessionStorage.setItem(TOKEN_KEY, token)
-    localStorage.removeItem(TOKEN_KEY)
-  }
+  tokenEnMemoria = token
+  if (remember) localStorage.setItem(REMEMBER_KEY, '1')
+  // Limpia restos de versiones anteriores que sí lo persistían.
+  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 function clearToken() {
+  tokenEnMemoria = null
   localStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(TOKEN_KEY)
 }

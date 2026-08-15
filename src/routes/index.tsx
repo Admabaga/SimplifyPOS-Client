@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import ProtectedRoute from './ProtectedRoute'
+import SessionBootstrap from './SessionBootstrap'
 import Layout from '@/shared/components/Layout'
 import SubscriptionGate from '@/features/subscription/SubscriptionGate'
 import { Spinner } from '@/shared/components/ui'
@@ -57,6 +58,7 @@ function Forbidden() {
 
 export default function AppRoutes() {
   return (
+    <SessionBootstrap>
     <Suspense fallback={<Loading />}>
       <Routes>
         {/* Públicas */}
@@ -148,5 +150,6 @@ export default function AppRoutes() {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
+    </SessionBootstrap>
   )
 }

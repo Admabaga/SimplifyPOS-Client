@@ -22,6 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Dependencias vulnerables: react-router acumulaba 13 avisos (uno crítico,
+      # RCE) sin que nada lo señalara. Aquí rompe el build.
+      - name: npm audit (dependencias de producción)
+        run: npm audit --omit=dev --audit-level=high
+
       - name: ESLint
         run: npm run lint --if-present
 

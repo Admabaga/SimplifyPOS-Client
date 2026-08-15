@@ -29,6 +29,27 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
+      # CSP en modo REPORTE, no bloqueante, a propósito.
+      #
+      # connect-src tiene que listar el origen EXACTO de tu API y no lo pude
+      # confirmar: .env.example dice simplifypos-api.onrender.com y el render.yaml
+      # de la API dice simplipos-api.onrender.com. Si el valor está mal y la CSP
+      # bloquea, el front deja de hablar con el backend y la app se cae entera.
+      #
+      # En modo reporte no bloquea nada: abre la consola del navegador en
+      # producción, mira si aparece alguna violación de connect-src y corrige el
+      # host. Cuando esté confirmado, cambia el nombre de esta cabecera a
+      # `Content-Security-Policy` (quita `-Report-Only`) y ya queda aplicando.
+      # El servicio dev de abajo SÍ va bloqueando: ahí romper no cuesta nada.
+      - path: /*
+        name: Content-Security-Policy-Report-Only
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://simplifypos-api.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: Strict-Transport-Security
+        value: "max-age=31536000; includeSubDomains"
+      - path: /*
+        name: Permissions-Policy
+        value: "geolocation=(), microphone=(), camera=(), payment=()"
       # Cache largo para assets con hash (Vite los versiona)
       - path: /assets/*
         name: Cache-Control
@@ -68,6 +89,19 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
+      # CSP: sin esto un XSS podía cargar y exfiltrar a cualquier host.
+      # 'unsafe-inline' en style-src lo exige Tailwind/React para estilos en línea;
+      # script-src queda cerrado a 'self', que es lo que de verdad importa.
+      # OJO: connect-src debe listar la URL real de tu API (la misma de VITE_API_URL).
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://simplifypos-api-dev.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: Strict-Transport-Security
+        value: "max-age=31536000; includeSubDomains"
+      - path: /*
+        name: Permissions-Policy
+        value: "geolocation=(), microphone=(), camera=(), payment=()"
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable

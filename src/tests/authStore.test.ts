@@ -34,19 +34,35 @@ describe('auth store', () => {
     vi.clearAllMocks()
   })
 
-  it('setUser con remember=true guarda token en localStorage (no session)', () => {
+  it('el token NUNCA se persiste: solo vive en memoria', () => {
+    // Guardarlo en localStorage/sessionStorage lo dejaba al alcance de
+    // cualquier XSS. La persistencia entre recargas la da la cookie httpOnly
+    // del refresh, que el JavaScript no puede leer.
     useAuthStore.getState().setUser(baseUser, 'tok-123', true)
-    expect(localStorage.getItem(TOKEN_KEY)).toBe('tok-123')
-    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
-    expect(localStorage.getItem(REMEMBER_KEY)).toBe('1')
     expect(getStoredToken()).toBe('tok-123')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
   })
 
-  it('setUser con remember=false guarda token en sessionStorage (no local)', () => {
+  it('remember=true deja la marca para que el refresh restaure la sesión', () => {
+    useAuthStore.getState().setUser(baseUser, 'tok-123', true)
+    expect(localStorage.getItem(REMEMBER_KEY)).toBe('1')
+  })
+
+  it('remember=false no deja marca ni token persistido', () => {
     useAuthStore.getState().setUser(baseUser, 'tok-xyz', false)
-    expect(sessionStorage.getItem(TOKEN_KEY)).toBe('tok-xyz')
+    expect(getStoredToken()).toBe('tok-xyz')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
     expect(localStorage.getItem(REMEMBER_KEY)).toBeNull()
+  })
+
+  it('limpia el token que hubiera dejado una versión anterior', () => {
+    localStorage.setItem(TOKEN_KEY, 'token-viejo-persistido')
+    sessionStorage.setItem(TOKEN_KEY, 'token-viejo-persistido')
+    useAuthStore.getState().setUser(baseUser, 'tok-nuevo', true)
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(sessionStorage.getItem(TOKEN_KEY)).toBeNull()
   })
 
   it('normaliza el role a minúsculas y marca autenticado', () => {
@@ -60,7 +76,8 @@ describe('auth store', () => {
   it('setUser sin remember explícito respeta el valor previamente recordado', () => {
     localStorage.setItem(REMEMBER_KEY, '1')
     useAuthStore.getState().setUser(baseUser, 'tok-remember')
-    expect(localStorage.getItem(TOKEN_KEY)).toBe('tok-remember')
+    expect(getStoredToken()).toBe('tok-remember')
+    expect(localStorage.getItem(REMEMBER_KEY)).toBe('1')
   })
 
   it('can() refleja los permisos del usuario', () => {

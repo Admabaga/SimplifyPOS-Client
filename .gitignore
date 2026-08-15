@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 coverage
+
+# Volcado del sistema antiguo (MariaDB) — no pinta nada en el frontend
+simplifypos.sql
+*.sql

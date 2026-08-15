@@ -26,12 +26,13 @@ type ResHandler = {
   rejected: (e: AxiosError) => Promise<unknown>
 }
 
+// `handlers` es interno de axios: se castea en vez de usar @ts-expect-error
+// porque axios lo fue tipando distinto entre versiones y la directiva quedaba
+// "sin usar", rompiendo el build con TS2578.
 const reqInterceptor = () =>
-  // @ts-expect-error acceso interno a handlers para test
-  (apiClient.interceptors.request.handlers as ReqHandler[]).find(Boolean)!
+  (apiClient.interceptors.request as unknown as { handlers: ReqHandler[] }).handlers.find(Boolean)!
 const resInterceptor = () =>
-  // @ts-expect-error acceso interno a handlers para test
-  (apiClient.interceptors.response.handlers as ResHandler[]).find(Boolean)!
+  (apiClient.interceptors.response as unknown as { handlers: ResHandler[] }).handlers.find(Boolean)!
 
 function mkConfig(over: Partial<InternalAxiosRequestConfig> = {}): InternalAxiosRequestConfig {
   return {

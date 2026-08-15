@@ -183,4 +183,29 @@ apiClient.interceptors.response.use(
   }
 )
 
+/**
+ * Canjea la cookie httpOnly de refresh por un access token nuevo.
+ *
+ * Se usa al arrancar la app: el token vive solo en memoria, así que tras una
+ * recarga hay que recuperarlo antes de lanzar la primera petición. Si la cookie
+ * ya no vale, limpia la sesión para que el router mande a /login.
+ */
+export async function restoreSession(): Promise<boolean> {
+  const { useAuthStore } = await import('@/stores/auth')
+  const { user } = useAuthStore.getState()
+  if (!user) return false
+  try {
+    const { data } = await axios.post<{ access_token: string }>(
+      `${BASE_URL}/auth/refresh`,
+      {},
+      { withCredentials: true }
+    )
+    useAuthStore.getState().setUser(user, data.access_token)
+    return true
+  } catch {
+    useAuthStore.getState().clearAuth()
+    return false
+  }
+}
+
 export default apiClient
