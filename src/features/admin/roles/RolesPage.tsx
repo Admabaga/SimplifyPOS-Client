@@ -85,7 +85,6 @@ export default function RolesPage() {
   return (
     <div>
       <PageHeader
-        title="Roles & Permisos"
         subtitle="Gestión dinámica de roles y matriz de permisos"
         actions={<Button icon={<Plus size={14} />} onClick={() => setShowCreate(true)}>Nuevo rol</Button>}
       />

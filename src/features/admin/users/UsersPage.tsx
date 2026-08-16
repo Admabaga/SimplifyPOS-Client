@@ -165,7 +165,6 @@ export default function UsersPage() {
   return (
     <div>
       <PageHeader
-        title="Usuarios"
         subtitle={isMaster ? 'Gestión de cuentas de acceso' : 'Crea y gestiona supervisores'}
         actions={
           <Button icon={<UserPlus size={14} />} onClick={() => setShowCreate(true)}>

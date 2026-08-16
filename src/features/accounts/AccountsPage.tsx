@@ -174,7 +174,7 @@ export default function AccountsPage() {
     }
     return (
       <div className="space-y-5">
-        <PageHeader title="Cuentas de crédito" subtitle="Gestión de ventas a crédito y pagos" />
+        <PageHeader subtitle="Gestión de ventas a crédito y pagos" />
         {toolbar}
         <div className="rounded-xl border border-slate-200/80 shadow-xs overflow-hidden bg-white">
           {list(false)}

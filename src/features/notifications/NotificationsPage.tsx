@@ -121,7 +121,6 @@ export default function NotificationsPage() {
   return (
     <div>
       <PageHeader
-        title="Notificaciones"
         subtitle="Alertas de tu negocio: stock, suscripción, facturación electrónica y caja"
         actions={
           <Button

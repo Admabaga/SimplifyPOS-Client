@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Fingerprint, Plus, Trash2, KeyRound, Loader2, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { startRegistration } from '@simplewebauthn/browser'
@@ -12,6 +13,7 @@ function formatFecha(iso: string | null): string {
 }
 
 export default function PasskeysCard() {
+  const qc = useQueryClient()
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState(false)
@@ -22,7 +24,11 @@ export default function PasskeysCard() {
 
   const cargar = async () => {
     try {
-      setPasskeys(await authApi.passkeyList())
+      const lista = await authApi.passkeyList()
+      setPasskeys(lista)
+      // Misma caché que lee el medidor de seguridad del perfil, para que el
+      // conteo de passkeys no se quede viejo al registrar o borrar una.
+      qc.setQueryData(['auth', 'passkeys'], lista)
     } catch {
       /* silencioso: la tarjeta simplemente muestra vacío */
     } finally {

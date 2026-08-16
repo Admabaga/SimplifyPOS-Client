@@ -91,7 +91,6 @@ export default function PaymentMethodsPage() {
   return (
     <div>
       <PageHeader
-        title="Medios de pago"
         subtitle={`${activosMedios.length} activo${activosMedios.length !== 1 ? 's' : ''}`}
         actions={
           <Can permission="medios_pago:create">

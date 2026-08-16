@@ -260,7 +260,7 @@ export default function MasterAnalyticsPage() {
   if (isLoading) {
     return (
       <div>
-        <PageHeader title="Master Analytics" subtitle="Visión global del ecosistema SimplifyPOS" />
+        <PageHeader subtitle="Visión global del ecosistema SimplifyPOS" />
         <div className="flex justify-center py-24"><Spinner size={36} /></div>
       </div>
     )
@@ -269,7 +269,7 @@ export default function MasterAnalyticsPage() {
   if (error || !data) {
     return (
       <div>
-        <PageHeader title="Master Analytics" subtitle="Visión global del ecosistema SimplifyPOS" />
+        <PageHeader subtitle="Visión global del ecosistema SimplifyPOS" />
         <EmptyState
           icon={<AlertCircle size={32} className="text-red-400" />}
           title="No se pudieron cargar las métricas"
@@ -285,7 +285,6 @@ export default function MasterAnalyticsPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        title="Master Analytics"
         subtitle="Visión global del ecosistema SimplifyPOS"
         actions={
           <Badge variant="purple" dot>

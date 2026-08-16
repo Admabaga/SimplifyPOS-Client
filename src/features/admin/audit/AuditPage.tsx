@@ -144,7 +144,6 @@ export default function AuditPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        title="Audit Log"
         subtitle="Actividad del sistema SimplifyPOS — visible solo para master"
         actions={
           <div className="flex items-center gap-2">

@@ -109,7 +109,6 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Categorías"
         subtitle="Categorías globales de SimplifyPOS con IVA según Estatuto Tributario colombiano"
         actions={
           <Can permission="categorias:create">

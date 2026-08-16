@@ -689,7 +689,6 @@ export default function CajaPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Caja"
         subtitle={esAdmin ? 'Panel de control de cajas y turnos' : 'Tu turno de caja'}
         actions={
           !miCajaAbierta && !isLoading ? (

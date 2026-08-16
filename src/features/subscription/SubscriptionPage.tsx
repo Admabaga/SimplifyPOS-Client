@@ -286,7 +286,7 @@ export default function SubscriptionPage() {
   if (esMasterSinNegocio) {
     return (
       <div className="space-y-5">
-        <PageHeader title="Suscripción" subtitle="Selecciona un negocio para ver y gestionar su suscripción" />
+        <PageHeader subtitle="Selecciona un negocio para ver y gestionar su suscripción" />
         <Card>
           <div className="flex flex-col items-center text-center gap-3 py-10">
             <Gem size={32} className="text-emerald-500" />
@@ -312,7 +312,7 @@ export default function SubscriptionPage() {
   if (isError || !sub) {
     return (
       <div className="space-y-5">
-        <PageHeader title="Mi suscripción" />
+        <PageHeader />
         <Card>
           <div className="flex flex-col items-center text-center gap-3 py-10">
             <AlertTriangle size={28} className="text-amber-500" />
@@ -331,7 +331,7 @@ export default function SubscriptionPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Mi suscripción" subtitle="Gestiona tu plan, pagos y facturación" />
+      <PageHeader subtitle="Gestiona tu plan, pagos y facturación" />
 
       {/* Master viendo un negocio */}
       {activeTenantId && (

@@ -260,7 +260,6 @@ export default function MasterPage() {
   return (
     <div>
       <PageHeader
-        title="Panel Master"
         subtitle="Gestiona todos los negocios registrados en la plataforma"
         actions={
           <Button

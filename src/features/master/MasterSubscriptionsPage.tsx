@@ -855,7 +855,6 @@ export default function MasterSubscriptionsPage() {
   return (
     <div>
       <PageHeader
-        title="Suscripciones y pagos"
         subtitle="Tu negocio SaaS de un vistazo: quién paga, quién está en mora y promos"
         actions={
           <Button

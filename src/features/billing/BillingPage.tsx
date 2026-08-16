@@ -109,7 +109,6 @@ export default function BillingPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        title="Facturación legal"
         subtitle={
           canConfigure
             ? 'Configura tu empresa y resoluciones DIAN para emitir documentos fiscales'

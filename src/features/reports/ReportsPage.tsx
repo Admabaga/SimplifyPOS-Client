@@ -500,7 +500,6 @@ export default function ReportsPage() {
   return (
     <div>
       <PageHeader
-        title="Reportes"
         subtitle="Análisis mensual de operaciones"
         actions={
           <div className="flex items-center gap-2">

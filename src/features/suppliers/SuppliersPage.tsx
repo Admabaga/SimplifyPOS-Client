@@ -80,7 +80,7 @@ export default function SuppliersPage() {
   return (
     <div>
       <PageHeader
-        title="Proveedores"
+        subtitle="Directorio de a quién le compras mercancía"
         actions={
           <Can permission="proveedores:create">
             <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>Nuevo proveedor</Button>

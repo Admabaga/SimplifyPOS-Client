@@ -119,7 +119,7 @@ export default function MasterTodayPage() {
   if (isLoading) {
     return (
       <div>
-        <PageHeader title="Mi día" subtitle="Lo que importa HOY como founder" />
+        <PageHeader subtitle="Lo que importa HOY como founder" />
         <div className="flex justify-center py-12"><Spinner /></div>
       </div>
     )
@@ -128,7 +128,7 @@ export default function MasterTodayPage() {
   if (isError || !data) {
     return (
       <div>
-        <PageHeader title="Mi día" subtitle="Lo que importa HOY como founder" />
+        <PageHeader subtitle="Lo que importa HOY como founder" />
         <EmptyState
           icon={<AlertCircle size={32} />}
           title="No se pudo cargar"
@@ -144,7 +144,6 @@ export default function MasterTodayPage() {
   return (
     <div>
       <PageHeader
-        title="Mi día"
         subtitle="Lo que importa HOY como founder de SimplifyPOS"
       />
 

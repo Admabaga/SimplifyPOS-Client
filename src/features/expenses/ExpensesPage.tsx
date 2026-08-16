@@ -131,8 +131,8 @@ export default function ExpensesPage() {
     <div>
       <Can permission="gastos:read" fallback={<p className="text-slate-500">Sin acceso</p>}>
         <PageHeader
-          title="Gastos"
-          actions={
+        subtitle="Egresos del negocio y con qué medio se pagaron"
+        actions={
             <Can permission="gastos:create">
               <Button icon={<Plus size={16} />} onClick={() => requireCaja('registrar un gasto') && setShowCreate(true)}>Registrar gasto</Button>
             </Can>

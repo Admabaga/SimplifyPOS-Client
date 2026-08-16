@@ -463,7 +463,6 @@ export default function MasterInfraPage() {
   return (
     <div>
       <PageHeader
-        title="Salud Técnica"
         subtitle="Métricas de infraestructura, proyecciones de escala y análisis con IA"
         actions={
           <Button

@@ -120,7 +120,6 @@ export default function ClientesPage() {
   return (
     <div>
       <PageHeader
-        title="Clientes"
         subtitle="Directorio fiscal — se usa al crear cuentas y generar facturas automáticamente"
         actions={
           <div className="flex gap-2">
