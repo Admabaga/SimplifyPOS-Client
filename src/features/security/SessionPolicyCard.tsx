@@ -96,30 +96,58 @@ export default function SessionPolicyCard() {
       ) : (
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="idle-min">
-              Cerrar sesión tras inactividad
-            </label>
-            <div className="flex items-center gap-2">
+            <span className="block text-sm font-medium mb-2">Cerrar sesión tras inactividad</span>
+
+            <label className="flex items-start gap-2 mb-2 cursor-pointer">
               <input
-                id="idle-min"
-                type="number"
-                min={0}
-                max={480}
-                value={idle}
-                onChange={(e) => setIdle(e.target.value)}
-                className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                type="radio"
+                name="modo-inactividad"
+                className="mt-1"
+                checked={!sinBloqueo}
+                onChange={() => setIdle(String(policy?.idle_por_defecto ?? 30))}
               />
-              <span className="text-sm text-slate-500">minutos</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              El contador se reinicia con cualquier clic o tecla, así que a un cajero trabajando no
-              le salta. Entre 5 y 480 minutos, o <strong>0 para no bloquear nunca</strong> (útil en
-              cajas que operan desatendidas).
-            </p>
+              <span className="text-sm">
+                Bloquear tras
+                <input
+                  type="number"
+                  min={5}
+                  max={480}
+                  value={sinBloqueo ? '' : idle}
+                  disabled={sinBloqueo}
+                  onChange={(e) => setIdle(e.target.value)}
+                  aria-label="Minutos de inactividad"
+                  className="w-20 mx-2 rounded-lg border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
+                />
+                minutos sin actividad
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  Entre 5 y 480. El contador se reinicia con cualquier clic o tecla, así que a un
+                  cajero atendiendo no le salta nunca.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="modo-inactividad"
+                className="mt-1"
+                checked={sinBloqueo}
+                onChange={() => setIdle('0')}
+              />
+              <span className="text-sm">
+                No bloquear nunca
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  La sesión queda abierta mientras el navegador esté abierto. Para cajas que operan
+                  desatendidas o pantallas de consulta.
+                </span>
+              </span>
+            </label>
+
             {sinBloqueo && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                Sin bloqueo por inactividad: si alguien deja la caja abierta, queda accesible a
-                quien pase por ahí. Actívalo solo si el negocio lo pide.
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+                <strong>Sin bloqueo:</strong> si alguien deja la caja abierta, queda accesible a
+                quien pase por ahí, con las ventas y los datos del negocio a la vista. Actívalo solo
+                si el cliente lo pide y entiende lo que implica.
               </p>
             )}
           </div>
@@ -161,8 +189,9 @@ export default function SessionPolicyCard() {
             )}
           </div>
           <p className="text-xs text-slate-400">
-            Por defecto del sistema: {policy?.idle_por_defecto} min de inactividad ·{' '}
-            {policy?.sesion_por_defecto} min de sesión.
+            Estos valores aplican al negocio, no a tu sesión de master: la tuya se bloquea antes y
+            no se configura desde aquí, porque es la única cuenta que ve los datos de todos los
+            comercios.
           </p>
         </div>
       )}
