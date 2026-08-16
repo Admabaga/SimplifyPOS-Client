@@ -71,7 +71,11 @@ export default function Layout() {
             'w-full overflow-x-hidden',
             fullBleed
               ? 'p-3 sm:p-4 md:p-6 lg:p-0'        // desktop: sin márgenes → borde a borde
-              : 'p-3 sm:p-4 md:p-6 max-w-7xl mx-auto',
+              // El tope sube de 1280 a 1680: en monitores grandes el contenido
+              // aprovecha el ancho en vez de dejar franjas vacías a los lados,
+              // pero sigue habiendo un límite para que las líneas no se vuelvan
+              // ilegibles en ultrawide.
+              : 'p-3 sm:p-4 md:p-6 max-w-[1680px] mx-auto',
           )}>
             <Outlet />
           </main>

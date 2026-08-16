@@ -432,8 +432,10 @@ function SesionActiva({ sesion }: { sesion: SesionCaja }) {
             <MedioCard label="Otros"         icon={<CircleDollarSign size={13} />} value={resumen.otros}         color="border-orange-100 bg-orange-50 text-orange-800" />
           </div>
 
-          {/* Flujo de efectivo del turno */}
-          <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
+          {/* Flujo de efectivo del turno.
+              En dos columnas cuando hay ancho: si no, cada renglón queda con un
+              hueco enorme entre el concepto y el monto. */}
+          <div className="bg-slate-50 rounded-xl p-4 grid sm:grid-cols-2 gap-x-10 gap-y-2 text-sm [&>*]:min-w-0">
             <div className="flex justify-between text-slate-500">
               <span>Monto inicial</span>
               <span className="tabular-nums font-medium">+ {formatCOP(sesion.monto_inicial)}</span>
@@ -466,7 +468,7 @@ function SesionActiva({ sesion }: { sesion: SesionCaja }) {
                 <span className="tabular-nums font-medium">− {formatCOP(resumen.devoluciones)}</span>
               </div>
             )}
-            <div className="border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-800">
+            <div className="sm:col-span-2 border-t border-slate-200 pt-2 flex justify-between font-bold text-slate-800">
               <span>Efectivo esperado en caja</span>
               <span className="tabular-nums">
                 {formatCOP(
@@ -717,51 +719,62 @@ export default function CajaPage() {
         </div>
       )}
 
-      {/* Stats rápidas del historial */}
-      {totalSesiones > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            label="Sesiones cerradas"
-            value={String(totalSesiones)}
-            icon={<ReceiptText size={17} className="text-slate-500" />}
-            accent="slate"
-          />
-          <StatCard
-            label="Total histórico"
-            value={formatCOP(totalVendido)}
-            icon={<CircleDollarSign size={17} className="t-text" />}
-            accent="green"
-          />
-        </div>
-      )}
-
-      {/* Mi sesión actual */}
-      {isLoading ? (
-        <div className="flex justify-center py-16"><Spinner size={32} /></div>
-      ) : miCajaAbierta && sesionActual ? (
-        <SesionActiva sesion={sesionActual} />
-      ) : (
-        <CajaCerrada onAbrir={() => setShowAbrir(true)} />
-      )}
-
-      {/* Historial (supervisor: solo el suyo; admin: todos) */}
-      {historial.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-            <ReceiptText size={15} className="text-slate-400" />
-            {esAdmin ? 'Historial de sesiones (todos los cajeros)' : 'Mis sesiones anteriores'}
-          </h2>
-          {loadingHistorial ? (
-            <div className="flex justify-center py-6"><Spinner size={24} /></div>
+      {/* Turno propio + historial.
+          A partir de 2xl el turno pasa a ser la columna principal y las stats
+          con el historial se van a un riel lateral: en monitores anchos el
+          contenido llena el espacio en vez de apilarse en una sola tira.
+          Por debajo de ese ancho la grilla colapsa a una columna. */}
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_400px] 2xl:items-start">
+        {/* Mi sesión actual */}
+        <div className="min-w-0">
+          {isLoading ? (
+            <div className="flex justify-center py-16"><Spinner size={32} /></div>
+          ) : miCajaAbierta && sesionActual ? (
+            <SesionActiva sesion={sesionActual} />
           ) : (
-            <div className="space-y-2">
-              {historial.map((s) => (
-                <HistorialItem key={s.id} sesion={s} />
-              ))}
-            </div>
+            <CajaCerrada onAbrir={() => setShowAbrir(true)} />
           )}
         </div>
-      )}
+
+        <aside className="min-w-0 space-y-5">
+          {/* Stats rápidas del historial */}
+          {totalSesiones > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard
+                label="Sesiones cerradas"
+                value={String(totalSesiones)}
+                icon={<ReceiptText size={17} className="text-slate-500" />}
+                accent="slate"
+              />
+              <StatCard
+                label="Total histórico"
+                value={formatCOP(totalVendido)}
+                icon={<CircleDollarSign size={17} className="t-text" />}
+                accent="green"
+              />
+            </div>
+          )}
+
+          {/* Historial (supervisor: solo el suyo; admin: todos) */}
+          {historial.length > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <ReceiptText size={15} className="text-slate-400" />
+                {esAdmin ? 'Historial de sesiones (todos los cajeros)' : 'Mis sesiones anteriores'}
+              </h2>
+              {loadingHistorial ? (
+                <div className="flex justify-center py-6"><Spinner size={24} /></div>
+              ) : (
+                <div className="space-y-2">
+                  {historial.map((s) => (
+                    <HistorialItem key={s.id} sesion={s} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </aside>
+      </div>
 
       <AbrirModal
         open={showAbrir}

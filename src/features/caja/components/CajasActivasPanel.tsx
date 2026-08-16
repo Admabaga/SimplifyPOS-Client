@@ -73,11 +73,13 @@ interface CajaCardProps {
   sesion: SesionCaja
   resumen: ResumenTiempoReal
   index: number
+  /** Única caja abierta → la tarjeta ocupa todo el ancho y reparte los medios en fila. */
+  wide?: boolean
   onVerZReport: (sesionId: number) => void
   onCerrar: (sesion: SesionCaja, resumen: ResumenTiempoReal) => void
 }
 
-function CajaCard({ sesion, resumen, index, onVerZReport, onCerrar }: CajaCardProps) {
+function CajaCard({ sesion, resumen, index, wide = false, onVerZReport, onCerrar }: CajaCardProps) {
   const efectivoEsperado =
     sesion.monto_inicial +
     resumen.efectivo +
@@ -110,7 +112,7 @@ function CajaCard({ sesion, resumen, index, onVerZReport, onCerrar }: CajaCardPr
       </div>
 
       {/* Stats por medio de pago */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${wide ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'}`}>
         {[
           { label: 'Efectivo',      value: resumen.efectivo,      icon: <Banknote size={11} />,         color: 'border-emerald-100 bg-emerald-50 text-emerald-800' },
           { label: 'Transfer.',     value: resumen.transferencia, icon: <Smartphone size={11} />,        color: 'border-blue-100 bg-blue-50 text-blue-800' },
@@ -128,32 +130,35 @@ function CajaCard({ sesion, resumen, index, onVerZReport, onCerrar }: CajaCardPr
         ))}
       </div>
 
-      {/* Efectivo esperado */}
-      <div className="flex justify-between items-center text-xs bg-slate-50 rounded-xl px-3 py-2">
-        <span className="text-slate-500">Efectivo esperado en caja</span>
-        <span className="font-bold text-slate-800 tabular-nums">{formatCOP(efectivoEsperado)}</span>
-      </div>
+      {/* Efectivo esperado + acciones.
+          En modo wide van en el mismo renglón: los botones no necesitan
+          estirarse a todo lo ancho de la tarjeta. */}
+      <div className={`flex flex-col gap-3 pt-1 ${wide ? 'md:flex-row md:items-center' : ''}`}>
+        <div className={`flex justify-between items-center text-xs bg-slate-50 rounded-xl px-3 py-2 ${wide ? 'md:flex-1' : ''}`}>
+          <span className="text-slate-500">Efectivo esperado en caja</span>
+          <span className="font-bold text-slate-800 tabular-nums">{formatCOP(efectivoEsperado)}</span>
+        </div>
 
-      {/* Acciones */}
-      <div className="flex gap-2 pt-1">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1"
-          icon={<FileText size={12} />}
-          onClick={() => onVerZReport(sesion.id)}
-        >
-          Reporte Z
-        </Button>
-        <Button
-          size="sm"
-          variant="danger"
-          className="flex-1"
-          icon={<Lock size={12} />}
-          onClick={() => onCerrar(sesion, resumen)}
-        >
-          Cerrar caja
-        </Button>
+        <div className={`flex gap-2 ${wide ? 'md:shrink-0' : ''}`}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1"
+            icon={<FileText size={12} />}
+            onClick={() => onVerZReport(sesion.id)}
+          >
+            Reporte Z
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            className="flex-1"
+            icon={<Lock size={12} />}
+            onClick={() => onCerrar(sesion, resumen)}
+          >
+            Cerrar caja
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -246,13 +251,21 @@ export default function CajasActivasPanel({ onCerrar }: Props) {
           <p className="text-xs text-slate-400 mt-1">Las cajas activas de tus cajeros aparecerán aquí.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        // Con una sola caja abierta la tarjeta ocupa el ancho completo (si no
+        // queda un bloque de 1/3 con el resto vacío); con varias se reparten en
+        // columnas que crecen con el espacio disponible.
+        <div className={`grid gap-4 ${
+          sesiones.length === 1
+            ? 'grid-cols-1'
+            : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
+        }`}>
           {sesiones.map(({ sesion, resumen }, i) => (
             <CajaCard
               key={sesion.id}
               sesion={sesion}
               resumen={resumen}
               index={i}
+              wide={sesiones.length === 1}
               onVerZReport={setZReportSesionId}
               onCerrar={onCerrar}
             />
