@@ -11,7 +11,7 @@
  * la app) en lugar de "algo se quedó cargando".
  */
 import { createPortal } from 'react-dom'
-import Logo from '@/assets/IconChart.png'
+import Logo from '@/assets/logo-mark.svg'
 
 export function LogoutOverlay({ open, nombre }: { open: boolean; nombre?: string }) {
   if (!open) return null
@@ -24,7 +24,7 @@ export function LogoutOverlay({ open, nombre }: { open: boolean; nombre?: string
       style={{ background: 'var(--t-sidebar-bg)' }}
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center px-6 animate-fade-in"
     >
-      <img src={Logo} alt="" className="h-12 w-auto max-w-[3.5rem] object-contain opacity-95" />
+      <img src={Logo} alt="" className="h-12 w-12 opacity-95" />
 
       <p className="mt-5 text-[17px] font-semibold tracking-[-0.01em] text-white">
         Cerrando sesión

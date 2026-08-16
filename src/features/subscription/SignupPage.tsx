@@ -12,7 +12,7 @@ import { CardFields, cardLista } from './CardFields'
 import { tokenizeCard, cardMeta, type CardInput } from './tokenize'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
-import IconChart from '@/assets/IconChart.png'
+import Logo from '@/assets/logo.svg'
 
 const schema = z.object({
   empresa_nombre: z.string().min(2, 'Nombre de la empresa requerido'),
@@ -94,7 +94,7 @@ export default function SignupPage() {
 
         <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
           <div className="flex items-center gap-2.5 mb-5">
-            <img src={IconChart} alt="" className="h-8 w-auto max-w-[2.5rem] object-contain" />
+            <img src={Logo} alt="" className="h-8 w-8" />
             <div className="leading-none">
               <p className="font-extrabold text-gray-900">Crea tu cuenta</p>
               <p className="text-[11px] text-gray-400 mt-1">Empieza tu mes gratis</p>

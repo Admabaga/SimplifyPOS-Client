@@ -18,6 +18,8 @@ import { Button, Modal, Spinner } from '@/shared/components/ui'
 import { formatCOP, formatDateTime } from '@/shared/lib/formatters'
 import { cajaApi, type ZReport } from '../api'
 import { useAuthStore } from '@/stores/auth'
+import Logo from '@/assets/logo.svg'
+import LogoMono from '@/assets/logo-mono.svg'
 
 interface Props {
   open: boolean
@@ -83,6 +85,8 @@ function buildPrintCss(rootId: string) {
   .rct-firma-grid    { display: flex !important; justify-content: space-between !important; margin-top: 6mm !important; gap: 2mm !important; }
   .rct-firma-col     { width: 45% !important; border-top: 1px solid #000 !important; padding-top: 1mm !important; text-align: center !important; font-size: 7.5pt !important; }
   .rct-indent        { padding-left: 3mm !important; }
+  .rct-logo          { display: block !important; width: 8mm !important; height: 8mm !important;
+                       margin: 0 auto 1.5mm !important; }
 }
 `
 }
@@ -178,7 +182,9 @@ function ReceiptContent({
   return (
     <div style={{ fontFamily: "'Courier New', monospace", fontSize: '9pt', color: '#000', width: '72mm', lineHeight: '1.3' }}>
       {/* Encabezado */}
-      <div className="rct-title">SimplifyPOS</div>
+      {/* El nombre del negocio manda: quien lee el cuadre es su dueño o su
+          cajero, no nosotros. La marca queda arriba como sello y en el pie. */}
+      <img src={LogoMono} alt="" className="rct-logo" style={{ width: '8mm', height: '8mm', display: 'block', margin: '0 auto 1.5mm' }} />
       <div className="rct-title">{empresaNombre ?? 'Mi Negocio'}</div>
       {empresaNit && <div className="rct-sub">NIT: {empresaNit}</div>}
       <div className="rct-sep">{SEP}</div>
@@ -284,9 +290,7 @@ function ReportContent({
       {/* ── Encabezado oscuro ── */}
       <div className="bg-slate-800 text-white rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-            <FileText size={16} className="text-white" />
-          </div>
+          <img src={Logo} alt="" className="w-8 h-8 rounded-lg shrink-0 ring-1 ring-white/15" />
           <div>
             <p className="text-[10px] text-white/60 uppercase tracking-widest leading-none mb-0.5">SimplifyPOS</p>
             <p className="text-sm font-bold leading-tight">{empresaNombre ?? 'Mi Negocio'}</p>

@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Check, Sparkles, ArrowRight, Loader2 } from 'lucide-react'
 import { subscriptionApi } from './api'
 import { formatCOP, type Plan } from './types'
-import IconChart from '@/assets/IconChart.png'
+import Logo from '@/assets/logo.svg'
 
 const FEATURE_LABELS: Record<string, string> = {
   pos: 'Punto de venta completo',
@@ -42,7 +42,7 @@ export default function PlansPage() {
       {/* Header */}
       <header className="flex items-center justify-between px-5 sm:px-10 py-4 border-b border-gray-200 bg-white">
         <Link to="/login" className="flex items-center gap-2.5">
-          <img src={IconChart} alt="" className="h-8 w-auto max-w-[2.5rem] object-contain" />
+          <img src={Logo} alt="" className="h-8 w-8" />
           <div className="leading-none">
             <p className="font-extrabold text-gray-900 text-lg">SimplifyPOS</p>
             <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">Point of Sale · Colombia</p>

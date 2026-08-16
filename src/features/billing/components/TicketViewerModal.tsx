@@ -23,6 +23,8 @@ import type { Ticket } from '../types'
 import type { Pago, Cuenta } from '@/shared/types/index'
 import { billingApi } from '../api'
 import { cuentasApi } from '@/features/accounts/api'
+import LogoMono from '@/assets/logo-mono.svg'
+import Logo from '@/assets/logo.svg'
 import DianEstadoBadge from './DianEstadoBadge'
 import EmitirNotaCreditoModal from './EmitirNotaCreditoModal'
 
@@ -83,6 +85,10 @@ function buildPrintCss(rootId: string) {
   .pt-anulada{ text-align: center !important; font-weight: bold !important; font-size: 14pt !important;
                border: 3px solid #000 !important; padding: 3mm !important; margin: 2mm 0 !important;
                letter-spacing: 3px !important; }
+  /* Marca del pie: chica y monocroma. La cabecera del ticket es del comercio,
+     no nuestra; SimplifyPOS sólo firma abajo. */
+  .pt-logo   { display: block !important; width: 7mm !important; height: 7mm !important;
+               margin: 2.5mm auto 1mm !important; opacity: 1 !important; }
 }
 `
 }
@@ -593,7 +599,10 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-semibold">Integridad del documento</p>
               <p className="text-[9px] font-mono text-slate-500 break-all leading-relaxed">{ticket.hash_integridad}</p>
               <p className="text-[9px] font-mono font-bold text-slate-600">{ticket.codigo_verificacion}</p>
-              <p className="text-[8px] text-slate-300">Generado por SimplifyPOS</p>
+              <p className="flex items-center justify-center gap-1.5 text-[8px] text-slate-400 pt-0.5">
+                <img src={Logo} alt="" className="h-3 w-3 rounded-[3px] opacity-70" />
+                Generado por SimplifyPOS
+              </p>
             </div>
 
           </div>
@@ -942,7 +951,8 @@ function ThermalContent({ ticket, pagos }: { ticket: Ticket; pagos?: Pago[] }) {
       <div className="pt-sub pt-mono pt-tiny" style={{ wordBreak: 'break-all' }}>
         Hash: {ticket.hash_integridad}
       </div>
-      <div className="pt-sub pt-tiny" style={{ marginTop: '2mm' }}>Generado por SimplifyPOS · simplifypos.app</div>
+      <img src={LogoMono} alt="" className="pt-logo" style={{ width: '7mm', height: '7mm', display: 'block', margin: '2.5mm auto 1mm' }} />
+      <div className="pt-sub pt-tiny">Generado por SimplifyPOS · simplifypos.app</div>
     </div>
   )
 }
