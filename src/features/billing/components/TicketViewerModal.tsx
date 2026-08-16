@@ -89,6 +89,11 @@ function buildPrintCss(rootId: string) {
      no nuestra; SimplifyPOS sólo firma abajo. */
   .pt-logo   { display: block !important; width: 7mm !important; height: 7mm !important;
                margin: 2.5mm auto 1mm !important; opacity: 1 !important; }
+  /* Logo del comercio: manda en la cabecera. Ancho tope 40mm sobre papel de
+     72mm útiles — más que eso desplaza el nombre y come papel en cada venta. */
+  .pt-logo-negocio { display: block !important; max-width: 40mm !important;
+               max-height: 16mm !important; width: auto !important; height: auto !important;
+               margin: 0 auto 1.5mm !important; }
 }
 `
 }
@@ -125,6 +130,15 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
     staleTime: 60_000,
   })
   const pagos: Pago[] | undefined = pagosProp ?? cuentaData?.pagos
+
+  // Logo del comercio. staleTime largo: cambia una vez al año, y la clave la
+  // comparte con el resto de la app para que se refresque al subir uno nuevo.
+  const { data: logo } = useQuery({
+    queryKey: ['billing', 'logo'],
+    queryFn: billingApi.getLogo,
+    enabled: open,
+    staleTime: 30 * 60_000,
+  })
 
   const enviarDianMutation = useMutation({
     mutationFn: () => billingApi.enviarADian(ticket.id),
@@ -176,7 +190,7 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
           style={{ position: 'fixed', left: '-9999px', top: 0, width: '72mm', pointerEvents: 'none' }}
           aria-hidden="true"
         >
-          <ThermalContent ticket={ticket} pagos={pagos} />
+          <ThermalContent ticket={ticket} pagos={pagos} logoMono={logo?.data_uri_mono} />
         </div>,
         document.body,
       )}
@@ -225,6 +239,13 @@ export default function TicketViewerModal({ open, onClose, ticket, pagos: pagosP
               <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/5" />
               <div className="absolute -right-2 -bottom-6 w-20 h-20 rounded-full bg-white/[0.04]" />
               <div className="relative flex items-start justify-between gap-3">
+                {logo && (
+                  <img
+                    src={logo.data_uri}
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-lg bg-white/95 object-contain p-1"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-[9px] text-white/50 uppercase tracking-[0.15em] mb-1">{TIPO_DOC_TITLE[ticket.tipo_documento]}</p>
                   <p className="text-[15px] font-bold leading-snug truncate">{ticket.empresa_razon_social}</p>
@@ -643,7 +664,12 @@ function Row({ label, value, bold }: { label: string; value: string; bold?: bool
 
 // ─── Contenido térmico (solo print) ───────────────────────────────────────────
 
-function ThermalContent({ ticket, pagos }: { ticket: Ticket; pagos?: Pago[] }) {
+function ThermalContent({ ticket, pagos, logoMono }: {
+  ticket: Ticket
+  pagos?: Pago[]
+  /** Logo del comercio en 1 bit. Ausente si el negocio no subió ninguno. */
+  logoMono?: string
+}) {
   const SEP = '─'.repeat(32)
   const SEP_DBL = '═'.repeat(32)
   const tieneCliente = !!ticket.cliente_nombre || !!ticket.cliente_documento
@@ -671,6 +697,7 @@ function ThermalContent({ ticket, pagos }: { ticket: Ticket; pagos?: Pago[] }) {
       {/* ══════════════════════════════════════
           EMPRESA
       ══════════════════════════════════════ */}
+      {logoMono && <img src={logoMono} alt="" className="pt-logo-negocio" />}
       <div className="pt-brand">{ticket.empresa_razon_social}</div>
       <div className="pt-sub">NIT: {ticket.empresa_nit}</div>
       {ticket.empresa_direccion && <div className="pt-sub">{ticket.empresa_direccion}</div>}

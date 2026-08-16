@@ -1,6 +1,6 @@
 import { apiClient } from '@/shared/api/client'
 import type {
-  EmpresaConfig, EmpresaConfigInput,
+  EmpresaConfig, EmpresaConfigInput, EmpresaLogo,
   ResolucionDian, ResolucionInput,
   Ticket, EmitirTicketInput,
 } from './types'
@@ -12,6 +12,20 @@ export const billingApi = {
 
   upsertEmpresa: (data: EmpresaConfigInput) =>
     apiClient.put<EmpresaConfig>('/billing/empresa', data).then((r) => r.data),
+
+  // Logo del comercio
+  getLogo: () =>
+    apiClient.get<EmpresaLogo | null>('/billing/empresa/logo').then((r) => r.data),
+
+  uploadLogo: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    // Sin Content-Type explícito: el navegador tiene que ponerlo él para
+    // incluir el boundary del multipart.
+    return apiClient.put<EmpresaLogo>('/billing/empresa/logo', form).then((r) => r.data)
+  },
+
+  deleteLogo: () => apiClient.delete('/billing/empresa/logo').then(() => undefined),
 
   // Resoluciones
   listResoluciones: () =>

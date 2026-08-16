@@ -6,7 +6,12 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('@/features/billing/api', () => ({
-  billingApi: { listByCuenta: vi.fn(() => Promise.resolve([])), updateDianSetup: vi.fn(), testEmission: vi.fn() },
+  billingApi: {
+    listByCuenta: vi.fn(() => Promise.resolve([])),
+    updateDianSetup: vi.fn(),
+    testEmission: vi.fn(),
+    getLogo: vi.fn(() => Promise.resolve(null)),
+  },
 }))
 vi.mock('react-hot-toast', () => ({
   toast: { success: vi.fn(), error: vi.fn() }, default: { success: vi.fn(), error: vi.fn() },

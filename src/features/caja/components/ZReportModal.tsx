@@ -17,6 +17,7 @@ import { Printer, FileText } from 'lucide-react'
 import { Button, Modal, Spinner } from '@/shared/components/ui'
 import { formatCOP, formatDateTime } from '@/shared/lib/formatters'
 import { cajaApi, type ZReport } from '../api'
+import { billingApi } from '@/features/billing/api'
 import { useAuthStore } from '@/stores/auth'
 import Logo from '@/assets/logo.svg'
 import LogoMono from '@/assets/logo-mono.svg'
@@ -87,6 +88,8 @@ function buildPrintCss(rootId: string) {
   .rct-indent        { padding-left: 3mm !important; }
   .rct-logo          { display: block !important; width: 8mm !important; height: 8mm !important;
                        margin: 0 auto 1.5mm !important; }
+  .rct-logo-negocio  { display: block !important; max-width: 40mm !important; max-height: 16mm !important;
+                       width: auto !important; height: auto !important; margin: 0 auto 1.5mm !important; }
 }
 `
 }
@@ -100,6 +103,15 @@ export default function ZReportModal({ open, onClose, sesionId }: Props) {
     queryFn: () => cajaApi.zReport(sesionId),
     enabled: open,
     staleTime: 30_000,
+  })
+
+  // Logo del comercio: si lo subió, manda él en la cabecera; si no, firma
+  // SimplifyPOS. El Reporte Z es interno, pero sigue siendo su documento.
+  const { data: logo } = useQuery({
+    queryKey: ['billing', 'logo'],
+    queryFn: billingApi.getLogo,
+    enabled: open,
+    staleTime: 30 * 60_000,
   })
 
   // Inyectar CSS de impresión específico para esta sesión
@@ -133,9 +145,9 @@ export default function ZReportModal({ open, onClose, sesionId }: Props) {
       >
         {z && (
           <>
-            <ReceiptContent z={z} empresaNombre={user?.nombre} empresaNit={user?.nit} copy={1} />
+            <ReceiptContent z={z} empresaNombre={user?.nombre} empresaNit={user?.nit} copy={1} logoMono={logo?.data_uri_mono} />
             <div className="rct-cut">{'═'.repeat(24)} CORTAR {'═'.repeat(24)}</div>
-            <ReceiptContent z={z} empresaNombre={user?.nombre} empresaNit={user?.nit} copy={2} />
+            <ReceiptContent z={z} empresaNombre={user?.nombre} empresaNit={user?.nit} copy={2} logoMono={logo?.data_uri_mono} />
           </>
         )}
       </div>
@@ -155,6 +167,7 @@ export default function ZReportModal({ open, onClose, sesionId }: Props) {
               z={z}
               empresaNombre={user?.nombre}
               empresaNit={user?.nit}
+              logo={logo?.data_uri}
             />
           </>
         )}
@@ -170,11 +183,14 @@ function ReceiptContent({
   empresaNombre,
   empresaNit,
   copy,
+  logoMono,
 }: {
   z: ZReport
   empresaNombre?: string | null
   empresaNit?: string | null
   copy?: number
+  /** Logo del comercio en 1 bit. Ausente si no subió ninguno. */
+  logoMono?: string
 }) {
   const esCerrada = z.sesion.estado === 'cerrada'
   const SEP = '─'.repeat(32)
@@ -183,8 +199,15 @@ function ReceiptContent({
     <div style={{ fontFamily: "'Courier New', monospace", fontSize: '9pt', color: '#000', width: '72mm', lineHeight: '1.3' }}>
       {/* Encabezado */}
       {/* El nombre del negocio manda: quien lee el cuadre es su dueño o su
-          cajero, no nosotros. La marca queda arriba como sello y en el pie. */}
-      <img src={LogoMono} alt="" className="rct-logo" style={{ width: '8mm', height: '8mm', display: 'block', margin: '0 auto 1.5mm' }} />
+          cajero, no nosotros. Si subió su logo, va el suyo; si no, el nuestro
+          como sello — y en ambos casos SimplifyPOS firma en el pie. */}
+      {logoMono ? (
+        <img src={logoMono} alt="" className="rct-logo-negocio"
+             style={{ maxWidth: '40mm', maxHeight: '16mm', display: 'block', margin: '0 auto 1.5mm' }} />
+      ) : (
+        <img src={LogoMono} alt="" className="rct-logo"
+             style={{ width: '8mm', height: '8mm', display: 'block', margin: '0 auto 1.5mm' }} />
+      )}
       <div className="rct-title">{empresaNombre ?? 'Mi Negocio'}</div>
       {empresaNit && <div className="rct-sub">NIT: {empresaNit}</div>}
       <div className="rct-sep">{SEP}</div>
@@ -278,10 +301,13 @@ function ReportContent({
   z,
   empresaNombre,
   empresaNit,
+  logo,
 }: {
   z: ZReport
   empresaNombre?: string | null
   empresaNit?: string | null
+  /** Logo del comercio en color, para pantalla. */
+  logo?: string
 }) {
   const esCerrada = z.sesion.estado === 'cerrada'
 
@@ -290,7 +316,11 @@ function ReportContent({
       {/* ── Encabezado oscuro ── */}
       <div className="bg-slate-800 text-white rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={Logo} alt="" className="w-8 h-8 rounded-lg shrink-0 ring-1 ring-white/15" />
+          <img
+            src={logo ?? Logo}
+            alt=""
+            className={`w-8 h-8 shrink-0 rounded-lg ring-1 ring-white/15 ${logo ? 'bg-white/95 object-contain p-0.5' : ''}`}
+          />
           <div>
             <p className="text-[10px] text-white/60 uppercase tracking-widest leading-none mb-0.5">SimplifyPOS</p>
             <p className="text-sm font-bold leading-tight">{empresaNombre ?? 'Mi Negocio'}</p>
