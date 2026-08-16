@@ -535,7 +535,7 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-300 ml-2 mt-1 shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-slate-600">{v.cantidad_unidades} u.</span>
+                              <span className="text-slate-600">{v.cantidad_unidades} uds</span>
                               <span className="text-slate-400">{formatDateTime(v.fecha_venta)}</span>
                             </div>
                             {/* Trazabilidad cajero/caja */}
@@ -846,7 +846,7 @@ export function AccountDetailPanel({ cuentaId, onBack, embedded = false }: Accou
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Cantidad</span>
-                <span className="font-medium">{deleteVenta?.cantidad_unidades} u.</span>
+                <span className="font-medium">{deleteVenta?.cantidad_unidades} unidades</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Precio</span>

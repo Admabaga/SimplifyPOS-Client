@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import {
-  ShoppingCart, TrendingUp, DollarSign, Users, Package, ArrowUpRight,
+  ShoppingCart, TrendingUp, Users, Package, ArrowUpRight,
   ArrowDownRight, Minus, BarChart3, CreditCard, AlertCircle,
   CheckCircle2, ChevronRight, Store, Wallet, X,
 } from 'lucide-react'
@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import { reportesApi } from './api'
+import { RANGOS, resolverRango, rangoPrevio, type RangoKey } from './rango'
 import { productsApi } from '@/features/products/api'
 import { cuentasApi } from '@/features/accounts/api'
 import { billingApi } from '@/features/billing/api'
@@ -25,6 +26,8 @@ import { apiClient } from '@/shared/api/client'
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type Periodo = 'mes' | 'semana' | 'hoy'
+
+interface DiaVenta { dia: string; num_ventas: number; total: number; ganancia: number }
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 
@@ -102,12 +105,72 @@ function getYesterday() {
   return d.toISOString().slice(0, 10)
 }
 
+// ─── Lecturas del pulso ───────────────────────────────────────────────────────
+
+function PulsoReadout({
+  label, value, hint, tone = 'neutral',
+}: {
+  label: string
+  value: string
+  hint?: string
+  tone?: 'neutral' | 'good' | 'bad'
+}) {
+  const dot = tone === 'bad' ? 'bg-red-500' : tone === 'good' ? 't-bg' : 'bg-slate-300'
+  const num = tone === 'bad' ? 'text-red-600' : 'text-slate-900'
+  return (
+    <div className="min-w-0 px-3 py-3.5 lg:min-w-[132px] lg:px-5 lg:py-5">
+      <span className="flex items-center gap-1.5">
+        <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', dot)} />
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {label}
+        </span>
+      </span>
+      <span className={clsx('mt-1.5 block num text-[18px] font-bold leading-none lg:text-[22px]', num)}>
+        {value}
+      </span>
+      {hint && <span className="mt-1 block truncate text-[10px] text-slate-400">{hint}</span>}
+    </div>
+  )
+}
+
+/** Indicador de salud del negocio. El punto de color da el estado sin depender
+ *  de leer la cifra; el texto del pie aclara a qué período pertenece. */
+function SaludTile({
+  label, value, hint, tone = 'neutral',
+}: {
+  label: string
+  value: string
+  hint?: string
+  tone?: 'neutral' | 'good' | 'warn' | 'bad'
+}) {
+  const dot = {
+    neutral: 'bg-slate-300',
+    good: 't-bg',
+    warn: 'bg-amber-500',
+    bad: 'bg-red-500',
+  }[tone]
+  const num = tone === 'bad' ? 'text-red-600' : 'text-slate-900'
+  return (
+    <Card className="p-4">
+      <span className="flex items-center gap-1.5">
+        <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', dot)} />
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {label}
+        </span>
+      </span>
+      <p className={clsx('mt-2 num text-[20px] font-bold leading-none sm:text-[24px]', num)}>{value}</p>
+      {hint && <p className="mt-1.5 truncate text-[10px] text-slate-400">{hint}</p>}
+    </Card>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user)
   const isDesktop = useIsDesktop()
   const [periodo, setPeriodo] = useState<Periodo>('hoy')
+  const [rangoKey, setRangoKey] = useState<RangoKey>('hoy')
   const now = new Date()
   const year  = now.getFullYear()
   const month = now.getMonth() + 1
@@ -175,25 +238,58 @@ export default function DashboardPage() {
   }, [data, dataPrev])
 
   // ── Chart data ───────────────────────────────────────────────────────────
+  // ── Reporte del rango (servido por el backend) ────────────────────────────
+  // El endpoint /reports/range calcula el P&L completo acotado a las fechas, así
+  // que gastos, ganancia neta y top de productos siguen el filtro de verdad en
+  // vez de quedarse clavados al mes.
+  const rango     = useMemo(() => resolverRango(rangoKey), [rangoKey])
+  const rangoPrev = useMemo(() => rangoPrevio(rango), [rango])
+
+  const { data: rangeData } = useQuery({
+    queryKey: ['reports', 'range', rango.desde, rango.hasta],
+    queryFn: () => reportesApi.range(rango.desde, rango.hasta),
+    enabled: canSeeReports || canSeeVentas,
+  })
+
+  const { data: rangePrevData } = useQuery({
+    queryKey: ['reports', 'range', rangoPrev.desde, rangoPrev.hasta],
+    queryFn: () => reportesApi.range(rangoPrev.desde, rangoPrev.hasta),
+    enabled: canSeeReports || canSeeVentas,
+  })
+
+  const actual = useMemo(() => {
+    const filas: DiaVenta[] = rangeData?.ventas_por_dia ?? []
+    return {
+      filas,
+      ventas:   rangeData?.total_ventas ?? 0,
+      ganancia: rangeData?.ganancia_bruta ?? 0,
+      num:      filas.reduce((s, d) => s + (d.num_ventas ?? 0), 0),
+    }
+  }, [rangeData])
+
+  const trendRango  = calcTrend(actual.ventas, rangePrevData?.total_ventas ?? 0)
+  const margenRango = actual.ventas > 0 ? (actual.ganancia / actual.ventas) * 100 : 0
+  const ticketProm  = actual.num > 0 ? actual.ventas / actual.num : 0
+
+  // La gráfica sigue al filtro: antes mostraba siempre el mes en curso aunque
+  // estuvieras viendo "7 días", lo que hacía que el número y la curva no
+  // hablaran del mismo período.
   const chartData = useMemo(() => {
-    if (!data?.ventas_por_dia) return []
-    return data.ventas_por_dia
-      .slice(-30)
-      .map((d: { dia: string; total: number; ganancia: number }) => ({
-        dia:      new Date(d.dia + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', timeZone: BOG }),
-        ventas:   d.total,
-        ganancia: d.ganancia,
-      }))
-  }, [data])
+    return actual.filas.map((d) => ({
+      dia:      new Date(d.dia + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', timeZone: BOG }),
+      ventas:   d.total,
+      ganancia: d.ganancia,
+    }))
+  }, [actual])
 
   const topChartData = useMemo(() => {
-    if (!data?.top_productos) return []
-    return data.top_productos.slice(0, 6).map((p: { producto_id: number; total: number; unidades: number }) => ({
+    if (!rangeData?.top_productos) return []
+    return rangeData.top_productos.slice(0, 6).map((p: { producto_id: number; total: number; unidades: number }) => ({
       nombre:   productName(p.producto_id).slice(0, 22),
       total:    p.total,
       unidades: p.unidades,
     }))
-  }, [data, products])
+  }, [rangeData, products])
 
   // ── Stats rápidas de cuentas ──────────────────────────────────────────────
   const cuentasStats = useMemo(() => {
@@ -384,7 +480,7 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-            ¡Hola, {user?.nombre ?? 'usuario'}! 
+            ¡Hola, {user?.nombre ?? 'usuario'}!
           </h1>
           <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-2">
             {mesActual} {year}
@@ -394,16 +490,25 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Período selector */}
-        <TabBar
-          tabs={[
-            { key: 'hoy',    label: 'Hoy' },
-            { key: 'semana', label: 'Semana' },
-            { key: 'mes',    label: 'Mes' },
-          ]}
-          active={periodo}
-          onChange={(k) => setPeriodo(k as Periodo)}
-        />
+        {/* Filtro de rango — 6 accesos en vez de 3, cada uno con su comparación */}
+        <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1">
+          {RANGOS.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => setRangoKey(r.key)}
+              aria-pressed={rangoKey === r.key}
+              className={clsx(
+                'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400',
+                rangoKey === r.key
+                  ? 't-bg text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Checklist de configuración — visible hasta que todo esté listo */}
@@ -417,78 +522,81 @@ export default function DashboardPage() {
         </Card>
       ) : (
         <>
-          {/* ── KPI Strip ───────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard
-              label={`Ventas ${periodoLabels[periodo]}`}
-              value={formatCOP(periodoData.ventas)}
-              icon={<ShoppingCart size={17} className="t-text" />}
-              accent="green"
-              trend={periodoData.trend}
-              trendLabel={periodoData.vsLabel}
+          {/* ── Pulso del negocio ───────────────────────────────────────────
+              La cifra que importa manda por escala, con su tendencia al lado.
+              A la derecha, lo que da contexto a esa cifra: cuánto queda, cuánto
+              vale cada venta y cuántas fueron. Todo respeta el rango elegido. */}
+          <Card padding={false} className="overflow-hidden">
+            <div className="flex flex-col divide-y divide-slate-100 lg:flex-row lg:items-stretch lg:divide-x lg:divide-y-0">
+              <div className="flex-1 p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Ventas · {rango.etiqueta}
+                </p>
+                <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-2">
+                  <p className="num text-[36px] font-bold leading-none tracking-[-0.03em] text-slate-900 sm:text-[46px]">
+                    {formatCOP(actual.ventas)}
+                  </p>
+                  <span
+                    className={clsx(
+                      'mb-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold',
+                      trendRango > 0 ? 'bg-green-50 text-green-700'
+                        : trendRango < 0 ? 'bg-red-50 text-red-600'
+                        : 'bg-slate-50 text-slate-500',
+                    )}
+                  >
+                    <TrendIcon pct={trendRango} />
+                    {trendRango > 0 ? '+' : ''}{trendRango.toFixed(1)}%
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {rango.vsEtiqueta}{' '}
+                  <span className="num font-semibold text-slate-600">{formatCOP(rangePrevData?.total_ventas ?? 0)}</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 lg:flex lg:divide-x lg:divide-slate-100">
+                <PulsoReadout
+                  label="Ganancia"
+                  value={formatCOP(actual.ganancia)}
+                  hint={`${margenRango.toFixed(0)}% margen`}
+                  tone={actual.ganancia < 0 ? 'bad' : 'good'}
+                />
+                <PulsoReadout label="Ticket prom." value={formatCOP(ticketProm)} hint="por venta" />
+                <PulsoReadout label="Ventas" value={String(actual.num)} hint="transacciones" />
+              </div>
+            </div>
+          </Card>
+
+          {/* ── Salud del negocio ───────────────────────────────────────────
+              Estas cifras vienen del reporte MENSUAL (el backend no las expone
+              por rango), por eso se rotulan explícitamente "del mes" y no
+              cambian con el filtro — mentir aquí sería peor que no mostrarlas. */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <SaludTile
+              label="Gastos"
+              value={formatCOP(rangeData?.total_gastos ?? 0)}
+              hint={rango.etiqueta}
+              tone="warn"
             />
-            <StatCard
-              label="Ganancia bruta"
-              value={formatCOP(periodoData.ganancia)}
-              subValue={periodoData.ventas > 0 ? `${Math.round((periodoData.ganancia / periodoData.ventas) * 100)}% margen` : undefined}
-              icon={<TrendingUp size={17} className="text-blue-600" />}
-              accent="blue"
+            <SaludTile
+              label="Ganancia neta"
+              value={formatCOP(rangeData?.ganancia_neta ?? 0)}
+              hint={`${rango.etiqueta} · después de gastos`}
+              tone={(rangeData?.ganancia_neta ?? 0) < 0 ? 'bad' : 'good'}
             />
-            <StatCard
-              label="Gastos del mes"
-              value={formatCOP(data.total_gastos)}
-              subValue={`Ganancia neta: ${formatCOP(data.ganancia_neta)}`}
-              icon={<DollarSign size={17} className="text-red-500" />}
-              accent="red"
-            />
-            <StatCard
+            <SaludTile
               label="Cuentas abiertas"
-              value={String(data.cuentas_abiertas)}
-              subValue={`Deuda: ${formatCOP(cuentasStats.deuda)}`}
-              icon={<Users size={17} className="text-yellow-600" />}
-              accent="yellow"
+              value={String(cuentasStats.abiertas)}
+              hint="sin pagar"
+              tone={cuentasStats.abiertas > 0 ? 'warn' : 'neutral'}
+            />
+            <SaludTile
+              label="Por cobrar"
+              value={formatCOP(cuentasStats.deuda)}
+              hint="deuda pendiente"
+              tone={cuentasStats.deuda > 0 ? 'bad' : 'neutral'}
             />
           </div>
-
-          {/* ── Comparativas strip ─────────────────────────────────────────── */}
-          {comparativas && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                {
-                  label: 'Hoy vs ayer',
-                  current: comparativas.hoy, prev: comparativas.ayer,
-                  pct: comparativas.trendHoy,
-                },
-                {
-                  label: 'Semana vs anterior',
-                  current: comparativas.semana, prev: comparativas.semPasada,
-                  pct: comparativas.trendSem,
-                },
-                {
-                  label: `${mesActual} vs ${mesAnterior}`,
-                  current: comparativas.mes, prev: comparativas.mesAnterior,
-                  pct: comparativas.trendMes,
-                },
-              ].map((c) => (
-                <Card key={c.label} className="p-3">
-                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wide mb-2">{c.label}</p>
-                  <div className="flex items-end justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm sm:text-base font-bold text-slate-900 tabular-nums truncate">{formatCOP(c.current)}</p>
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">vs {formatCOP(c.prev)}</p>
-                    </div>
-                    <div className={clsx(
-                      'flex items-center gap-0.5 text-xs font-semibold px-1.5 py-1 rounded-lg shrink-0',
-                      c.pct > 0 ? 'bg-green-50 text-green-700' : c.pct < 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-500'
-                    )}>
-                      <TrendIcon pct={c.pct} />
-                      {c.pct > 0 ? '+' : ''}{c.pct.toFixed(1)}%
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
 
           {/* ── Charts ──────────────────────────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -497,7 +605,7 @@ export default function DashboardPage() {
               <div className="p-4 border-b border-slate-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp size={15} className="t-text" />
-                  <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {mesActual}</h2>
+                  <h2 className="text-sm font-semibold text-slate-800">Ventas por día — {rango.etiqueta}</h2>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-400">
                   <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm t-bg inline-block" />Ventas</span>
@@ -625,7 +733,7 @@ export default function DashboardPage() {
               <Card padding={false}>
                 <div className="p-4 border-b border-slate-50 flex items-center gap-2">
                   <BarChart3 size={15} className="text-blue-600" />
-                  <h2 className="text-sm font-semibold text-slate-800">Ranking ventas — {mesActual}</h2>
+                  <h2 className="text-sm font-semibold text-slate-800">Ranking ventas — {rango.etiqueta}</h2>
                 </div>
                 <div className="divide-y divide-slate-50">
                   {data.top_productos.slice(0, 6).map((p, i) => {
@@ -640,7 +748,7 @@ export default function DashboardPage() {
                             <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
                               <div className="h-full t-bg rounded-full" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-[10px] text-slate-400 shrink-0 tabular-nums">{p.unidades} u.</span>
+                            <span className="text-[10px] text-slate-400 shrink-0 tabular-nums">{p.unidades} uds</span>
                           </div>
                         </div>
                         <span className="text-sm font-semibold t-text-dk shrink-0 tabular-nums">{formatCOP(p.total)}</span>

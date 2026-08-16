@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import ThemePanel from './ThemePanel'
+import LogoutOverlay from './LogoutOverlay'
 import {
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
-  ScrollText, Building2, XCircle, BarChart3, Server, Brain, Palette, Sunrise, Gem,
+  ScrollText, Building2, XCircle, BarChart3, Server, Brain, Palette, Sunrise, Gem, Loader2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -261,7 +262,7 @@ function NavContent({ collapsed, onNavigate, can, role }: {
                       {item.to === '/notifications' && notifCount > 0 && (
                         <span
                           className={`absolute -top-1 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-black text-white flex items-center justify-center leading-none ${
-                            notifCritical ? 'bg-red-500' : 'bg-yellow-400'
+                            notifCritical ? 'bg-red-600' : 'bg-red-500'
                           }`}
                         >
                           {notifCount > 9 ? '9+' : notifCount}
@@ -275,7 +276,7 @@ function NavContent({ collapsed, onNavigate, can, role }: {
                     {!collapsed && item.to === '/notifications' && notifCount > 0 && (
                       <span
                         className={`text-[10px] font-black px-1.5 py-0.5 rounded-full text-white leading-none ${
-                          notifCritical ? 'bg-red-500' : 'bg-yellow-400'
+                          notifCritical ? 'bg-red-600' : 'bg-red-500'
                         }`}
                       >
                         {notifCount}
@@ -299,16 +300,35 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [themeOpen, setThemeOpen]   = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
 
+  // Cerrar sesión hace una llamada de red: en un backend dormido puede tardar
+  // varios segundos. Sin feedback, el usuario cree que no pasó nada y hace clic
+  // varias veces. Estado explícito + botón bloqueado + toast de progreso.
   const handleLogout = async () => {
-    try { await authApi.logout() } catch { /* ignore */ }
-    clearActiveTenant()  // limpiar tenant activo al salir
-    clearAuth()
-    toast.success('Sesión cerrada')
-    navigate('/login', { replace: true })
+    if (loggingOut) return
+    setLoggingOut(true)          // el overlay bloquea la UI: no hay doble clic posible
+    const startedAt = Date.now()
+    try {
+      await authApi.logout()
+    } catch {
+      /* la sesión se limpia igual en el cliente */
+    } finally {
+      // Piso de 650ms: si la API responde al instante, el overlay parpadearía y
+      // se leería como un glitch. Una salida deliberada se siente intencional.
+      const elapsed = Date.now() - startedAt
+      if (elapsed < 650) await new Promise((r) => setTimeout(r, 650 - elapsed))
+
+      clearActiveTenant()  // limpiar tenant activo al salir
+      clearAuth()
+      setMobileOpen(false)
+      setLoggingOut(false)
+      navigate('/login', { replace: true })
+      toast.success('Sesión cerrada')
+    }
   }
 
-  const BottomBar = ({ collapsed: c }: { collapsed: boolean }) => (
+  const BottomBar = ({ collapsed: c, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) => (
     <div className={clsx('shrink-0 border-t border-white/10 px-2 py-2 space-y-1')}>
       {/* Toggle collapse — siempre visible */}
       <button
@@ -326,7 +346,7 @@ export default function Sidebar() {
       {/* User info — clickeable → /profile */}
       {!c && user && (
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => { navigate('/profile'); onNavigate?.() }}
           className="flex items-center gap-2 px-2 py-1.5 w-full rounded-lg hover:bg-white/10 transition-colors text-left group"
           title="Ver mi perfil"
         >
@@ -344,15 +364,18 @@ export default function Sidebar() {
       {/* Logout */}
       <button
         onClick={handleLogout}
-        title="Cerrar sesión"
+        disabled={loggingOut}
+        aria-busy={loggingOut}
+        title={loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión'}
         className={clsx(
           'flex items-center gap-2 text-white/50 hover:text-white hover:bg-white/10',
           'rounded-lg px-3 py-2 transition-colors text-xs w-full',
+          'disabled:cursor-wait disabled:text-white/70 disabled:hover:bg-transparent',
           c && 'justify-center'
         )}
       >
-        <LogOut size={14} />
-        {!c && 'Cerrar sesión'}
+        {loggingOut ? <Loader2 size={14} className="animate-spin shrink-0" /> : <LogOut size={14} />}
+        {!c && (loggingOut ? 'Cerrando sesión…' : 'Cerrar sesión')}
       </button>
     </div>
   )
@@ -442,10 +465,13 @@ export default function Sidebar() {
               </div>
             </div>
             <NavContent collapsed={false} can={can} role={user?.role} onNavigate={() => setMobileOpen(false)} />
-            <BottomBar collapsed={false} />
+            <BottomBar collapsed={false} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </>
       )}
+
+      {/* Cierre de sesión: pantalla completa, bloquea la UI mientras ocurre */}
+      <LogoutOverlay open={loggingOut} nombre={user?.nombre} />
     </>
   )
 }

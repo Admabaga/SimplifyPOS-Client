@@ -6,13 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import type { Resolver } from 'react-hook-form'
 import { z } from 'zod'
 import {
-  Pencil, Trash2, DollarSign, Plus, AlertTriangle, Package, BarChart3,
+  Pencil, Trash2, DollarSign, Plus, Package,
   LayoutGrid, List, Tag,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Input, Table, Th, Td, Badge, Spinner, EmptyState,
-  Modal, ConfirmDialog, Card, StatCard, SearchInput, Pagination,
+  Modal, ModalSection, ConfirmDialog, Card, SearchInput, Pagination,
 } from '@/shared/components/ui'
 import { usePagination } from '@/shared/hooks/usePagination'
 import Can from '@/shared/components/Can'
@@ -49,12 +49,103 @@ type PriceForm   = z.infer<typeof priceSchema>
 
 type ViewMode = 'table' | 'grid'
 
-// ─── StockBadge ──────────────────────────────────────────────────────────────
+// ─── Stock: lectura tipo instrumento ─────────────────────────────────────────
+// Quien atiende necesita responder "¿cuánto tengo?" en una fracción de segundo,
+// con el cliente enfrente. Por eso la CANTIDAD es el elemento dominante (número
+// tabular, alineado en columna para comparar de un vistazo) y el color es solo
+// confirmación — nunca el único canal (número + barra + texto en los estados
+// que exigen atención).
 
-function StockBadge({ stock }: { stock: number }) {
-  if (stock === 0)   return <Badge variant="red" dot>Agotado</Badge>
-  if (stock <= 5)    return <Badge variant="yellow" dot>Stock bajo ({stock})</Badge>
-  return                    <Badge variant="green" dot>En stock ({stock})</Badge>
+const STOCK_LOW = 5       // umbral de negocio (mismo que stats y filtros)
+const STOCK_FULL = 20     // referencia de "lleno" para la barra
+
+function stockTone(stock: number) {
+  if (stock === 0)
+    return { bar: 'bg-red-500',   rail: 'bg-red-100',   num: 'text-red-600',    label: 'Agotado',    stripe: 'border-l-red-400' }
+  if (stock <= STOCK_LOW)
+    return { bar: 'bg-amber-500', rail: 'bg-amber-100', num: 'text-amber-700',  label: 'Stock bajo', stripe: 'border-l-amber-400' }
+  return   { bar: 't-bg',         rail: 'bg-slate-100', num: 'text-slate-900',  label: '',           stripe: 'border-l-transparent' }
+}
+
+/** Medidor de existencias: número + barra de nivel. El estado normal es
+ *  silencioso; solo lo que necesita atención se anuncia con texto. */
+function StockGauge({ stock, compact = false }: { stock: number; compact?: boolean }) {
+  const t = stockTone(stock)
+  const pct = stock === 0 ? 0 : Math.max(6, Math.min(100, (stock / STOCK_FULL) * 100))
+  const title = `${stock} unidades${t.label ? ` — ${t.label}` : ''}`
+
+  return (
+    <div className={compact ? 'w-full' : 'min-w-[86px]'} title={title}>
+      <div className="flex items-baseline gap-1">
+        <span
+          className={`num font-bold leading-none ${compact ? 'text-[19px]' : 'text-[22px]'} ${t.num}`}
+        >
+          {stock}
+        </span>
+        <span className="text-[10px] font-medium text-slate-400">uds</span>
+      </div>
+      <div
+        className={`mt-1.5 h-[3px] w-full overflow-hidden rounded-full ${t.rail}`}
+        role="meter"
+        aria-valuenow={stock}
+        aria-valuemin={0}
+        aria-label={title}
+      >
+        <div className={`h-full rounded-full ${t.bar} transition-[width] duration-500 ease-out`} style={{ width: `${pct}%` }} />
+      </div>
+      {t.label && (
+        <span className={`mt-1 block text-[10px] font-medium ${stock === 0 ? 'text-red-500' : 'text-amber-600'}`}>
+          {t.label}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ─── StatusReadout ────────────────────────────────────────────────────────────
+// Lectura de estado que además filtra. Es un botón real (Enter/Espacio, foco
+// visible, aria-pressed) — la superficie es distinta, el comportamiento no.
+
+function StatusReadout({
+  label, value, tone, active, onClick, hint,
+}: {
+  label: string
+  value: number
+  tone: 'ok' | 'low' | 'out'
+  active: boolean
+  onClick: () => void
+  hint?: string
+}) {
+  const tones = {
+    ok:  { dot: 't-bg',          num: 'text-slate-900', on: 'bg-slate-50' },
+    low: { dot: 'bg-amber-500',  num: 'text-amber-700', on: 'bg-amber-50/70' },
+    out: { dot: 'bg-red-500',    num: 'text-red-600',   on: 'bg-red-50/60' },
+  }[tone]
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={`${label} — clic para filtrar`}
+      className={`relative min-w-0 px-4 py-3.5 text-left transition-colors sm:min-w-[124px] sm:px-5 sm:py-5 ${
+        active ? tones.on : 'hover:bg-slate-50'
+      } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400`}
+    >
+      {/* Marca de "filtro activo": la franja se lee sin depender del color de fondo */}
+      <span
+        className={`absolute inset-x-0 bottom-0 h-0.5 transition-opacity ${tones.dot} ${active ? 'opacity-100' : 'opacity-0'}`}
+      />
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tones.dot}`} />
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</span>
+      </span>
+      <span className={`mt-1.5 block num text-[26px] font-bold leading-none sm:text-[30px] ${tones.num}`}>
+        {value}
+      </span>
+      {hint && <span className="mt-1 block text-[10px] text-slate-400">{hint}</span>}
+    </button>
+  )
 }
 
 // ─── ProductCard ──────────────────────────────────────────────────────────────
@@ -70,15 +161,22 @@ function ProductCard({
   onPrices: () => void
 }) {
   const stock = product.stock_total ?? 0
-  const stockColor = stock === 0 ? 'border-red-100 bg-red-50/30' : stock <= 5 ? 'border-yellow-100 bg-yellow-50/20' : 'border-slate-200'
+  const tone = stockTone(stock)
 
   return (
-    <Card className={`border ${stockColor} hover:shadow-md transition-all duration-200`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+    <Card
+      padding={false}
+      // h-full + flex-col: la grilla estira las tarjetas a la altura de la fila,
+      // pero sin esto el contenido no ocupa el alto y la banda de acciones
+      // quedaba flotando a media tarjeta en las que tienen menos presentaciones.
+      className={`group flex h-full flex-col overflow-hidden border-l-2 ${tone.stripe} transition-all duration-200 hover:border-slate-300 hover:shadow-md`}
+    >
+      <div className="flex-1 p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 transition-colors group-hover:bg-white group-hover:ring-1 group-hover:ring-slate-200">
           <Package size={18} className="text-slate-500" />
         </div>
-        <StockBadge stock={stock} />
+        <div className="w-[92px] shrink-0"><StockGauge stock={stock} compact /></div>
       </div>
 
       <h3 className="font-semibold text-slate-900 text-sm mb-0.5 leading-tight">{product.nombre}</h3>
@@ -104,11 +202,11 @@ function ProductCard({
       {(product.codigo || product.codigo_arancelario) && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-2">
           {product.codigo && (
-            <p className="text-xs text-slate-400 font-mono">#{product.codigo}</p>
+            <p className="text-xs text-slate-400 num">#{product.codigo}</p>
           )}
           {product.codigo_arancelario && (
             <p
-              className="text-[10px] text-slate-400 font-mono"
+              className="text-[10px] text-slate-400 num"
               title="Código arancelario DIAN"
             >
               DIAN: {product.codigo_arancelario}
@@ -132,17 +230,23 @@ function ProductCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-        <span className="text-sm font-bold text-slate-800 tabular-nums">{formatCOP(product.precio_ponderado)}</span>
-        <div className="flex gap-1">
+      </div>
+
+      {/* Banda de acciones: separada por superficie, no solo por una línea */}
+      <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
+        <div className="min-w-0">
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Precio base</span>
+          <span className="block num text-[15px] font-bold text-slate-800">{formatCOP(product.precio_ponderado)}</span>
+        </div>
+        <div className="flex shrink-0 gap-1">
           <Button size="xs" variant="ghost" icon={<DollarSign size={12} />} onClick={onPrices} className="text-blue-500">
             Precios
           </Button>
           <Can permission="productos:update">
-            <Button size="xs" variant="ghost" icon={<Pencil size={12} />} onClick={onEdit} />
+            <Button size="xs" variant="ghost" aria-label="Editar producto" icon={<Pencil size={12} />} onClick={onEdit} />
           </Can>
           <Can permission="productos:delete">
-            <Button size="xs" variant="ghost" icon={<Trash2 size={12} />} onClick={onDelete} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
+            <Button size="xs" variant="ghost" aria-label="Eliminar producto" icon={<Trash2 size={12} />} onClick={onDelete} className="text-red-400 hover:text-red-600 hover:bg-red-50" />
           </Can>
         </div>
       </div>
@@ -303,7 +407,6 @@ export default function ProductsPage() {
   return (
     <div>
       <PageHeader
-        title="Productos"
         subtitle="Inventario y presentaciones de precio"
         actions={
           <div className="flex gap-2">
@@ -330,13 +433,57 @@ export default function ProductsPage() {
         }
       />
 
-      {/* ── Stats ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Productos activos"  value={String(stats.activos)}   icon={<Package       size={17} className="text-green-600"  />} accent="green"  />
-        <StatCard label="Total en catálogo"  value={String(stats.total)}     icon={<BarChart3      size={17} className="text-blue-600"   />} accent="blue"   />
-        <StatCard label="Stock bajo"         value={String(stats.stockBajo)} subValue="≤ 5 unidades" icon={<AlertTriangle size={17} className="text-yellow-500" />} accent="yellow" />
-        <StatCard label="Sin stock"          value={String(stats.sinStock)}  icon={<AlertTriangle  size={17} className="text-red-500"    />} accent="red"    />
-      </div>
+      {/* ── Franja de instrumentos ────────────────────────────────────────────
+          Una sola superficie en vez de 4 tarjetas sueltas: el dato que manda
+          (unidades en inventario) domina por escala, y los estados que exigen
+          acción son botones que filtran la tabla — leer y actuar en un gesto. */}
+      <Card padding={false} className="mb-5 overflow-hidden">
+        <div className="flex flex-col divide-y divide-slate-100 sm:flex-row sm:items-stretch sm:divide-x sm:divide-y-0">
+          {/* Lectura dominante */}
+          <div className="flex-1 p-4 sm:p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Unidades en inventario
+            </p>
+            <div className="mt-2 flex items-baseline gap-1.5">
+              <span className="num text-[36px] font-bold leading-none tracking-[-0.03em] text-slate-900 sm:text-[44px]">
+                {stats.totalStock.toLocaleString('es-CO')}
+              </span>
+              <span className="text-xs font-medium text-slate-400">unidades</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              <span className="num font-bold text-slate-700">{stats.activos}</span> activos
+              {' de '}
+              <span className="num">{stats.total}</span> en catálogo
+            </p>
+          </div>
+
+          {/* Estados accionables */}
+          <div className="grid grid-cols-3 sm:flex sm:divide-x sm:divide-slate-100">
+            <StatusReadout
+              label="Sin alertas"
+              value={Math.max(0, stats.activos - stats.stockBajo - stats.sinStock)}
+              tone="ok"
+              active={stockFilter === 'con-stock'}
+              onClick={() => setStockFilter(stockFilter === 'con-stock' ? 'todos' : 'con-stock')}
+            />
+            <StatusReadout
+              label="Stock bajo"
+              hint="≤ 5 u."
+              value={stats.stockBajo}
+              tone="low"
+              active={stockFilter === 'bajo-stock'}
+              onClick={() => setStockFilter(stockFilter === 'bajo-stock' ? 'todos' : 'bajo-stock')}
+            />
+            <StatusReadout
+              label="Agotados"
+              value={stats.sinStock}
+              tone="out"
+              active={stockFilter === 'sin-stock'}
+              onClick={() => setStockFilter(stockFilter === 'sin-stock' ? 'todos' : 'sin-stock')}
+            />
+          </div>
+        </div>
+      </Card>
 
       {/* ── Filters ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4 items-start sm:items-center">
@@ -411,14 +558,14 @@ export default function ProductsPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Nombre</Th>
-                <Th className="hidden sm:table-cell">Código</Th>
-                <Th>Presentaciones</Th>
-                <Th className="hidden sm:table-cell">Stock</Th>
-                <Can permission="users:create_supervisor"><Th className="hidden md:table-cell">Precio base</Th></Can>
-                <Th className="hidden lg:table-cell">Categoría</Th>
-                <Th className="hidden sm:table-cell">Estado</Th>
-                <Th>Acciones</Th>
+                <Th className="pl-5 tracking-[0.1em]">Producto</Th>
+                <Th className="hidden sm:table-cell tracking-[0.1em]">Código</Th>
+                <Th className="tracking-[0.1em]">Presentaciones</Th>
+                <Th className="hidden sm:table-cell tracking-[0.1em]">Existencias</Th>
+                <Can permission="users:create_supervisor"><Th className="hidden md:table-cell text-right tracking-[0.1em]">Precio base</Th></Can>
+                <Th className="hidden xl:table-cell tracking-[0.1em]">Categoría</Th>
+                <Th className="hidden sm:table-cell tracking-[0.1em]">Estado</Th>
+                <Th className="text-right tracking-[0.1em]">Acciones</Th>
               </tr>
             </thead>
             <tbody>
@@ -427,14 +574,16 @@ export default function ProductsPage() {
                 const stock = p.stock_total ?? 0
                 const presentaciones = p.precios?.filter((pr) => pr.nombre !== 'Perdida' && pr.activo !== false) ?? []
 
+                const tone = stockTone(stock)
+
                 return (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <Td>
+                  <tr key={p.id} className="group hover:bg-slate-50/70 transition-colors">
+                    <Td className={`border-l-2 ${tone.stripe} pl-4`}>
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-white group-hover:ring-1 group-hover:ring-slate-200 flex items-center justify-center shrink-0 transition-all">
                           <Package size={13} className="text-slate-400" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 max-w-[200px]">
                           {inlineEdit?.id === p.id && inlineEdit.field === 'nombre' ? (
                             <input
                               autoFocus
@@ -456,17 +605,40 @@ export default function ProductsPage() {
                               {p.nombre}
                             </span>
                           )}
-                          <span className={`sm:hidden text-[10px] font-medium ${stock === 0 ? 'text-red-500' : stock <= 5 ? 'text-yellow-600' : 't-text'}`}>
-                            {stock === 0 ? 'Sin stock' : `${stock} u.`}
+                          {/* Móvil: la columna Existencias se oculta, así que el
+                              nivel viaja aquí — mismo lenguaje visual, menos espacio. */}
+                          <span className="sm:hidden mt-1 flex items-center gap-1.5">
+                            <span className={`num text-[13px] font-bold ${tone.num}`}>
+                              {stock}<span className="ml-0.5 font-sans text-[9px] font-medium text-slate-400">uds</span>
+                            </span>
+                            <span className={`h-[3px] w-10 overflow-hidden rounded-full ${tone.rail}`}>
+                              <span
+                                className={`block h-full rounded-full ${tone.bar}`}
+                                style={{ width: `${stock === 0 ? 0 : Math.max(6, Math.min(100, (stock / STOCK_FULL) * 100))}%` }}
+                              />
+                            </span>
+                            {tone.label && (
+                              <span className={`text-[9px] font-medium ${stock === 0 ? 'text-red-500' : 'text-amber-600'}`}>
+                                {tone.label}
+                              </span>
+                            )}
                           </span>
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-slate-400 font-mono text-xs hidden sm:table-cell">
-                      <div className="flex flex-col leading-tight">
-                        <span>{p.codigo ?? '—'}</span>
+                    <Td className="hidden sm:table-cell">
+                      {/* Los EAN de 13-22 dígitos empujaban la tabla hasta forzar
+                          scroll horizontal. Se truncan y el valor completo queda
+                          en el tooltip — el código rara vez se lee entero de un vistazo. */}
+                      <div className="flex max-w-[112px] flex-col gap-0.5 leading-tight">
+                        <span className="num truncate text-[13px] text-slate-500" title={p.codigo ?? undefined}>
+                          {p.codigo ?? '—'}
+                        </span>
                         {p.codigo_arancelario && (
-                          <span className="text-[10px] text-slate-400/80" title="Código arancelario DIAN">
+                          <span
+                            className="w-fit max-w-full truncate rounded bg-slate-50 px-1 py-px num text-[9px] tabular-nums text-slate-400 ring-1 ring-slate-200/70"
+                            title={`Código arancelario DIAN: ${p.codigo_arancelario}`}
+                          >
                             DIAN {p.codigo_arancelario}
                           </span>
                         )}
@@ -477,24 +649,43 @@ export default function ProductsPage() {
                       <span className="sm:hidden text-xs text-slate-500 whitespace-nowrap">
                         {presentaciones.length} precio{presentaciones.length !== 1 ? 's' : ''}
                       </span>
-                      {/* Desktop: chips */}
-                      <div className="hidden sm:flex flex-wrap gap-1">
-                        {presentaciones.slice(0, 3).map((pr) => (
-                          <span key={pr.id} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 t-bg-xlt border t-border-lt rounded-md text-[10px] t-text-dk font-medium whitespace-nowrap">
+                      {/* Desktop: presentación + precio — el nombre solo obligaba
+                          a abrir "Precios" para saber a cuánto se vende. */}
+                      <div className="hidden max-w-[158px] sm:flex flex-wrap gap-1">
+                        {presentaciones.slice(0, 2).map((pr) => (
+                          <span
+                            key={pr.id}
+                            className="inline-flex items-baseline gap-1 rounded-md border t-border-lt t-bg-xlt px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap t-text-dk"
+                          >
                             {pr.nombre}
+                            <span className="num opacity-70">{formatCOP(pr.precio)}</span>
                           </span>
                         ))}
-                        {presentaciones.length > 3 && (
-                          <span className="text-[10px] text-slate-400 px-1 py-0.5">+{presentaciones.length - 3}</span>
+                        {presentaciones.length > 2 && (
+                          <button
+                            onClick={() => setPricesProduct(p)}
+                            className="rounded-md px-1 py-0.5 text-[10px] font-medium text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                            title="Ver todas las presentaciones"
+                          >
+                            +{presentaciones.length - 2}
+                          </button>
+                        )}
+                        {presentaciones.length === 0 && (
+                          <span className="text-[10px] text-slate-300">Sin precio</span>
                         )}
                       </div>
                     </Td>
-                    <Td className="hidden sm:table-cell"><StockBadge stock={stock} /></Td>
-                    <Can permission="users:create_supervisor"><Td className="font-semibold text-slate-700 tabular-nums hidden md:table-cell">{formatCOP(p.precio_ponderado)}</Td></Can>
-                    <Td className="hidden lg:table-cell">
+                    <Td className="hidden sm:table-cell"><StockGauge stock={stock} /></Td>
+                    <Can permission="users:create_supervisor"><Td className="hidden md:table-cell text-right num text-[15px] font-bold text-slate-800">{formatCOP(p.precio_ponderado)}</Td></Can>
+                    <Td className="hidden xl:table-cell">
                       {cat ? (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs">{cat.nombre}</span>
+                        <div className="flex max-w-[124px] items-center gap-1.5 flex-wrap">
+                          <span
+                            className="max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
+                            title={cat.nombre}
+                          >
+                            {cat.nombre}
+                          </span>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums ${
                               cat.iva === 0
@@ -516,7 +707,7 @@ export default function ProductsPage() {
                       <Badge variant={p.activo ? 'green' : 'gray'}>{p.activo ? 'Activo' : 'Inactivo'}</Badge>
                     </Td>
                     <Td>
-                      <div className="flex gap-1 items-center">
+                      <div className="flex gap-1 items-center justify-end">
                         <Button size="sm" variant="ghost" icon={<DollarSign size={13} />} onClick={() => setPricesProduct(p)} className="text-blue-500 hidden sm:inline-flex">
                           Precios
                         </Button>
@@ -536,9 +727,18 @@ export default function ProductsPage() {
           </Table>
           </div>
           <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
-          <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-100 flex justify-between text-xs text-slate-500">
-            <span>{filtered.length} producto{filtered.length !== 1 ? 's' : ''}</span>
-            <span>Stock total: <strong className="text-slate-700">{stats.totalStock} u.</strong></span>
+          <div className="flex justify-between border-t border-slate-100 bg-slate-50/70 px-4 py-2.5 text-xs text-slate-500">
+            <span>
+              <span className="num font-bold text-slate-700">{filtered.length}</span>
+              {' '}producto{filtered.length !== 1 ? 's' : ''}
+              {filtered.length !== products.length && <span className="text-slate-400"> de {products.length}</span>}
+            </span>
+            <span>
+              Stock total{' '}
+              <span className="num font-bold text-slate-700">
+                {stats.totalStock.toLocaleString('es-CO')}
+              </span>{' '}unidades
+            </span>
           </div>
         </Card>
       )}
@@ -586,7 +786,7 @@ export default function ProductsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Stock total</span>
-                <span className="font-medium">{deleteProd?.stock_total ?? 0} u.</span>
+                <span className="font-medium">{deleteProd?.stock_total ?? 0} unidades</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Precio base</span>
@@ -759,7 +959,14 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
   }, [open, reset]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Modal open={open} onClose={onClose} title={title}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      size="lg"
+      eyebrow="Inventario"
+      icon={<Package size={17} />}
+      description="La categoría define el IVA; el precio de venta crea la presentación «Unidad»."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -768,7 +975,8 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
       }
     >
       {/* onSubmit preventDefault: pistola de barras envía Enter — evita submit prematuro */}
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-7" onSubmit={(e) => e.preventDefault()}>
+        <ModalSection title="Identificación" className="space-y-3.5">
         <Input label="Nombre *"      {...register('nombre')}      error={errors.nombre?.message} autoFocus />
         <div className="grid grid-cols-2 gap-3">
           <Input label="Código interno" {...register('codigo')}      placeholder="Ej: AGU001" />
@@ -790,19 +998,16 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-slate-400">
-            La categoría define el IVA que se aplica al producto en las facturas.
-          </p>
         </div>
-        <label className="flex items-center gap-2.5 text-sm cursor-pointer group">
+        <label className="flex w-fit cursor-pointer items-center gap-2.5 text-sm group">
           <input type="checkbox" {...register('activo')} className="w-4 h-4 rounded" />
           <span className="text-slate-700 group-hover:text-slate-900">Activo</span>
         </label>
+        </ModalSection>
 
         {/* Ajuste de stock — solo en modo edición */}
         {stockActual !== undefined && (
-          <div className="pt-3 border-t border-slate-100 space-y-1.5">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inventario</p>
+          <ModalSection title="Inventario" className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">Cantidad en stock</label>
             <input
               {...stockInicialInput.inputProps}
@@ -817,12 +1022,11 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
             <p className="text-[11px] text-slate-400">
               Ajusta las unidades disponibles (valor actual: {stockActual}).
             </p>
-          </div>
+          </ModalSection>
         )}
 
         {showStock && (
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Precio de venta</p>
+          <ModalSection title="Precio de venta" className="space-y-2">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Valor de venta unitaria ($)</label>
               <div className="relative flex items-center">
@@ -844,12 +1048,11 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
               Se crea automáticamente la presentación <span className="font-medium">«Unidad»</span> con
               este precio. Luego puedes añadir más presentaciones (paca, media, etc.) en «Precios».
             </p>
-          </div>
+          </ModalSection>
         )}
 
         {showStock && (
-          <div className="pt-3 border-t border-slate-100 space-y-3">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock inicial (opcional)</p>
+          <ModalSection title="Stock inicial" description="Opcional — si ingresas unidades se registra una compra de apertura." className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">Unidades</label>
@@ -899,10 +1102,9 @@ function ProductFormModal({ open, onClose, categorias, defaultValues, onSubmit, 
               </div>
             )}
             <p className="text-[11px] text-slate-400">
-              Ingresa el costo <span className="font-medium">por unidad</span>. Se multiplica por las unidades
-              y se registra una compra de apertura para inicializar el inventario.
+              Ingresa el costo <span className="font-medium">por unidad</span> — se multiplica por las unidades.
             </p>
-          </div>
+          </ModalSection>
         )}
       </form>
     </Modal>

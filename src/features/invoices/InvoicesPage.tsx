@@ -6,13 +6,13 @@ import type { Resolver } from 'react-hook-form'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, Trash2, FileText, DollarSign, ShoppingCart, Package,
+  Plus, Trash2, FileText, Package,
   ChevronDown, ChevronUp, Upload, AlertCircle, ScanLine, ArrowRight,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import {
   PageHeader, Button, Table, Th, Td, Spinner, EmptyState, Modal, Card,
-  StatCard, DateRangeBar, SearchInput, Badge, FileDropZone, InfoBanner, Pagination,
+  DateRangeBar, SearchInput, FileDropZone, InfoBanner, Pagination,
 } from '@/shared/components/ui'
 import { usePagination } from '@/shared/hooks/usePagination'
 import { apiError } from '@/shared/lib/apiError'
@@ -36,6 +36,26 @@ type ItemState = {
   producto_id: number
   cantDisplay: string
   precioDisplay: string
+}
+
+// ─── InvoiceReadout ───────────────────────────────────────────────────────────
+// Lectura de apoyo de la franja superior. Mismo lenguaje que Productos/Ventas.
+
+function InvoiceReadout({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="min-w-0 px-4 py-3.5 sm:min-w-[150px] sm:px-5 sm:py-5">
+      <span className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {label}
+        </span>
+      </span>
+      <span className="mt-1.5 block num text-[20px] font-bold leading-none text-slate-900 sm:text-[24px]">
+        {value}
+      </span>
+      {hint && <span className="mt-1 block text-[10px] text-slate-400">{hint}</span>}
+    </div>
+  )
 }
 
 export default function InvoicesPage() {
@@ -70,7 +90,10 @@ export default function InvoicesPage() {
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => productsApi.getAll(),
+    // Sin { limit: 500 } el backend devuelve solo los primeros 25 productos:
+    // los demás no se podían elegir al registrar una compra, la pistola de
+    // barras no los encontraba y salían como "#42" en el detalle.
+    queryFn: () => productsApi.getAll({ limit: 500 }),
   })
 
   const createMutation = useMutation({
@@ -138,7 +161,6 @@ export default function InvoicesPage() {
     <div>
       <Can permission="facturas:read" fallback={<p className="text-slate-500 p-4">Sin acceso</p>}>
         <PageHeader
-          title="Facturas de compra"
           subtitle="Registro de compras a proveedores"
           actions={
             <Can permission="facturas:create">
@@ -149,34 +171,41 @@ export default function InvoicesPage() {
           }
         />
 
-        {/* ── Stats ─────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <StatCard
-            label="Invertido este mes"
-            value={formatCOP(stats.totalMes)}
-            subValue={`${stats.esMes} factura${stats.esMes !== 1 ? 's' : ''}`}
-            icon={<DollarSign size={17} className="t-text" />}
-            accent="green"
-          />
-          <StatCard
-            label="Total histórico"
-            value={formatCOP(stats.total)}
-            icon={<DollarSign size={17} className="text-blue-600" />}
-            accent="blue"
-          />
-          <StatCard
-            label="Facturas totales"
-            value={String(stats.count)}
-            icon={<FileText size={17} className="text-purple-600" />}
-            accent="purple"
-          />
-          <StatCard
-            label="Unidades compradas"
-            value={stats.totalUnidades.toLocaleString('es-CO')}
-            icon={<Package size={17} className="text-orange-600" />}
-            accent="orange"
-          />
-        </div>
+        {/* ── Franja de instrumentos ────────────────────────────────────────
+            Mismo criterio que Productos y Ventas: una sola superficie, con lo
+            invertido en el mes dominando por escala (es la cifra que el dueño
+            revisa) y el histórico como lectura de apoyo. */}
+        <Card padding={false} className="mb-6 overflow-hidden">
+          <div className="flex flex-col divide-y divide-slate-100 sm:flex-row sm:items-stretch sm:divide-x sm:divide-y-0">
+            <div className="flex-1 p-4 sm:p-5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Invertido este mes
+              </p>
+              <p className="mt-2 num text-[32px] font-bold leading-none tracking-[-0.03em] text-slate-900 sm:text-[40px]">
+                {formatCOP(stats.totalMes)}
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                <span className="num font-bold text-slate-700">{stats.esMes}</span>{' '}
+                factura{stats.esMes !== 1 ? 's' : ''} en el mes
+                {' · '}
+                <span className="num font-bold text-slate-700">{stats.count}</span> en total
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:flex sm:divide-x sm:divide-slate-100">
+              <InvoiceReadout
+                label="Total histórico"
+                value={formatCOP(stats.total)}
+                hint="acumulado en compras"
+              />
+              <InvoiceReadout
+                label="Unidades"
+                value={stats.totalUnidades.toLocaleString('es-CO')}
+                hint="compradas"
+              />
+            </div>
+          </div>
+        </Card>
 
         {/* ── Upload zone ──────────────────────────────────────────────────── */}
         <Can permission="facturas:create">
@@ -240,11 +269,11 @@ export default function InvoicesPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th className="hidden sm:table-cell">#</Th>
-                  <Th>Proveedor</Th>
-                  <Th>Total</Th>
-                  <Th className="hidden sm:table-cell">Ítems</Th>
-                  <Th className="hidden md:table-cell">Fecha</Th>
+                  <Th className="hidden sm:table-cell pl-5 tracking-[0.1em]">#</Th>
+                  <Th className="tracking-[0.1em]">Proveedor</Th>
+                  <Th className="text-right tracking-[0.1em]">Total</Th>
+                  <Th className="hidden sm:table-cell text-right tracking-[0.1em]">Ítems</Th>
+                  <Th className="hidden md:table-cell tracking-[0.1em]">Fecha</Th>
                   <Th> </Th>
                 </tr>
               </thead>
@@ -260,7 +289,7 @@ export default function InvoicesPage() {
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                         onClick={() => toggleExpand(f.id)}
                       >
-                        <Td className="font-mono text-xs text-slate-400 hidden sm:table-cell">#{f.id}</Td>
+                        <Td className="hidden sm:table-cell pl-5 num text-xs text-slate-400">#{f.id}</Td>
                         <Td>
                           <div>
                             <p className="font-semibold text-slate-800">{proveedorNombre(f.proveedor_id)}</p>
@@ -275,12 +304,12 @@ export default function InvoicesPage() {
                             </span>
                           </div>
                         </Td>
-                        <Td className="font-bold text-slate-800 tabular-nums">{formatCOP(total)}</Td>
-                        <Td className="hidden sm:table-cell">
-                          <Badge variant="gray">
-                            <ShoppingCart size={10} className="mr-0.5" />
-                            {f.compras.length} ítem{f.compras.length !== 1 ? 's' : ''}
-                          </Badge>
+                        <Td className="text-right num text-[15px] font-bold text-slate-900 whitespace-nowrap">{formatCOP(total)}</Td>
+                        <Td className="hidden sm:table-cell text-right whitespace-nowrap">
+                          <span className="num text-[15px] font-bold text-slate-700">{f.compras.length}</span>
+                          <span className="ml-1 text-[10px] text-slate-400">
+                            ítem{f.compras.length !== 1 ? 's' : ''}
+                          </span>
                         </Td>
                         <Td className="text-slate-400 text-xs whitespace-nowrap hidden md:table-cell">{formatDate(f.fecha_creacion)}</Td>
                         <Td>

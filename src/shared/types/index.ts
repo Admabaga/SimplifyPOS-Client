@@ -205,6 +205,14 @@ export interface AuditEntry {
 
 // ─── Reportes ─────────────────────────────────────────────────────────────────
 
+/** Reporte por rango de fechas — mismo P&L que el mensual pero acotado a
+ *  `desde`/`hasta`. Lo usa el dashboard para que gastos, ganancia neta y top
+ *  de productos sigan el filtro y no queden clavados al mes. */
+export interface ReporteRango extends Omit<ReporteMensual, 'year' | 'month'> {
+  desde: string
+  hasta: string
+}
+
 export interface ReporteMensual {
   year: number
   month: number

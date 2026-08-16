@@ -312,7 +312,7 @@ export default function ReportsPage() {
           severity: 'info',
           icon: <Package size={16} />,
           title: `Tus 3 productos top mueven el ${top3Share.toFixed(0)}% del negocio`,
-          description: `Concentración saludable. "${topProductos[0].nombre}" lidera con ${formatCOP(topProductos[0].total)} (${topProductos[0].unidades} u.). Mantén stock prioritario y vigila márgenes.`,
+          description: `Concentración saludable. "${topProductos[0].nombre}" lidera con ${formatCOP(topProductos[0].total)} (${topProductos[0].unidades} uds). Mantén stock prioritario y vigila márgenes.`,
           metric: formatCOP(topProductos[0].total),
           metricLabel: topProductos[0].nombre,
         })

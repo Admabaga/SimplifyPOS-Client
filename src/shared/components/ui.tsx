@@ -8,7 +8,7 @@ import React, {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
-import { Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, Calendar, X } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus, Calendar, X, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 // ─── Button ──────────────────────────────────────────────────────────────────
@@ -460,7 +460,9 @@ export function EmptyState({
 // ─── PageHeader ──────────────────────────────────────────────────────────────
 
 interface PageHeaderProps {
-  title: string
+  /** Opcional: la barra superior ya muestra la ruta actual como título. Se omite
+   *  aquí para no repetir el mismo texto dos veces en pantalla. */
+  title?: string
   subtitle?: string
   actions?: ReactNode
   back?: boolean
@@ -481,8 +483,8 @@ export function PageHeader({ title, subtitle, actions, back }: PageHeaderProps) 
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>}
+          {title && <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">{title}</h1>}
+          {subtitle && <p className={clsx('text-sm text-slate-500', title && 'mt-0.5')}>{subtitle}</p>}
         </div>
       </div>
       {actions && <div className="flex gap-2 items-center flex-wrap">{actions}</div>}
@@ -512,6 +514,14 @@ interface ModalProps {
   title: string
   children: ReactNode
   footer?: ReactNode
+  /** Micro-título de contexto sobre el título (ej. "Inventario"). */
+  eyebrow?: string
+  /** Icono a la izquierda del título; hereda el color del tema. */
+  icon?: ReactNode
+  /** Aclaración breve bajo el título — evita explicar dentro del formulario. */
+  description?: string
+  /** Variante de intención: `danger` tiñe el filete superior y el icono. */
+  tone?: 'default' | 'danger'
   /**
    * sm  = 384px   · diálogos simples
    * md  = 448px   · formularios cortos
@@ -523,8 +533,12 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
 }
 
-export function Modal({ open, onClose, title, children, footer, size = 'md' }: ModalProps) {
+export function Modal({
+  open, onClose, title, children, footer, size = 'md',
+  eyebrow, icon, description, tone = 'default',
+}: ModalProps) {
   const titleId = useId()
+  const descId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   // Ref para onClose → el handler de Escape siempre usa la versión más reciente
   // sin necesitar onClose como dependencia del useEffect de apertura.
@@ -586,39 +600,123 @@ export function Modal({ open, onClose, title, children, footer, size = 'md' }: M
   // Portal al document.body — el backdrop cubre TODO el viewport incluyendo sidebar
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 lg:p-6" role="presentation">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
+      {/* Fondo entintado (no negro puro): el negro plano se ve digital y barato;
+          un azul-tinta profundo deja respirar el color del panel. */}
+      <div
+        className="fixed inset-0 bg-slate-950/55 backdrop-blur-[3px] animate-backdrop-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={description ? descId : undefined}
         tabIndex={-1}
         className={clsx(
-          'relative z-10 bg-white w-full focus:outline-none animate-slide-up',
-          'rounded-2xl shadow-2xl flex flex-col',
+          'relative z-10 w-full bg-white focus:outline-none animate-modal-in',
+          'flex flex-col overflow-hidden rounded-2xl',
+          // Sombra en capas + hairline: se lee como un objeto apoyado, no como
+          // un rectángulo flotando con blur genérico.
+          'shadow-[0_1px_2px_rgba(15,23,42,0.08),0_24px_48px_-12px_rgba(15,23,42,0.28)] ring-1 ring-slate-900/[0.06]',
           heightCls,
           sizes[size],
         )}
       >
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 shrink-0">
-          <h3 id={titleId} className="text-sm font-semibold text-slate-900">{title}</h3>
+        {/* Filete de identidad: 3px del color del tema (rojo si es destructivo).
+            Es la firma que distingue el modal de un card cualquiera. */}
+        <span
+          aria-hidden="true"
+          className={clsx('h-[3px] w-full shrink-0', tone === 'danger' ? 'bg-red-500' : 't-gradient')}
+        />
+
+        <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3.5 sm:px-6 sm:pt-5 shrink-0">
+          <div className="flex min-w-0 items-start gap-3">
+            {icon && (
+              <span
+                className={clsx(
+                  'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
+                  tone === 'danger'
+                    ? 'bg-red-50 text-red-600 ring-red-100'
+                    : 't-bg-xlt t-text-dk ring-[var(--t-primary-light)]',
+                )}
+              >
+                {icon}
+              </span>
+            )}
+            <div className="min-w-0">
+              {eyebrow && (
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {eyebrow}
+                </p>
+              )}
+              {/* 17px con tracking negativo: a 14px el título competía con el
+                  cuerpo y el modal se sentía sin jerarquía. */}
+              <h3
+                id={titleId}
+                className="text-[17px] font-semibold leading-tight tracking-[-0.01em] text-slate-900"
+              >
+                {title}
+              </h3>
+              {description && (
+                <p id={descId} className="mt-1 text-xs leading-relaxed text-slate-500">
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="-mr-1 shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto flex-1 min-h-0">{children}</div>
+
+        {/* Hairline en vez de borde completo: separa sin encajonar */}
+        <span aria-hidden="true" className="mx-5 h-px shrink-0 bg-slate-100 sm:mx-6" />
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+
         {footer && (
-          <div className="px-5 py-3.5 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/60 rounded-b-2xl shrink-0">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-5 py-3.5 sm:px-6">
             {footer}
           </div>
         )}
       </div>
     </div>,
     document.body,
+  )
+}
+
+// ─── ModalSection ─────────────────────────────────────────────────────────────
+// Agrupa campos dentro de un modal con una etiqueta en micro-mayúsculas y un
+// hairline. El espacio hace el trabajo: los campos de un mismo bloque se juntan
+// y los bloques se separan mucho — así se lee la estructura sin leer el texto.
+
+export function ModalSection({
+  title, description, children, className,
+}: {
+  title?: string
+  description?: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={clsx('space-y-3', className)}>
+      {title && (
+        <div className="flex items-center gap-2.5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 whitespace-nowrap">
+            {title}
+          </span>
+          <span className="h-px flex-1 bg-slate-100" />
+        </div>
+      )}
+      {description && <p className="-mt-1 text-xs text-slate-500">{description}</p>}
+      {children}
+    </section>
   )
 }
 
@@ -639,7 +737,13 @@ export function ConfirmDialog({
   open, onConfirm, onCancel, title, message, confirmLabel = 'Confirmar', danger, loading,
 }: ConfirmDialogProps) {
   return (
-    <Modal open={open} onClose={onCancel} title={title} size="sm"
+    <Modal
+      open={open}
+      onClose={onCancel}
+      title={title}
+      size="sm"
+      tone={danger ? 'danger' : 'default'}
+      icon={danger ? <AlertTriangle size={17} /> : undefined}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} disabled={loading}>Cancelar</Button>

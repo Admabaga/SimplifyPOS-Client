@@ -312,7 +312,7 @@ export function StepPayment({
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold t-text uppercase tracking-wide">Total a cobrar</span>
             <span className="text-[11px] text-slate-400">
-              · {cart.reduce((s, i) => s + i.cantidad, 0)} u.
+              · {cart.reduce((s, i) => s + i.cantidad, 0)} uds
             </span>
           </div>
           <span className="text-xl font-extrabold t-text-dk tabular-nums">{formatCOP(total)}</span>

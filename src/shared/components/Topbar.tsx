@@ -55,7 +55,11 @@ function Breadcrumbs() {
             <li key={to} className="flex items-center gap-1">
               {i > 0 && <span className="text-slate-300 select-none">/</span>}
               {isLast ? (
-                <span className="font-medium text-slate-700">{label}</span>
+                // La ruta actual ES el título de la página: se le da el peso que
+                // antes cargaba el <h1> del contenido, para no repetirlo dos veces.
+                <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+                  {label}
+                </span>
               ) : (
                 <Link to={to} className="text-slate-400 hover:text-slate-600 transition-colors">
                   {label}
@@ -179,7 +183,7 @@ function NotificationBell() {
         {count > 0 && (
           <span
             className={`absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full text-[10px] font-black text-white flex items-center justify-center leading-none ${
-              hasCritical ? 'bg-red-500' : 'bg-yellow-400'
+              hasCritical ? 'bg-red-600' : 'bg-red-500'
             }`}
           >
             {count > 9 ? '9+' : count}
@@ -198,7 +202,7 @@ function NotificationBell() {
               {count > 0 && (
                 <span
                   className={`text-[10px] font-black px-1.5 py-0.5 rounded-full text-white ${
-                    hasCritical ? 'bg-red-500' : 'bg-yellow-400'
+                    hasCritical ? 'bg-red-600' : 'bg-red-500'
                   }`}
                 >
                   {count}

@@ -4,14 +4,14 @@ import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Receipt, TrendingUp, DollarSign, ShoppingCart, ArrowRight, Package,
+  Receipt, TrendingUp, ShoppingCart, ArrowRight, Package,
 } from 'lucide-react'
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from 'recharts'
 import {
   PageHeader, Card, Table, Th, Td, Spinner, EmptyState, Button,
-  StatCard, DateRangeBar, SearchInput, Badge, InfoBanner, Pagination,
+  DateRangeBar, SearchInput, InfoBanner, Pagination,
 } from '@/shared/components/ui'
 import { usePagination } from '@/shared/hooks/usePagination'
 import { formatCOP, formatDate } from '@/shared/lib/formatters'
@@ -37,6 +37,50 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   )
 }
 
+// ─── Readout ──────────────────────────────────────────────────────────────────
+// Lectura de apoyo dentro de la franja. Sin acción asociada (a diferencia de
+// Productos, aquí no hay un filtro equivalente), pero mismo lenguaje visual.
+
+function Readout({
+  label, value, hint, tone = 'neutral',
+}: {
+  label: string
+  value: string
+  hint?: string
+  tone?: 'neutral' | 'good' | 'bad'
+}) {
+  const dot = tone === 'bad' ? 'bg-red-500' : tone === 'good' ? 't-bg' : 'bg-slate-300'
+  const num = tone === 'bad' ? 'text-red-600' : 'text-slate-900'
+  return (
+    <div className="min-w-0 px-4 py-3.5 sm:min-w-[150px] sm:px-5 sm:py-5">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {label}
+        </span>
+      </span>
+      <span className={`mt-1.5 block num text-[20px] font-bold leading-none sm:text-[24px] ${num}`}>
+        {value}
+      </span>
+      {hint && <span className="mt-1 block text-[10px] text-slate-400">{hint}</span>}
+    </div>
+  )
+}
+
+// ─── Salud del margen ─────────────────────────────────────────────────────────
+// El equivalente en Ventas a la alarma de stock en Productos: lo que exige
+// atención aquí es la venta donde se ganó poco o se perdió plata. La franja de
+// la fila lo delata sin tener que leer cada cifra.
+
+const MARGEN_BAJO = 15  // %
+
+function margenTone(ganancia: number, total: number) {
+  const pct = total > 0 ? (ganancia / total) * 100 : 0
+  if (ganancia < 0)      return { pct, stripe: 'border-l-red-400',   num: 'text-red-600',   label: 'Pérdida' }
+  if (pct < MARGEN_BAJO) return { pct, stripe: 'border-l-amber-400', num: 'text-amber-700', label: 'Margen bajo' }
+  return                        { pct, stripe: 'border-l-transparent', num: 'text-slate-900', label: '' }
+}
+
 export default function SalesPage() {
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
@@ -52,9 +96,14 @@ export default function SalesPage() {
     queryFn: () => ventasApi.getAll({ desde, hasta, limit: 500 }),
   })
 
+  // Mismo queryKey y params que ProductsPage: sin { limit: 500 } el backend
+  // devuelve solo los primeros 25 productos y las ventas de los demás se
+  // mostraban como "#42" en vez del nombre (y no se podían buscar). Además,
+  // al compartir queryKey con ProductsPage, la caché quedaba incompleta según
+  // qué pantalla cargara primero.
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
-    queryFn: () => productsApi.getAll(),
+    queryFn: () => productsApi.getAll({ limit: 500 }),
   })
 
   const { data: cuentas = [] } = useQuery({
@@ -69,39 +118,46 @@ export default function SalesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Historial de ventas"
-        subtitle="Ventas registradas a través de cuentas de crédito"
-      />
+      <PageHeader subtitle="Ventas registradas a través de cuentas de crédito" />
 
-      {/* ── Stats ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard
-          label="Total vendido"
-          value={formatCOP(stats.totalVentas)}
-          icon={<DollarSign size={17} className="t-text" />}
-          accent="green"
-        />
-        <StatCard
-          label="Ganancia bruta"
-          value={formatCOP(stats.totalGanancia)}
-          subValue={`${stats.margen.toFixed(1)}% margen`}
-          icon={<TrendingUp size={17} className="text-green-600" />}
-          accent="blue"
-        />
-        <StatCard
-          label="Transacciones"
-          value={String(stats.count)}
-          icon={<Receipt size={17} className="text-purple-600" />}
-          accent="purple"
-        />
-        <StatCard
-          label="Unidades vendidas"
-          value={stats.totalUnidades.toLocaleString('es-CO')}
-          icon={<ShoppingCart size={17} className="text-orange-600" />}
-          accent="orange"
-        />
-      </div>
+      {/* ── Franja de instrumentos ──────────────────────────────────────────
+          Mismo criterio que Productos: una sola superficie, el dato que manda
+          (lo vendido) domina por escala y el resto son lecturas de apoyo. */}
+      <Card padding={false} className="mb-6 overflow-hidden">
+        <div className="flex flex-col divide-y divide-slate-100 sm:flex-row sm:items-stretch sm:divide-x sm:divide-y-0">
+          <div className="flex-1 p-4 sm:p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Total vendido
+            </p>
+            <p className="mt-2 num text-[32px] font-bold leading-none tracking-[-0.03em] text-slate-900 sm:text-[40px]">
+              {formatCOP(stats.totalVentas)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              <span className="num font-bold text-slate-700">{stats.count}</span>{' '}
+              transacción{stats.count !== 1 ? 'es' : ''}
+              {' · '}
+              <span className="num font-bold text-slate-700">
+                {stats.totalUnidades.toLocaleString('es-CO')}
+              </span>{' '}
+              uds vendidas
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:flex sm:divide-x sm:divide-slate-100">
+            <Readout
+              label="Ganancia bruta"
+              value={formatCOP(stats.totalGanancia)}
+              hint={`${stats.margen.toFixed(1)}% margen`}
+              tone={stats.totalGanancia < 0 ? 'bad' : 'good'}
+            />
+            <Readout
+              label="Unidades"
+              value={stats.totalUnidades.toLocaleString('es-CO')}
+              hint={`en ${stats.count} venta${stats.count !== 1 ? 's' : ''}`}
+            />
+          </div>
+        </div>
+      </Card>
 
       {/* ── Charts (si hay datos suficientes) ─────────────────────────────── */}
       {chartData.length > 1 && (
@@ -218,25 +274,27 @@ export default function SalesPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Producto</Th>
-                <Th className="hidden sm:table-cell">Vendedor</Th>
-                <Th className="hidden sm:table-cell">Cant.</Th>
-                <Th className="hidden md:table-cell">Precio unit.</Th>
-                <Th>Total</Th>
-                <Th className="hidden sm:table-cell">Ganancia</Th>
-                <Th className="hidden lg:table-cell">Fecha</Th>
+                <Th className="pl-5 tracking-[0.1em]">Producto</Th>
+                <Th className="hidden sm:table-cell tracking-[0.1em]">Vendedor</Th>
+                <Th className="hidden sm:table-cell text-right tracking-[0.1em]">Cant.</Th>
+                <Th className="hidden md:table-cell text-right tracking-[0.1em]">Precio unit.</Th>
+                <Th className="text-right tracking-[0.1em]">Total</Th>
+                <Th className="hidden sm:table-cell text-right tracking-[0.1em]">Ganancia</Th>
+                <Th className="hidden lg:table-cell tracking-[0.1em]">Fecha</Th>
                 <Th> </Th>
               </tr>
             </thead>
             <tbody>
-              {pg.paginated.map((v) => (
-                <tr key={v.id} className="hover:bg-slate-50 transition-colors group">
-                  <Td className="font-medium text-slate-800">
-                    <div className="min-w-0">
+              {pg.paginated.map((v) => {
+                const m = margenTone(v.ganancia, v.precio_venta)
+                return (
+                <tr key={v.id} className="hover:bg-slate-50/70 transition-colors group">
+                  <Td className={`border-l-2 ${m.stripe} pl-4 font-medium text-slate-800`}>
+                    <div className="min-w-0 max-w-[240px]">
                       <span className="block truncate">{productoNombre(v.producto_id)}</span>
                       {/* Mobile: vendedor + cantidad como sub-línea */}
                       <span className="sm:hidden text-[10px] text-slate-500 truncate block max-w-[160px]">
-                        {vendedorNombre(v)} · {v.cantidad_unidades} u.
+                        {vendedorNombre(v)} · {v.cantidad_unidades} uds
                       </span>
                     </div>
                   </Td>
@@ -245,13 +303,17 @@ export default function SalesPage() {
                       {vendedorNombre(v)}
                     </span>
                   </Td>
-                  <Td className="text-slate-500 tabular-nums hidden sm:table-cell">{v.cantidad_unidades}</Td>
-                  <Td className="text-slate-500 tabular-nums hidden md:table-cell">{formatCOP(v.precio_unitario)}</Td>
-                  <Td className="font-semibold text-slate-800 tabular-nums whitespace-nowrap">{formatCOP(v.precio_venta)}</Td>
-                  <Td className="hidden sm:table-cell">
-                    <Badge variant={v.ganancia >= 0 ? 'green' : 'red'}>
+                  <Td className="hidden sm:table-cell text-right num text-slate-600">{v.cantidad_unidades}</Td>
+                  <Td className="hidden md:table-cell text-right num text-slate-500">{formatCOP(v.precio_unitario)}</Td>
+                  <Td className="text-right num text-[15px] font-bold text-slate-900 whitespace-nowrap">{formatCOP(v.precio_venta)}</Td>
+                  {/* Ganancia + margen: el monto solo no dice si la venta fue buena */}
+                  <Td className="hidden sm:table-cell text-right whitespace-nowrap">
+                    <span className={`block num text-[15px] font-bold ${m.num}`}>
                       {formatCOP(v.ganancia)}
-                    </Badge>
+                    </span>
+                    <span className={`block text-[10px] font-medium ${m.label ? m.num : 'text-slate-400'}`}>
+                      {m.label || `${m.pct.toFixed(0)}% margen`}
+                    </span>
                   </Td>
                   <Td className="text-slate-400 text-xs whitespace-nowrap hidden lg:table-cell">{formatDate(v.fecha_venta)}</Td>
                   <Td>
@@ -264,16 +326,30 @@ export default function SalesPage() {
                     />
                   </Td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </Table>
 
           <Pagination page={pg.page} total={pg.total} pageSize={pg.pageSize} onChange={pg.setPage} />
-          <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap justify-between items-center gap-2 text-xs text-slate-500">
-            <span>{filtered.length} venta{filtered.length !== 1 ? 's' : ''}</span>
-            <div className="flex gap-4 font-semibold">
-              <span className="text-slate-700 tabular-nums">Total: {formatCOP(filtered.reduce((s, v) => s + v.precio_venta, 0))}</span>
-              <span className="text-green-700 tabular-nums">Ganancia: {formatCOP(filtered.reduce((s, v) => s + v.ganancia, 0))}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-2.5 text-xs text-slate-500">
+            <span>
+              <span className="num font-bold text-slate-700">{filtered.length}</span>{' '}
+              venta{filtered.length !== 1 ? 's' : ''}
+            </span>
+            <div className="flex gap-4">
+              <span>
+                Total{' '}
+                <span className="num font-bold text-slate-700">
+                  {formatCOP(filtered.reduce((s, v) => s + v.precio_venta, 0))}
+                </span>
+              </span>
+              <span>
+                Ganancia{' '}
+                <span className="num font-bold t-text-dk">
+                  {formatCOP(filtered.reduce((s, v) => s + v.ganancia, 0))}
+                </span>
+              </span>
             </div>
           </div>
         </Card>
