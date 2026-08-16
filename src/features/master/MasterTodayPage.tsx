@@ -1,126 +1,221 @@
 /**
  * Master — "Mi día"
  *
- * Vista resumen para el founder: 3-5 KPIs accionables HOY + lista priorizada
- * de tenants a contactar. La diferencia con MasterAnalyticsPage es que esta
- * página responde a "¿qué hago hoy?", no a "¿cómo va el negocio en general?".
+ * Esta página responde una sola pregunta: ¿a quién llamo hoy y por qué?
+ *
+ * La versión anterior mostraba el mismo negocio hasta dos veces —una en la
+ * lista de alertas y otra en las tarjetas agrupadas por nivel— y abría con
+ * cuatro tarjetas de conteo que no dicen qué hacer. Aquí hay UNA cola
+ * ordenada por urgencia, y los negocios estables quedan plegados: no
+ * necesitan tiempo del founder, sólo la tranquilidad de saber que están ahí.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle, Building2, CheckCircle2, ChevronRight, Activity,
-  Sparkles, PhoneCall, AlertCircle, TrendingUp,
+  AlertCircle, ArrowRight, Building2, ChevronDown, RefreshCw,
 } from 'lucide-react'
-import {
-  PageHeader, Card, Spinner, EmptyState, Badge, SectionHeader, StatCard,
-} from '@/shared/components/ui'
+import { PageHeader, Button, Spinner, EmptyState } from '@/shared/components/ui'
 import { masterApi, type TenantHealth, type HealthLevel } from './api'
 import { useMasterStore } from '@/stores/master'
+import {
+  Cifra, Cifras, Espectro, Marcador, Motivo, NIVEL, Papel, Rotulo,
+} from './components/consola'
 
-// ─── Helpers visuales ───────────────────────────────────────────────────────
+// ─── Lectura de un negocio ───────────────────────────────────────────────────
 
-const LEVEL_META: Record<
-  HealthLevel,
-  { color: string; bg: string; border: string; label: string; emoji: string }
-> = {
-  green:  { color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', label: 'Saludable', emoji: '🟢' },
-  yellow: { color: 'text-amber-700',   bg: 'bg-amber-50',   border: 'border-amber-200',   label: 'Atención',  emoji: '🟡' },
-  red:    { color: 'text-red-700',     bg: 'bg-red-50',     border: 'border-red-200',     label: 'Crítico',   emoji: '🔴' },
+/** Traduce los días sin actividad a algo que se lee sin hacer cuentas. */
+function haceCuanto(dias: number | null): string {
+  if (dias === null) return 'nunca'
+  if (dias === 0) return 'hoy'
+  if (dias === 1) return 'ayer'
+  if (dias < 7) return `hace ${dias} d`
+  if (dias < 30) return `hace ${Math.floor(dias / 7)} sem`
+  return `hace ${Math.floor(dias / 30)} m`
 }
 
-function HealthBadge({ level, score }: { level: HealthLevel; score: number }) {
-  const m = LEVEL_META[level]
+function Dato({ etiqueta, valor, alerta }: { etiqueta: string; valor: string; alerta?: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${m.bg} ${m.color} border ${m.border}`}>
-      <span>{m.emoji}</span>
-      <span className="tabular-nums">{score}</span>
-    </span>
-  )
-}
-
-// ─── TenantHealthCard ─────────────────────────────────────────────────────────
-
-function TenantHealthCard({ t, onActuar }: { t: TenantHealth; onActuar: () => void }) {
-  const m = LEVEL_META[t.level]
-  const topReasons = t.reasons
-    .filter((r) => r.severity === 'danger' || r.severity === 'warning')
-    .slice(0, 3)
-
-  return (
-    <div className={`rounded-xl border p-3 ${m.border} ${m.bg} hover:shadow-sm transition-all`}>
-      <div className="flex items-start gap-3">
-        <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-base font-bold ${m.color} bg-white border ${m.border}`}>
-          <span className="tabular-nums text-xs">{t.score}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold text-slate-800 truncate text-sm">{t.nombre}</p>
-            <HealthBadge level={t.level} score={t.score} />
-          </div>
-          <p className="text-[11px] text-slate-500 truncate">{t.email}</p>
-
-          {topReasons.length > 0 && (
-            <ul className="mt-1.5 space-y-0.5">
-              {topReasons.map((r) => (
-                <li
-                  key={r.key}
-                  className={`text-[11px] flex items-center gap-1.5 ${
-                    r.severity === 'danger' ? 'text-red-600' : 'text-amber-700'
-                  }`}
-                >
-                  <span className="w-1 h-1 rounded-full bg-current shrink-0" />
-                  {r.label}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <button
-            onClick={onActuar}
-            className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium t-text hover:t-text-dk transition-colors"
-          >
-            Actuar como este negocio
-            <ChevronRight size={12} />
-          </button>
-        </div>
-      </div>
+    <div className="min-w-0">
+      <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        {etiqueta}
+      </p>
+      <p className={`num text-xs mt-0.5 ${alerta ? 'text-rose-600 font-semibold' : 'text-slate-700'}`}>
+        {valor}
+      </p>
     </div>
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+/**
+ * Una fila de la cola. No es una tarjeta: es un renglón de un listado de
+ * trabajo, y se lee de izquierda a derecha — qué tan mal está, quién es, qué
+ * le pasa, qué hago.
+ */
+function Renglon({ t, onActuar }: { t: TenantHealth; onActuar: () => void }) {
+  const motivos = t.reasons
+    .filter((r) => r.severity === 'danger' || r.severity === 'warning')
+    .slice(0, 4)
+
+  return (
+    <li className="group flex items-start gap-4 px-4 py-3.5 transition-colors hover:bg-slate-50/80">
+      <div className="pt-0.5">
+        <Marcador score={t.score} nivel={t.level} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="truncate text-sm font-semibold text-slate-900">{t.nombre}</p>
+          <span className={`shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] ${NIVEL[t.level].texto}`}>
+            {NIVEL[t.level].label}
+          </span>
+        </div>
+        <p className="truncate text-[11px] text-slate-400">{t.email}</p>
+
+        {motivos.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {motivos.map((r) => (
+              <Motivo key={r.key} tono={r.severity === 'danger' ? 'danger' : 'warning'}>
+                {r.label}
+              </Motivo>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-2.5 grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4 sm:max-w-lg">
+          <Dato
+            etiqueta="Último ingreso"
+            valor={haceCuanto(t.days_since_login)}
+            alerta={t.days_since_login === null || t.days_since_login > 7}
+          />
+          <Dato
+            etiqueta="Última venta"
+            valor={haceCuanto(t.days_since_sale)}
+            alerta={t.days_since_sale === null || t.days_since_sale > 3}
+          />
+          <Dato etiqueta="Caja hoy" valor={t.caja_today ? 'abierta' : 'sin abrir'} alerta={!t.caja_today} />
+          <Dato
+            etiqueta="Fiados vencidos"
+            valor={String(t.cuentas_morosas_30d)}
+            alerta={t.cuentas_morosas_30d > 0}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={onActuar}
+        className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-white hover:text-slate-900"
+      >
+        Entrar
+        <ArrowRight size={12} />
+      </button>
+    </li>
+  )
+}
+
+/** Los estables van plegados: existen, pero no piden nada. */
+function Estables({ lista, onActuar }: { lista: TenantHealth[]; onActuar: (t: TenantHealth) => void }) {
+  const [abierto, setAbierto] = useState(false)
+  if (lista.length === 0) return null
+
+  return (
+    <div>
+      <Rotulo contador={lista.length}>Estables</Rotulo>
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:bg-slate-50"
+      >
+        <div className="flex -space-x-0.5">
+          {lista.slice(0, 12).map((t) => (
+            <span key={t.admin_id} className="h-5 w-1 rounded-full bg-emerald-400" />
+          ))}
+        </div>
+        <p className="flex-1 text-xs text-slate-500">
+          <span className="font-semibold text-slate-700">{lista.length} negocios</span> operando sin
+          novedad. No requieren tu tiempo hoy.
+        </p>
+        <ChevronDown
+          size={15}
+          className={`text-slate-400 transition-transform ${abierto ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {abierto && (
+        <ul className="mt-2 grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
+          {lista.map((t) => (
+            <li key={t.admin_id}>
+              <button
+                type="button"
+                onClick={() => onActuar(t)}
+                className="flex w-full items-center gap-2.5 rounded-lg border border-slate-100 px-3 py-2 text-left transition-colors hover:border-slate-200 hover:bg-white"
+              >
+                <span className="num font-display text-[13px] text-emerald-700">{t.score}</span>
+                <span className="min-w-0 flex-1 truncate text-xs text-slate-700">{t.nombre}</span>
+                <ArrowRight size={11} className="shrink-0 text-slate-300" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ─── Página ──────────────────────────────────────────────────────────────────
 
 export default function MasterTodayPage() {
   const navigate = useNavigate()
   const { setActiveTenant } = useMasterStore()
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['master-health-scores'],
     queryFn: masterApi.healthScores,
     staleTime: 60_000,
   })
 
-  const tenantsByLevel = useMemo(() => {
-    if (!data) return { red: [], yellow: [], green: [] }
-    return {
-      red: data.tenants.filter((t) => t.level === 'red'),
-      yellow: data.tenants.filter((t) => t.level === 'yellow'),
-      green: data.tenants.filter((t) => t.level === 'green'),
-    }
+  /** La cola: críticos primero y, dentro de cada nivel, el peor score arriba. */
+  const cola = useMemo(() => {
+    if (!data) return []
+    const peso: Record<HealthLevel, number> = { red: 0, yellow: 1, green: 2 }
+    return data.tenants
+      .filter((t) => t.level !== 'green')
+      .sort((a, b) => peso[a.level] - peso[b.level] || a.score - b.score)
   }, [data])
 
-  function handleActuar(t: TenantHealth) {
+  const estables = useMemo(
+    () => (data?.tenants ?? []).filter((t) => t.level === 'green').sort((a, b) => b.score - a.score),
+    [data],
+  )
+
+  function actuar(t: TenantHealth) {
     setActiveTenant(t.admin_id, t.nombre)
     navigate('/dashboard')
   }
 
+  const encabezado = (
+    <PageHeader
+      subtitle="A quién llamar hoy, y por qué"
+      actions={
+        <Button
+          size="sm"
+          variant="outline"
+          icon={<RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />}
+          onClick={() => refetch()}
+        >
+          Actualizar
+        </Button>
+      }
+    />
+  )
+
   if (isLoading) {
     return (
       <div>
-        <PageHeader subtitle="Lo que importa HOY como founder" />
-        <div className="flex justify-center py-12"><Spinner /></div>
+        {encabezado}
+        <div className="flex justify-center py-16"><Spinner size={30} /></div>
       </div>
     )
   }
@@ -128,146 +223,99 @@ export default function MasterTodayPage() {
   if (isError || !data) {
     return (
       <div>
-        <PageHeader subtitle="Lo que importa HOY como founder" />
+        {encabezado}
         <EmptyState
-          icon={<AlertCircle size={32} />}
+          icon={<AlertCircle size={30} />}
           title="No se pudo cargar"
-          description="Reintenta en unos segundos"
+          description="Reintenta en unos segundos."
         />
       </div>
     )
   }
 
-  const { summary, alerts } = data
-  const accionablesHoy = tenantsByLevel.red.length + tenantsByLevel.yellow.length
+  const { summary } = data
 
-  return (
-    <div>
-      <PageHeader
-        subtitle="Lo que importa HOY como founder de SimplifyPOS"
-      />
-
-      {/* ── KPIs accionables ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard
-          label="Saludables"
-          value={String(summary.green)}
-          subValue={summary.total > 0 ? `${Math.round((summary.green / summary.total) * 100)}% del ecosistema` : ''}
-          icon={<CheckCircle2 size={17} className="text-emerald-600" />}
-          accent="green"
-        />
-        <StatCard
-          label="Atención"
-          value={String(summary.yellow)}
-          subValue="Revisar esta semana"
-          icon={<AlertTriangle size={17} className="text-amber-500" />}
-          accent="yellow"
-        />
-        <StatCard
-          label="Críticos"
-          value={String(summary.red)}
-          subValue="Contactar HOY"
-          icon={<PhoneCall size={17} className="text-red-500" />}
-          accent="red"
-        />
-        <StatCard
-          label="Total negocios"
-          value={String(summary.total)}
-          icon={<Building2 size={17} className="text-blue-600" />}
-          accent="blue"
+  if (summary.total === 0) {
+    return (
+      <div>
+        {encabezado}
+        <EmptyState
+          icon={<Building2 size={30} />}
+          title="Sin negocios aún"
+          description="A medida que se registren negocios verás aquí su salud."
         />
       </div>
+    )
+  }
 
-      {/* ── Alertas accionables ─────────────────────────────────────────── */}
-      {alerts.length > 0 && (
-        <Card padding={false} className="mb-6">
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader
-              title="Tu lista de contactos HOY"
-              icon={<PhoneCall size={15} className="text-red-500" />}
-            />
-            <p className="text-[11px] text-slate-500 mt-0.5">Los tenants con mayor riesgo de churn. Cada minuto cuenta.</p>
-          </div>
-          <ul className="divide-y divide-slate-50">
-            {alerts.map((a) => {
-              const m = LEVEL_META[a.level]
-              return (
-                <li
-                  key={a.admin_id}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/60 transition-colors"
-                >
-                  <span className="text-base">{m.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{a.nombre}</p>
-                    <p className={`text-xs ${a.level === 'red' ? 'text-red-600' : 'text-amber-700'}`}>
-                      {a.main_reason}
-                    </p>
-                  </div>
-                  <HealthBadge level={a.level} score={a.score} />
-                  <button
-                    onClick={() => {
-                      const t = data.tenants.find((x) => x.admin_id === a.admin_id)
-                      if (t) handleActuar(t)
-                    }}
-                    className="text-xs font-medium t-text hover:t-text-dk inline-flex items-center gap-1 shrink-0"
-                  >
-                    Ver
-                    <ChevronRight size={13} />
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </Card>
-      )}
+  const puntos = data.tenants.map((t) => ({
+    id: t.admin_id,
+    nombre: t.nombre,
+    score: t.score,
+    nivel: t.level,
+  }))
 
-      {alerts.length === 0 && summary.total > 0 && (
-        <Card className="mb-6 text-center">
-          <div className="py-6">
-            <Sparkles size={28} className="mx-auto text-emerald-500 mb-2" />
-            <p className="text-sm font-semibold text-slate-700">¡Día tranquilo! 🎉</p>
-            <p className="text-xs text-slate-500">Sin alertas críticas. Aprovecha para construir.</p>
-          </div>
-        </Card>
-      )}
+  return (
+    <div className="space-y-6">
+      {encabezado}
 
-      {/* ── Resto de tenants por nivel ────────────────────────────────── */}
-      {(['red', 'yellow', 'green'] as HealthLevel[]).map((level) => {
-        const list = tenantsByLevel[level]
-        if (list.length === 0) return null
-        const m = LEVEL_META[level]
-        return (
-          <div key={level} className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`text-base`}>{m.emoji}</span>
-              <h3 className="font-semibold text-slate-700">{m.label}</h3>
-              <Badge variant="gray">{list.length}</Badge>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {list.map((t) => (
-                <TenantHealthCard
-                  key={t.admin_id}
-                  t={t}
-                  onActuar={() => handleActuar(t)}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
+      {/* ── El espectro: la forma de la cartera en una sola banda ── */}
+      {/* Cifras a la izquierda, espectro llenando lo que sobre: en un monitor
+          ancho el panel se lee como la cabecera de un informe, no como una
+          columna con aire muerto al costado. */}
+      <Papel className="grid gap-6 p-5 xl:grid-cols-[auto_minmax(0,1fr)] xl:items-center xl:gap-8">
+        <Cifras>
+          <Cifra
+            valor={cola.length}
+            etiqueta="Piden atención"
+            nota={cola.length === 0 ? 'nada pendiente' : `de ${summary.total} negocios`}
+            tono={summary.red > 0 ? 'red' : cola.length > 0 ? 'yellow' : 'green'}
+          />
+          <Cifra valor={summary.red} etiqueta="Críticos" nota="contactar hoy" tono="red" />
+          <Cifra valor={summary.yellow} etiqueta="En riesgo" nota="esta semana" tono="yellow" />
+          <Cifra valor={summary.green} etiqueta="Estables" tono="green" />
+        </Cifras>
 
-      {summary.total === 0 && (
-        <EmptyState
-          icon={<Building2 size={32} />}
-          title="Sin negocios aún"
-          description="A medida que se registren tenants verás aquí su salud."
+        <Espectro
+          puntos={puntos}
+          onSelect={(id) => {
+            const t = data.tenants.find((x) => x.admin_id === id)
+            if (t) actuar(t)
+          }}
         />
+      </Papel>
+
+      {/* ── La cola de trabajo ── */}
+      {cola.length > 0 ? (
+        <div>
+          <Rotulo contador={cola.length}>Tu cola de hoy</Rotulo>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <ul className="divide-y divide-slate-100">
+              {cola.map((t) => (
+                <Renglon key={t.admin_id} t={t} onActuar={() => actuar(t)} />
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Rotulo>Tu cola de hoy</Rotulo>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-5 py-8 text-center">
+            <p className="font-display text-lg tracking-[-0.02em] text-emerald-900">
+              Nada que apagar hoy
+            </p>
+            <p className="mt-1 text-xs text-emerald-700/80">
+              Los {summary.total} negocios están operando. Buen día para construir.
+            </p>
+          </div>
+        </div>
       )}
 
-      <p className="text-[10px] text-slate-400 text-center mt-8">
-        Indicadores: login, ventas, caja, DIAN, cobranza. Score 0-100 actualizado en tiempo real.
-        <br />
-        <Activity size={10} className="inline" /> Health score · <TrendingUp size={10} className="inline" /> Más detalles en Analytics
+      <Estables lista={estables} onActuar={actuar} />
+
+      <p className="border-t border-slate-100 pt-4 text-[10.5px] leading-relaxed text-slate-400">
+        El score combina ingreso, ventas, apertura de caja, estado DIAN y cobranza. Va de 0 a 100 y
+        se recalcula en cada consulta — no es un promedio histórico, es la foto de ahora.
       </p>
     </div>
   )
