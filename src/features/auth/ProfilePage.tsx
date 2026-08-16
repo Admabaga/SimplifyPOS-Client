@@ -14,6 +14,7 @@ import { apiError } from '@/shared/lib/apiError'
 import { PageHeader, Card, Button, Badge } from '@/shared/components/ui'
 import TwoFactorCard from './TwoFactorCard'
 import PasskeysCard from './PasskeysCard'
+import SessionPolicyCard from '@/features/security/SessionPolicyCard'
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -428,6 +429,9 @@ export default function ProfilePage() {
 
           <TwoFactorCard />
           <PasskeysCard />
+
+          {/* Solo master: ajusta los tiempos de sesión del negocio activo. */}
+          <SessionPolicyCard />
         </div>
       </div>
     </div>

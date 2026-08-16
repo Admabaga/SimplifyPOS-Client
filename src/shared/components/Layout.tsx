@@ -9,29 +9,36 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, applyTheme } from '@/stores/theme'
 import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
 import SetupWizard, { useSetupWizard } from '@/features/onboarding/SetupWizard'
+import { useSessionPolicy } from '@/features/security/sessionPolicyApi'
 
 // Minutos de INACTIVIDAD antes de cerrar sesión por seguridad. El temporizador
 // se reinicia con cualquier clic, tecla o movimiento: a un cajero trabajando no
-// le salta nunca. Solo protege el caso que importa —la caja desatendida— y por
-// eso 30 min, no 2 horas: un POS abierto y sin nadie delante es el riesgo real.
-// No confundir con la vida del token de sesión (2h, en el servidor), que se
-// renueva sola por detrás y el usuario no percibe.
+// le salta nunca. Solo protege el caso que importa —la caja abierta y sin nadie
+// delante—. No confundir con la vida del token de sesión, que la aplica el
+// servidor y se renueva sola sin que el usuario lo note.
+//
+// El valor real lo fija el master por negocio (Perfil → Seguridad de la sesión).
+// Esto es el respaldo mientras esa política carga, o si la API no responde.
 // Configurable por env (Render → Static Site → VITE_IDLE_TIMEOUT_MIN).
-const IDLE_TIMEOUT_MIN = Number(import.meta.env.VITE_IDLE_TIMEOUT_MIN) || 30
-const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MIN * 60 * 1000
+const IDLE_FALLBACK_MIN = Number(import.meta.env.VITE_IDLE_TIMEOUT_MIN) || 30
 
 function useIdleTimer() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { data: policy } = useSessionPolicy()
+
+  // 0 = el master desactivó el bloqueo para este negocio (caja desatendida).
+  const idleMin = policy?.idle_timeout_min ?? IDLE_FALLBACK_MIN
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || idleMin === 0) return
 
+    const timeoutMs = idleMin * 60 * 1000
     const trigger = () => window.dispatchEvent(new CustomEvent('simplifypos:session-expired'))
 
     const reset = () => {
       if (timerRef.current) clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(trigger, IDLE_TIMEOUT_MS)
+      timerRef.current = setTimeout(trigger, timeoutMs)
     }
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click']
@@ -43,7 +50,7 @@ function useIdleTimer() {
       if (timerRef.current) clearTimeout(timerRef.current)
       events.forEach((e) => window.removeEventListener(e, reset))
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, idleMin])
 }
 
 export default function Layout() {
