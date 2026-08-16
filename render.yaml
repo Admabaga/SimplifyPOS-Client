@@ -58,6 +58,11 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false                # URL del backend en Render (la set manualmente)
+      # Minutos de INACTIVIDAD antes de cerrar sesión. Se reinicia con cualquier
+      # clic o tecla, así que a un cajero trabajando no le salta: solo protege
+      # la caja abierta y desatendida.
+      - key: VITE_IDLE_TIMEOUT_MIN
+        value: "30"
 
   # ═══════════════════════════════════════════════════════════════════════════
   # AMBIENTE DEVELOP (staging) — frontend apuntando al backend dev
@@ -107,6 +112,8 @@ services:
         value: public, max-age=31536000, immutable
 
     envVars:
+      - key: VITE_IDLE_TIMEOUT_MIN
+        value: "30"
       - key: VITE_API_URL
         sync: false                # URL del backend DEV + /api/v1
                                    # ej: https://simplifypos-api-dev.onrender.com/api/v1

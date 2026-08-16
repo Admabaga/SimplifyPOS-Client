@@ -10,9 +10,14 @@ import { useThemeStore, applyTheme } from '@/stores/theme'
 import { useGlobalShortcuts } from '@/shared/hooks/useGlobalShortcuts'
 import SetupWizard, { useSetupWizard } from '@/features/onboarding/SetupWizard'
 
-// Minutos de inactividad antes de cerrar sesión por seguridad.
-// Configurable por env (Render → Static Site → VITE_IDLE_TIMEOUT_MIN). Default 120.
-const IDLE_TIMEOUT_MIN = Number(import.meta.env.VITE_IDLE_TIMEOUT_MIN) || 120
+// Minutos de INACTIVIDAD antes de cerrar sesión por seguridad. El temporizador
+// se reinicia con cualquier clic, tecla o movimiento: a un cajero trabajando no
+// le salta nunca. Solo protege el caso que importa —la caja desatendida— y por
+// eso 30 min, no 2 horas: un POS abierto y sin nadie delante es el riesgo real.
+// No confundir con la vida del token de sesión (2h, en el servidor), que se
+// renueva sola por detrás y el usuario no percibe.
+// Configurable por env (Render → Static Site → VITE_IDLE_TIMEOUT_MIN).
+const IDLE_TIMEOUT_MIN = Number(import.meta.env.VITE_IDLE_TIMEOUT_MIN) || 30
 const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MIN * 60 * 1000
 
 function useIdleTimer() {
