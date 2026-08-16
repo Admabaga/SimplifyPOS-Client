@@ -1,4 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+/* Display con carácter propio. Inter sola es correcta pero anónima: la usan
+   miles de productos. Bricolage Grotesque tiene terminales y aperturas con
+   personalidad —algo industrial, algo editorial— sin caer en la fuente
+   "amigable" de siempre (Poppins/Montserrat). Solo para titulares; el cuerpo
+   sigue en Inter, que es donde manda la legibilidad. */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -38,6 +44,7 @@
 
   /* ─── Typography ─────────────────────────────────────────── */
   --font-sans:            'Inter', system-ui, -apple-system, sans-serif;
+  --font-display:         'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
   /* Solo para códigos (barras, DIAN): ahí la monoespaciada ayuda a
      distinguir 0/O y 1/l. Los NÚMEROS de negocio usan Inter con cifras
      tabulares (.num) — una mono de fallback los hacía ver más pequeños
@@ -266,6 +273,15 @@ html, body, #root {
 
 /* ─── Number animation ───────────────────────────────────────── */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ─── Titulares ──────────────────────────────────────────────────
+   Tracking negativo: los tamaños grandes necesitan cerrar el espacio
+   entre letras o se ven sueltos y amateur. */
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: 'wdth' 92;
+  letter-spacing: -0.035em;
+}
 
 /* ─── Cifras de negocio ──────────────────────────────────────────
    Inter con cifras tabulares: alinean en columna igual que una

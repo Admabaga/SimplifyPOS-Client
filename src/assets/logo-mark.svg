@@ -1,0 +1,15 @@
+<!--
+  Variante knockout del logo: sólo la marca, sin la teja verde oscura.
+  Se usa sobre superficies oscuras (sidebar, hero del login, overlay de logout),
+  donde la teja del icono completo se confundiría con el fondo.
+  El icono con teja (logo.svg) se reserva para fondos claros y para el favicon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 108 312 312" width="312" height="312">
+  <g fill="#a8f0cb">
+    <rect x="120" y="330" width="52" height="74" rx="26" fill-opacity=".38"></rect>
+    <rect x="230" y="288" width="52" height="116" rx="26" fill-opacity=".38"></rect>
+    <rect x="340" y="222" width="52" height="182" rx="26"></rect>
+  </g>
+  <path d="M120 302 L184 240 L246 280 L362 166" fill="none" stroke="#a8f0cb" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path d="M404 124 L379 197 L331 149 Z" fill="#a8f0cb" stroke="#a8f0cb" stroke-width="6" stroke-linejoin="round"></path>
+</svg>

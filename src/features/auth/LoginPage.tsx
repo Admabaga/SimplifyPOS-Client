@@ -17,7 +17,7 @@ import {
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
-import IconChart from '@/assets/IconChart.png'
+import Logo from '@/assets/logo-mark.svg'
 
 // ─── Live activity panel — feed dinámico estilo dashboard ────────────────────
 const TICKER_ITEMS = [
@@ -429,6 +429,36 @@ export default function LoginPage() {
           }
           .mock-bar { transform-origin: bottom; animation: bar-grow 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
           .mock-row { animation: slide-in 0.5s ease-out both; }
+
+          /* ── Lenguaje "tiquete" ───────────────────────────────────────────
+             El alma de un POS es el recibo impreso. En vez del degradado y las
+             tarjetas de vidrio que usa cualquier SaaS, el pie del hero toma
+             prestada la gramática del tiquete: línea perforada, guía de puntos
+             y cifras tabulares. Es el objeto que el tendero ya conoce. */
+          .perf-rule {
+            height: 1px;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.34) 1px, transparent 1px);
+            background-size: 7px 1px;
+            background-repeat: repeat-x;
+          }
+          .perf-rule::before, .perf-rule::after {
+            content: '';
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--t-sidebar-bg);
+            top: -5px;
+          }
+          .perf-rule::before { left: -13px; }
+          .perf-rule::after  { right: -13px; }
+
+          /* Guía de puntos entre etiqueta y valor, como en una factura */
+          .leader {
+            flex: 1;
+            margin: 0 8px;
+            border-bottom: 1px dotted rgba(255,255,255,0.22);
+            transform: translateY(-3px);
+          }
         `}</style>
 
         {/* Aurora mesh background */}
@@ -461,7 +491,7 @@ export default function LoginPage() {
             <div className="relative">
               <div className="absolute inset-0 rounded-xl blur-xl scale-150 anim-glow"
                    style={{ background: 'var(--t-accent)' }} />
-              <img src={IconChart} alt="" className="relative h-9 w-auto max-w-[3rem] object-contain drop-shadow-xl" />
+              <img src={Logo} alt="" className="relative h-9 w-9 drop-shadow-xl" />
             </div>
             <div>
               <p className="text-white font-extrabold text-lg leading-none tracking-tight">SimplifyPOS</p>
@@ -473,9 +503,9 @@ export default function LoginPage() {
         </div>
 
         {/* ─── Centro: hero claim + dashboard mock ─── */}
-        <div className="relative z-10 flex flex-col items-start max-w-2xl w-full flex-1 justify-start overflow-hidden py-4 lg:py-6">
+        <div className="relative z-10 flex w-full max-w-2xl flex-1 flex-col items-start justify-start py-4 lg:py-6">
           {/* Hero claim grande */}
-          <h1 className="text-[28px] sm:text-[36px] xl:text-[40px] font-extrabold leading-[1.08] tracking-tight text-white mb-3 anim-fade-up"
+          <h1 className="font-display text-[34px] sm:text-[44px] xl:text-[52px] font-bold leading-[0.98] text-white mb-3 anim-fade-up"
               style={{ animationDelay: '0.15s' }}>
             Tu negocio,<br />
             <span className="text-shimmer">siempre al día.</span>
@@ -486,22 +516,32 @@ export default function LoginPage() {
             El POS diseñado para comerciantes colombianos. Inventario, ventas, caja y DIAN en una sola app.
           </p>
 
-          {/* Feature bullets — 3 props claras como Wompi */}
-          <div className="flex flex-col gap-3 mb-6 anim-fade-up w-full max-w-sm xl:hidden" style={{ animationDelay: '0.32s' }}>
+          {/* Propuestas de valor. Con iconos de la librería y no emojis: los
+              emojis cambian de forma según el sistema operativo y restan
+              seriedad a una pantalla que es la primera impresión del producto. */}
+          <div
+            className="mb-6 grid w-full max-w-sm gap-2.5 anim-fade-up sm:max-w-xl sm:grid-cols-3 xl:hidden"
+            style={{ animationDelay: '0.32s' }}
+          >
             {[
-              { icon: '⚡', title: 'Venta en 8 segundos', desc: 'Busca, agrega y cobra sin fricciones' },
-              { icon: '📊', title: 'Reportes en tiempo real', desc: 'KPIs, caja y stock siempre actualizados' },
-              { icon: '🧾', title: 'Facturación DIAN', desc: 'Factura y factura electrónica con un click' },
-            ].map((f, i) => (
+              { Icon: Zap,      title: 'Venta en segundos',  desc: 'Busca, agrega y cobra sin fricciones' },
+              { Icon: BarChart3, title: 'Reportes en vivo',   desc: 'Caja, stock y ganancia al día' },
+              { Icon: Receipt,  title: 'Facturación DIAN',   desc: 'Factura electrónica con un clic' },
+            ].map(({ Icon, title, desc }) => (
               <div
-                key={i}
-                className="flex items-start gap-3 px-3.5 py-3 rounded-xl border border-white/10"
+                key={title}
+                className="flex items-start gap-3 rounded-xl border border-white/10 px-3.5 py-3 sm:flex-col sm:gap-2"
                 style={{ background: 'rgba(255,255,255,0.05)' }}
               >
-                <span className="text-xl leading-none mt-0.5">{f.icon}</span>
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: 'rgba(255,255,255,0.08)' }}
+                >
+                  <Icon size={15} style={{ color: 'var(--t-accent)' }} strokeWidth={2.3} />
+                </span>
                 <div>
-                  <p className="text-sm font-bold text-white leading-tight">{f.title}</p>
-                  <p className="text-xs text-white/55 mt-0.5 leading-tight">{f.desc}</p>
+                  <p className="text-sm font-bold leading-tight text-white">{title}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-white/55">{desc}</p>
                 </div>
               </div>
             ))}
@@ -524,7 +564,14 @@ export default function LoginPage() {
           </button>
 
           {/* Dashboard mock flotante 3D — solo xl+ para no saturar */}
-          <div className="relative w-full anim-fade-up hidden xl:block" style={{ animationDelay: '0.45s' }}>
+          {/* El mockup es más alto que el espacio libre del panel, así que se
+              reduce en bloque en vez de recortarlo: así entran completos tanto
+              la tarjeta superior como la inferior. El origen arriba-izquierda
+              evita que quede flotando centrado al escalar. */}
+          <div
+            className="relative mt-3 w-full origin-top-left anim-fade-up hidden xl:block xl:scale-[0.86]"
+            style={{ animationDelay: '0.45s' }}
+          >
             {/* Glow detrás del mock */}
             <div className="absolute -inset-4 rounded-3xl blur-2xl opacity-50"
                  style={{ background: 'radial-gradient(circle at 50% 0%, var(--t-accent) 0%, transparent 60%)' }} />
@@ -633,7 +680,7 @@ export default function LoginPage() {
 
               {/* Floating accent card top-right */}
               <div
-                className="hidden xl:flex absolute -top-6 -right-6 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
+                className="hidden xl:flex absolute -top-5 right-1 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.92), rgba(5,150,105,0.92))',
                   backdropFilter: 'blur(8px)',
@@ -649,7 +696,7 @@ export default function LoginPage() {
 
               {/* Floating accent card bottom-left */}
               <div
-                className="hidden xl:flex absolute -bottom-5 -left-5 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
+                className="hidden xl:flex absolute -bottom-4 left-1 anim-float items-center gap-2 px-3 py-2 rounded-xl border border-white/15 shadow-2xl"
                 style={{
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(241,245,249,0.95))',
                   animationDelay: '1.2s',
@@ -664,38 +711,44 @@ export default function LoginPage() {
 
         {/* ─── Bottom: stats + colombian pride ─── */}
         <div className="relative z-10 anim-fade-up shrink-0" style={{ animationDelay: '0.7s' }}>
-          <div className="grid grid-cols-3 gap-3 pb-3 border-b border-white/10">
-            {[
-              { v: <AnimatedCounter target={8} suffix="s" />,    l: 'Por venta',     i: Zap,       c: 'text-amber-300'   },
-              { v: <AnimatedCounter target={100} suffix="%" />,  l: 'Cifras DIAN',   i: Shield,    c: 'text-emerald-300' },
-              { v: <AnimatedCounter target={24} suffix="/7" />,  l: 'En tu negocio', i: BarChart3, c: 'text-blue-300'    },
-            ].map((s, i) => {
-              const Icon = s.i
-              return (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                       style={{ background: 'rgba(255,255,255,0.06)' }}>
-                    <Icon size={13} className={s.c} strokeWidth={2.4} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-base xl:text-lg font-extrabold text-white tabular-nums leading-none">{s.v}</p>
-                    <p className="text-[10px] text-white/45 mt-1 leading-none truncate">{s.l}</p>
-                  </div>
-                </div>
-              )
-            })}
+          {/* Encabezado del tiquete */}
+          <div className="mb-2.5 flex items-center gap-2.5">
+            <Receipt size={12} style={{ color: 'var(--t-accent)' }} />
+            <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/45">
+              SimplifyPOS · Colombia
+            </span>
           </div>
 
-          <div className="flex items-center justify-between mt-3">
+          <div className="relative perf-rule" />
+
+          {/* Renglones: etiqueta — guía de puntos — valor, como en una factura */}
+          <div className="space-y-1.5 py-3">
+            {[
+              { l: 'Una venta toma',      v: <AnimatedCounter target={8} suffix=" s" /> },
+              { l: 'Factura electrónica', v: 'DIAN' },
+              { l: 'Disponible',          v: <AnimatedCounter target={24} suffix="/7" /> },
+            ].map((r) => (
+              <div key={r.l} className="flex items-baseline">
+                <span className="shrink-0 text-[11px] text-white/55">{r.l}</span>
+                <span className="leader" />
+                <span className="num shrink-0 text-sm font-bold text-white">{r.v}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="relative perf-rule" />
+
+          {/* Pie del tiquete */}
+          <div className="mt-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-white/50">
               <Sparkles size={11} style={{ color: 'var(--t-accent)' }} />
               <span className="text-[10px] font-medium">
                 Hecho con <span className="text-red-400">♥</span> en Colombia 🇨🇴
               </span>
             </div>
-            <span className="flex items-center gap-1 text-[10px] text-white/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Sistema operativo
+            <span className="flex items-center gap-1.5 text-[10px] text-white/35">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Servicio activo
             </span>
           </div>
         </div>
@@ -847,118 +900,135 @@ export default function LoginPage() {
           ) : (
 
           /* ── Formulario de login normal ── */
-          <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-1">Iniciar sesión</h2>
-            <p className="text-gray-500 text-sm mb-6">Ingresa tus credenciales para continuar</p>
+          <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_20px_40px_-16px_rgba(15,23,42,0.18)] sm:p-8">
+            {/* Filete del tema: ancla la tarjeta a la marca sin recargarla */}
+            <span aria-hidden="true" className="mb-6 block h-1 w-10 rounded-full t-gradient" />
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <h2 className="font-display text-[30px] font-bold leading-tight text-slate-900">
+              Iniciar sesión
+            </h2>
+            <p className="mt-1 mb-6 text-sm text-slate-500">Ingresa tus credenciales para continuar</p>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="space-y-1.5">
+                <label htmlFor="login-email" className="block text-sm font-medium text-slate-700">
                   Correo electrónico
                 </label>
                 <input
+                  id="login-email"
                   type="email"
                   autoComplete="email"
+                  autoFocus
+                  aria-invalid={!!errors.email}
                   {...register('email')}
                   placeholder="usuario@empresa.com"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm transition"
+                  className={`w-full rounded-xl border px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary-ring)] focus:border-[var(--t-primary)] ${
+                    errors.email
+                      ? 'border-red-400 bg-red-50/60 text-red-900'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
                 />
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+                  <p role="alert" className="text-xs text-red-600">{errors.email.message}</p>
                 )}
               </div>
 
               {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="space-y-1.5">
+                <label htmlFor="login-password" className="block text-sm font-medium text-slate-700">
                   Contraseña
                 </label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPwd ? 'text' : 'password'}
                     autoComplete="current-password"
+                    aria-invalid={!!errors.password}
                     {...register('password')}
                     placeholder="••••••••"
-                    className="w-full px-4 pr-11 py-2.5 rounded-lg border border-gray-300 text-sm transition"
+                    className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-sm transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--t-primary-ring)] focus:border-[var(--t-primary)] ${
+                      errors.password
+                        ? 'border-red-400 bg-red-50/60 text-red-900'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-slate-400 transition-colors hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                   >
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+                  <p role="alert" className="text-xs text-red-600">{errors.password.message}</p>
                 )}
               </div>
 
               {/* Recordarme */}
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <label className="flex w-fit cursor-pointer select-none items-center gap-2.5 py-1">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded"
+                  className="h-4 w-4 rounded"
                 />
-                <span className="text-sm text-gray-600">Recordarme en este dispositivo</span>
+                <span className="text-sm text-slate-600">Recordarme en este dispositivo</span>
               </label>
 
-              {/* Submit */}
+              {/* Acción principal: la única con peso completo */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 text-white font-semibold py-2.5 rounded-lg transition-all"
-                style={{
-                  background: loading ? 'var(--t-primary-dark)' : 'var(--t-primary)',
-                  opacity: loading ? 0.7 : 1,
-                }}
+                aria-busy={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--t-primary)]"
+                style={{ background: 'var(--t-primary)' }}
               >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <LogIn className="w-4 h-4" />
-                )}
-                {loading ? 'Ingresando...' : 'Ingresar'}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                {loading ? 'Ingresando…' : 'Ingresar'}
               </button>
             </form>
 
-            {/* Divisor + login con passkey */}
-            <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 font-medium">o</span>
-              <div className="flex-1 h-px bg-gray-200" />
+            {/* Divisor + login con passkey (alternativa, no competidora) */}
+            <div className="my-5 flex items-center gap-3">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs font-medium text-slate-400">o</span>
+              <span className="h-px flex-1 bg-slate-200" />
             </div>
+
             <button
               type="button"
               onClick={onPasskeyLogin}
               disabled={passkeyLoading}
-              className="w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-lg border-2 border-gray-200 text-gray-700 transition-all hover:border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+              aria-busy={passkeyLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
               {passkeyLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Fingerprint className="w-4 h-4" style={{ color: 'var(--t-primary)' }} />
+                <Fingerprint className="h-4 w-4 t-text" />
               )}
               {passkeyLoading ? 'Verificando…' : 'Entrar con passkey'}
             </button>
-            <p className="mt-2 text-xs text-gray-400 text-center">
+            <p className="mt-2 text-center text-xs text-slate-400">
               Usa tu huella, Face ID o llave de seguridad
             </p>
 
-            {/* CTA de registro / planes */}
-            <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-              <p className="text-sm text-gray-500">¿No tienes cuenta todavía?</p>
-              <Link
-                to="/planes"
-                className="mt-2 inline-flex items-center justify-center gap-1.5 w-full font-semibold py-2.5 rounded-lg border-2 transition-all hover:bg-emerald-50"
-                style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
-              >
-                Suscríbete y mira nuestros planes →
-              </Link>
-              <p className="mt-2 text-xs text-gray-400">1 mes gratis · sin permanencia</p>
+            {/* Registro: tercer nivel de jerarquía — es para quien AÚN no es
+                cliente, así que no debe competir con el botón de entrar. */}
+            <div className="mt-6 border-t border-slate-100 pt-5 text-center">
+              <p className="text-sm text-slate-500">
+                ¿No tienes cuenta?{' '}
+                <Link
+                  to="/planes"
+                  className="font-semibold t-text-dk underline decoration-2 underline-offset-2 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--t-primary)] rounded"
+                >
+                  Mira nuestros planes
+                </Link>
+              </p>
+              <p className="mt-1.5 text-xs text-slate-400">1 mes gratis · sin permanencia</p>
             </div>
           </div>
           )}
