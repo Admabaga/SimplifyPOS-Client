@@ -101,16 +101,59 @@ beforeEach(() => {
 })
 
 describe('Master · Releases', () => {
-  it('muestra cada release con sus dos interruptores', async () => {
+  it('muestra un interruptor por release y dos casillas de capa', async () => {
     const Page = (await import('@/features/master/MasterReleasesPage')).default
     wrap(<Page />)
 
     expect(await screen.findByText('Facturación electrónica DIAN')).toBeInTheDocument()
     expect(screen.getByText('Suscripciones y cobro SaaS')).toBeInTheDocument()
 
-    // Dos interruptores por release: API y web.
-    const switches = screen.getAllByRole('switch')
-    expect(switches).toHaveLength(4)
+    // Un interruptor por release; el alcance se elige con casillas.
+    expect(screen.getAllByRole('switch')).toHaveLength(2)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(4)
+  })
+
+  it('por defecto el interruptor actúa sobre las dos capas', async () => {
+    const Page = (await import('@/features/master/MasterReleasesPage')).default
+    wrap(<Page />)
+
+    await screen.findByText('Facturación electrónica DIAN')
+    await userEvent.click(screen.getAllByRole('switch')[0]!)
+
+    await waitFor(() =>
+      expect(h.patch).toHaveBeenCalledWith('/master/releases/facturacion_electronica', {
+        api: true,
+        web: true,
+      }),
+    )
+  })
+
+  it('desmarcar una capa la deja fuera del cambio', async () => {
+    const Page = (await import('@/features/master/MasterReleasesPage')).default
+    wrap(<Page />)
+
+    await screen.findByText('Facturación electrónica DIAN')
+    // Casillas 0 y 1 son las del primer release: API y Web.
+    await userEvent.click(screen.getAllByRole('checkbox')[1]!) // desmarca Web
+    await userEvent.click(screen.getAllByRole('switch')[0]!)
+
+    await waitFor(() =>
+      expect(h.patch).toHaveBeenCalledWith('/master/releases/facturacion_electronica', {
+        api: true,
+      }),
+    )
+  })
+
+  it('sin capas marcadas el interruptor no se puede mover', async () => {
+    const Page = (await import('@/features/master/MasterReleasesPage')).default
+    wrap(<Page />)
+
+    await screen.findByText('Facturación electrónica DIAN')
+    await userEvent.click(screen.getAllByRole('checkbox')[0]!)
+    await userEvent.click(screen.getAllByRole('checkbox')[1]!)
+
+    expect(screen.getAllByRole('switch')[0]!).toBeDisabled()
+    expect(screen.getByText(/marca al menos una capa/i)).toBeInTheDocument()
   })
 
   it('distingue apagado de encendido solo en la API', async () => {
@@ -120,21 +163,6 @@ describe('Master · Releases', () => {
     await screen.findByText('Facturación electrónica DIAN')
     expect(screen.getByText('Apagado')).toBeInTheDocument()
     expect(screen.getByText('Solo API')).toBeInTheDocument()
-  })
-
-  it('prender la API manda solo esa capa, sin arrastrar la web', async () => {
-    const Page = (await import('@/features/master/MasterReleasesPage')).default
-    wrap(<Page />)
-
-    await screen.findByText('Facturación electrónica DIAN')
-    const apiSwitch = screen.getAllByRole('switch')[0]!
-    await userEvent.click(apiSwitch)
-
-    await waitFor(() =>
-      expect(h.patch).toHaveBeenCalledWith('/master/releases/facturacion_electronica', {
-        api: true,
-      }),
-    )
   })
 
   it('avisa cuando la web va adelantada a la API', async () => {
