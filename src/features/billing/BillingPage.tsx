@@ -14,6 +14,7 @@ import {
   Building2, FileText, ScrollText, CheckCircle2, AlertTriangle, Lock, ShieldCheck,
 } from 'lucide-react'
 import { PageHeader, TabBar, Card, Spinner } from '@/shared/components/ui'
+import { useRelease } from '@/shared/hooks/useReleases'
 import { useAuthStore } from '@/stores/auth'
 import { billingApi } from './api'
 import EmpresaConfigTab from './components/EmpresaConfigTab'
@@ -34,6 +35,10 @@ export default function BillingPage() {
   const canConfigure = isAdminOrMaster && can('facturacion:configure')
 
   // Si no puede configurar, solo verá historial.
+  // La facturación electrónica es un release de plataforma: con la web apagada,
+  // esta pantalla se queda con lo que siempre funciona —datos de empresa,
+  // resoluciones de numeración e histórico de tickets—.
+  const feActiva = useRelease('facturacion_electronica')
   const defaultTab: Tab = canConfigure ? 'empresa' : 'historial'
   const [tab, setTab] = useState<Tab>(defaultTab)
 
@@ -86,8 +91,8 @@ export default function BillingPage() {
         label: 'Datos empresa',
         dot: empresa ? 'green' : 'red',
       })
-      // Solo mostrar tab DIAN si el setup está incompleto
-      if (!empresa?.dian_setup_completado) {
+      // Solo mostrar tab DIAN si el release está prendido y el setup incompleto
+      if (feActiva && !empresa?.dian_setup_completado) {
         all.push({
           key: 'dian',
           label: 'Facturación electrónica',
@@ -102,7 +107,7 @@ export default function BillingPage() {
     }
     all.push({ key: 'historial', label: 'Documentos emitidos' })
     return all
-  }, [canConfigure, empresa, resActiva, resAlertas])
+  }, [canConfigure, empresa, resActiva, resAlertas, feActiva])
 
   const loadingResumen = canConfigure && (loadingEmp || loadingRes || loadingTk)
 
@@ -128,7 +133,7 @@ export default function BillingPage() {
             warnText="Sin configurar"
             onClick={() => setTab('empresa')}
           />
-          <ResumenCard
+          {feActiva && <ResumenCard
             icon={<ShieldCheck size={18} />}
             label="Facturación electrónica"
             loading={loadingResumen}
@@ -141,7 +146,7 @@ export default function BillingPage() {
             warnText={empresa ? 'Pendiente de prueba' : 'Sin configurar'}
             warnLevel={empresa && !empresa.dian_setup_completado ? 'yellow' : undefined}
             onClick={() => setTab('dian')}
-          />
+          />}
           <ResumenCard
             icon={<FileText size={18} />}
             label="Resolución DIAN activa"

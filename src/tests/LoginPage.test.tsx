@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import LoginPage from '@/features/auth/LoginPage'
 
 // Mock de módulos externos
@@ -46,10 +47,15 @@ import {
 import toast from 'react-hot-toast'
 
 function renderLogin() {
+  // La pantalla consulta los releases —para saber si ofrece el alta por cuenta
+  // propia— así que necesita el provider, igual que en la app real.
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <LoginPage />
-    </MemoryRouter>
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 

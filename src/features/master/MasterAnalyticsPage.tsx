@@ -1,234 +1,291 @@
 /**
- * Master Analytics — Dashboard SaaS cross-tenant.
+ * Master — Analytics
  *
- * Visión global del operador del POS sobre todos los negocios del sistema:
- *  - Crecimiento de tenants
- *  - GMV consolidado
- *  - Engagement (DAU/WAU/MAU)
- *  - Top performers
- *  - Distribución geográfica
- *  - Audit log activity
+ * La visión del operador sobre todo el ecosistema. El contenido de esta
+ * página siempre fue bueno (sobre todo el motor de hallazgos); lo que
+ * fallaba era la forma: doce tarjetas con degradado en cinco colores
+ * distintos, cada bloque pidiendo atención por su cuenta. Cuando todo
+ * grita, nada se lee.
+ *
+ * Ahora usa el lenguaje de la consola —papel, rótulos, cifras— y el color
+ * queda reservado para lo que significa algo: bien, atención, mal.
+ *
+ * El bloque de engagement se cambió por una representación anidada: DAU
+ * está dentro de WAU, que está dentro de MAU. Es literalmente lo que son,
+ * y así el stickiness se ve como proporción en vez de tener que comparar
+ * tres números sueltos y leer un porcentaje aparte.
  */
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Building2, TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart,
-  CreditCard, BookOpen, Activity, MapPin, Shield, Sparkles, BarChart3,
-  ArrowUpRight, ArrowDownRight, Minus, Receipt, AlertCircle,
+  Activity, AlertCircle, Building2, DollarSign, MapPin, Shield, TrendingDown,
+  TrendingUp,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line,
 } from 'recharts'
-import {
-  Card, PageHeader, Spinner, StatCard, EmptyState, SectionHeader, Badge,
-} from '@/shared/components/ui'
+import { PageHeader, Spinner, EmptyState } from '@/shared/components/ui'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { formatCOP } from '@/shared/lib/formatters'
-import { masterApi } from './api'
+import { masterApi, type MasterAnalytics } from './api'
+import { Cifra, Cifras, Papel, Rotulo } from './components/consola'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MONTHS_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 function formatYM(ym: string) {
-  // "2026-05" → "May 2026"
   const [y, m] = ym.split('-')
   const idx = Number(m) - 1
-  return MONTHS_SHORT[idx] && y ? `${MONTHS_SHORT[idx]} ${y.slice(2)}` : ym
+  return MESES[idx] && y ? `${MESES[idx]} ${y.slice(2)}` : ym
 }
 
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; dataKey: string; color?: string }[]; label?: string }) {
-  if (!active || !payload || !payload.length) return null
+/** Delta como cifra firmada, no como pastilla de color. */
+function Delta({ pct }: { pct: number | null }) {
+  if (pct === null) return null
+  const plano = Math.abs(pct) < 0.5
+  const color = plano ? 'text-slate-400' : pct > 0 ? 'text-emerald-600' : 'text-rose-600'
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-2.5 text-xs">
-      <p className="text-slate-600 font-medium mb-1">{label}</p>
+    <span className={`num text-[11px] font-semibold ${color}`}>
+      {plano ? '=' : pct > 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs período anterior
+    </span>
+  )
+}
+
+function ChartTooltip({
+  active, payload, label,
+}: {
+  active?: boolean
+  payload?: { value: number; name: string; dataKey: string; color?: string }[]
+  label?: string
+}) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 shadow-lg">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
       {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color ?? 'var(--t-primary)' }} />
-          <span className="text-slate-500">{p.name}:</span>
-          <span className="font-bold text-slate-800 tabular-nums">
-            {p.dataKey === 'gmv' ? formatCOP(p.value) : p.value.toLocaleString('es-CO')}
-          </span>
-        </div>
+        <p key={i} className="num text-xs font-semibold text-slate-800">
+          {p.dataKey === 'gmv' ? formatCOP(p.value) : p.value.toLocaleString('es-CO')}
+          <span className="ml-1.5 font-normal text-slate-400">{p.name}</span>
+        </p>
       ))}
     </div>
   )
 }
 
-// ─── Delta indicator ──────────────────────────────────────────────────────────
-
-function DeltaPill({ pct }: { pct: number | null }) {
-  if (pct === null) return null
-  const positive = pct > 0
-  const flat = Math.abs(pct) < 0.5
-  const Icon = flat ? Minus : positive ? ArrowUpRight : ArrowDownRight
-  const color = flat ? 'text-slate-500 bg-slate-100' : positive ? 'text-emerald-700 bg-emerald-100' : 'text-red-700 bg-red-100'
+/** Barra de proporción a filete. Un solo tono; la longitud es el dato. */
+function Proporcion({ valor, max, tono = 'primary' }: { valor: number; max: number; tono?: 'primary' | 'slate' }) {
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${color}`}>
-      <Icon size={10} />
-      {positive && !flat ? '+' : ''}{pct.toFixed(1)}%
-    </span>
+    <div className="h-1 overflow-hidden rounded-full bg-slate-100">
+      <div
+        className={`h-full rounded-full ${tono === 'primary' ? 't-bg' : 'bg-slate-400'}`}
+        style={{ width: `${max > 0 ? Math.max(2, (valor / max) * 100) : 0}%` }}
+      />
+    </div>
   )
 }
 
-// ─── Insight engine — para master ─────────────────────────────────────────────
+// ─── Engagement anidado ──────────────────────────────────────────────────────
 
-function generateMasterInsights(d: NonNullable<ReturnType<typeof useQuery<typeof masterApi.analytics extends () => Promise<infer T> ? T : never>>['data']>) {
-  type MasterInsight = {
-    severity: 'success' | 'warning' | 'danger' | 'info' | 'opportunity'
-    icon: React.ReactNode
-    title: string
-    description: string
-    metric?: string
-    metricLabel?: string
-  }
-  const out: MasterInsight[] = []
+/**
+ * DAU ⊂ WAU ⊂ MAU. Dibujarlos como cajas concéntricas dice la relación sola:
+ * si el bloque interior llena casi todo el exterior, la app se usa a diario.
+ */
+function Engagement({ e }: { e: MasterAnalytics['engagement'] }) {
+  const mau = Math.max(e.mau, 1)
+  const anchoWau = Math.max(3, (e.wau / mau) * 100)
+  const anchoDau = Math.max(2, (e.dau / mau) * 100)
 
-  // 1) Growth de tenants
-  if (d.tenants.delta_pct !== null) {
-    if (d.tenants.delta_pct > 20) {
-      out.push({
-        severity: 'success',
-        icon: <TrendingUp size={16} />,
-        title: `Crecimiento del ${d.tenants.delta_pct.toFixed(1)}% en nuevos negocios`,
-        description: `${d.tenants.nuevos_30d} negocios se registraron en los últimos 30 días vs ${d.tenants.nuevos_30d_prev} en el período anterior. Mantén la inversión en adquisición que está funcionando.`,
-        metric: `+${d.tenants.nuevos_30d}`,
-        metricLabel: 'Nuevos en 30 días',
-      })
-    } else if (d.tenants.delta_pct < -20) {
-      out.push({
-        severity: 'danger',
-        icon: <TrendingDown size={16} />,
-        title: 'Caída en adquisición de nuevos negocios',
-        description: `${d.tenants.nuevos_30d} nuevos vs ${d.tenants.nuevos_30d_prev} el período anterior (${d.tenants.delta_pct.toFixed(1)}%). Revisa el embudo de signup y campañas de marketing.`,
-        metric: `${d.tenants.nuevos_30d}`,
-        metricLabel: 'Nuevos en 30 días',
-      })
-    }
-  }
+  const capas = [
+    { k: 'MAU', v: e.mau, ancho: 100, clase: 'bg-slate-200', txt: 'text-slate-600', desc: 'activos en 30 días' },
+    { k: 'WAU', v: e.wau, ancho: anchoWau, clase: 'bg-slate-400', txt: 'text-slate-700', desc: 'activos en 7 días' },
+    { k: 'DAU', v: e.dau, ancho: anchoDau, clase: 't-bg', txt: 't-text-dk', desc: 'activos hoy' },
+  ]
 
-  // 2) GMV growth
-  if (d.gmv.delta_pct !== null) {
-    if (d.gmv.delta_pct > 15) {
-      out.push({
-        severity: 'success',
-        icon: <DollarSign size={16} />,
-        title: `GMV creció ${d.gmv.delta_pct.toFixed(1)}% mes vs mes`,
-        description: `${formatCOP(d.gmv.mes_actual)} este mes vs ${formatCOP(d.gmv.mes_anterior)} el anterior. Volumen sólido, considera escalar capacidad de infra.`,
-        metric: formatCOP(d.gmv.mes_actual),
-        metricLabel: 'GMV mes actual',
-      })
-    } else if (d.gmv.delta_pct < -15) {
-      out.push({
-        severity: 'warning',
-        icon: <TrendingDown size={16} />,
-        title: `GMV bajó ${Math.abs(d.gmv.delta_pct).toFixed(1)}% vs mes anterior`,
-        description: `Procesaste ${formatCOP(d.gmv.mes_actual)} vs ${formatCOP(d.gmv.mes_anterior)}. Investiga si es estacional o si hay tenants que dejaron de operar.`,
-        metric: formatCOP(d.gmv.mes_actual),
-        metricLabel: 'GMV mes actual',
-      })
-    }
-  }
+  return (
+    <div>
+      <div className="space-y-1.5">
+        {capas.map((c) => (
+          <div key={c.k} className="flex items-center gap-3">
+            <span className="w-9 shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+              {c.k}
+            </span>
+            <div className="relative h-7 flex-1 overflow-hidden rounded-md bg-slate-50">
+              <div className={`h-full rounded-md ${c.clase}`} style={{ width: `${c.ancho}%` }} />
+              <span className="absolute inset-y-0 left-2.5 flex items-center">
+                <span className={`num font-display text-[15px] ${c.txt}`}>
+                  {c.v.toLocaleString('es-CO')}
+                </span>
+              </span>
+            </div>
+            <span className="hidden w-32 shrink-0 text-[10.5px] text-slate-400 sm:block">{c.desc}</span>
+          </div>
+        ))}
+      </div>
 
-  // 3) Engagement health (DAU/WAU ratio — sticky factor)
-  if (d.engagement.wau > 0) {
-    if (d.engagement.dau_wau_ratio > 40) {
-      out.push({
-        severity: 'success',
-        icon: <Activity size={16} />,
-        title: 'Engagement saludable (DAU/WAU)',
-        description: `${d.engagement.dau_wau_ratio.toFixed(0)}% de tus usuarios semanales también usan la app diariamente. Indica que el POS forma parte del flujo de trabajo diario.`,
-        metric: `${d.engagement.dau_wau_ratio.toFixed(0)}%`,
-        metricLabel: 'Stickiness DAU/WAU',
-      })
-    } else if (d.engagement.dau_wau_ratio < 20) {
-      out.push({
-        severity: 'warning',
-        icon: <Activity size={16} />,
-        title: 'Engagement bajo — usuarios no vuelven a diario',
-        description: `Solo ${d.engagement.dau_wau_ratio.toFixed(0)}% de los usuarios semanales abren la app cada día. Implementa notificaciones, gamificación o recordatorios de cierre de caja.`,
-        metric: `${d.engagement.dau_wau_ratio.toFixed(0)}%`,
-        metricLabel: 'Stickiness DAU/WAU',
-      })
-    }
-  }
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 border-t border-slate-100 pt-2.5">
+        <p className="text-[11px] text-slate-500">
+          Vuelven a diario{' '}
+          <span className="num font-semibold text-slate-800">{e.dau_wau_ratio.toFixed(0)}%</span>
+          <span className="text-slate-400"> de los semanales</span>
+        </p>
+        <p className="text-[11px] text-slate-500">
+          Vuelven cada semana{' '}
+          <span className="num font-semibold text-slate-800">{e.wau_mau_ratio.toFixed(0)}%</span>
+          <span className="text-slate-400"> de los mensuales</span>
+        </p>
+      </div>
+    </div>
+  )
+}
 
-  // 4) Tenants inactivos (churn potencial)
-  if (d.tenants.total > 0) {
-    const inactivePct = (d.tenants.inactivos / d.tenants.total) * 100
-    if (inactivePct > 15) {
-      out.push({
-        severity: 'danger',
-        icon: <AlertCircle size={16} />,
-        title: `${d.tenants.inactivos} negocios inactivos (${inactivePct.toFixed(0)}%)`,
-        description: 'Programa una campaña de re-engagement: email + descuento por reactivar. Cada tenant inactivo es churn potencial — el costo de recuperarlo es menor al de adquirir uno nuevo.',
-        metric: `${d.tenants.inactivos}`,
-        metricLabel: 'Negocios inactivos',
-      })
-    }
-  }
+// ─── Motor de hallazgos ──────────────────────────────────────────────────────
 
-  // 5) Concentración del top tenant (riesgo de dependencia)
-  if (d.top_tenants.length > 0 && d.gmv.total > 0) {
-    const topShare = (d.top_tenants[0]!.gmv / d.gmv.total) * 100
-    if (topShare > 20) {
-      out.push({
-        severity: 'warning',
-        icon: <Building2 size={16} />,
-        title: `"${d.top_tenants[0]!.nombre}" concentra ${topShare.toFixed(0)}% del GMV`,
-        description: 'Si este cliente se va o reduce operación, el impacto es alto. Diversifica la base con outreach activo a tenants medianos.',
-        metric: `${topShare.toFixed(0)}%`,
-        metricLabel: 'del GMV total',
-      })
-    }
-  }
+type Severidad = 'success' | 'warning' | 'danger' | 'info' | 'opportunity'
 
-  // 6) Geo concentration (oportunidad de expansión)
-  if (d.tenants.geo.length > 0 && d.tenants.total > 0) {
-    const topCity = d.tenants.geo[0]!
-    const topCityShare = (topCity.n / d.tenants.total) * 100
-    if (topCityShare > 50) {
-      out.push({
-        severity: 'opportunity',
-        icon: <MapPin size={16} />,
-        title: `${topCity.ciudad} concentra ${topCityShare.toFixed(0)}% de tus negocios`,
-        description: 'Tu mercado está geográficamente concentrado. Considera expandirte a otras ciudades — replica la estrategia que funcionó aquí.',
-        metric: topCity.ciudad,
-        metricLabel: `${topCity.n} negocios`,
-      })
-    }
-  }
+interface Hallazgo {
+  severidad: Severidad
+  titulo: string
+  detalle: string
+  cifra?: string
+  cifraEtiqueta?: string
+}
 
-  // 7) Cuentas por cobrar globales (salud financiera del ecosistema)
-  if (d.totales.cuentas_por_cobrar > d.gmv.total * 0.3 && d.gmv.total > 0) {
+const SEVERIDAD: Record<Severidad, { etiqueta: string; punto: string; texto: string }> = {
+  success:     { etiqueta: 'Buena señal', punto: 'bg-emerald-500', texto: 'text-emerald-700' },
+  warning:     { etiqueta: 'Atención',    punto: 'bg-amber-500',   texto: 'text-amber-700' },
+  danger:      { etiqueta: 'Crítico',     punto: 'bg-rose-500',    texto: 'text-rose-700' },
+  info:        { etiqueta: 'Dato',        punto: 'bg-slate-400',   texto: 'text-slate-600' },
+  opportunity: { etiqueta: 'Oportunidad', punto: 'bg-violet-500',  texto: 'text-violet-700' },
+}
+
+function hallazgos(d: MasterAnalytics): Hallazgo[] {
+  const out: Hallazgo[] = []
+
+  if (d.tenants.delta_pct !== null && d.tenants.delta_pct > 20) {
     out.push({
-      severity: 'info',
-      icon: <BookOpen size={16} />,
-      title: `${formatCOP(d.totales.cuentas_por_cobrar)} pendientes en cuentas`,
-      description: 'Tus tenants tienen mucho dinero en la calle. Es una oportunidad para vender features de cobranza (recordatorios automáticos, WhatsApp links de pago).',
-      metric: formatCOP(d.totales.cuentas_por_cobrar),
-      metricLabel: 'CxC ecosistema',
+      severidad: 'success',
+      titulo: `Crecimiento del ${d.tenants.delta_pct.toFixed(1)}% en nuevos negocios`,
+      detalle: `${d.tenants.nuevos_30d} negocios se registraron en los últimos 30 días, contra ${d.tenants.nuevos_30d_prev} del período anterior. Sostén la inversión en adquisición que está funcionando.`,
+      cifra: `+${d.tenants.nuevos_30d}`,
+      cifraEtiqueta: 'nuevos en 30 días',
+    })
+  } else if (d.tenants.delta_pct !== null && d.tenants.delta_pct < -20) {
+    out.push({
+      severidad: 'danger',
+      titulo: 'Caída en adquisición de nuevos negocios',
+      detalle: `${d.tenants.nuevos_30d} nuevos contra ${d.tenants.nuevos_30d_prev} del período anterior. Revisa el embudo de registro y las campañas activas.`,
+      cifra: String(d.tenants.nuevos_30d),
+      cifraEtiqueta: 'nuevos en 30 días',
     })
   }
 
-  // 8) Audit activity insight (compliance / fraude)
-  if (d.audit.serie_diaria.length >= 7) {
-    const recent = d.audit.serie_diaria.slice(-7).reduce((s, r) => s + r.n, 0)
-    const previous = d.audit.serie_diaria.slice(-14, -7).reduce((s, r) => s + r.n, 0)
-    if (previous > 0) {
-      const change = ((recent - previous) / previous) * 100
-      if (Math.abs(change) > 50) {
+  if (d.gmv.delta_pct !== null && d.gmv.delta_pct > 15) {
+    out.push({
+      severidad: 'success',
+      titulo: `El volumen transado creció ${d.gmv.delta_pct.toFixed(1)}% frente al mes pasado`,
+      detalle: `${formatCOP(d.gmv.mes_actual)} este mes contra ${formatCOP(d.gmv.mes_anterior)} el anterior. Con este ritmo conviene revisar la capacidad de infraestructura antes de que apriete.`,
+      cifra: formatCOP(d.gmv.mes_actual),
+      cifraEtiqueta: 'transado este mes',
+    })
+  } else if (d.gmv.delta_pct !== null && d.gmv.delta_pct < -15) {
+    out.push({
+      severidad: 'warning',
+      titulo: `El volumen transado bajó ${Math.abs(d.gmv.delta_pct).toFixed(1)}% frente al mes pasado`,
+      detalle: `${formatCOP(d.gmv.mes_actual)} contra ${formatCOP(d.gmv.mes_anterior)}. Antes de asumir que es estacional, mira si hay negocios que dejaron de operar.`,
+      cifra: formatCOP(d.gmv.mes_actual),
+      cifraEtiqueta: 'transado este mes',
+    })
+  }
+
+  if (d.engagement.wau > 0) {
+    if (d.engagement.dau_wau_ratio > 40) {
+      out.push({
+        severidad: 'success',
+        titulo: 'El POS entró en la rutina diaria',
+        detalle: `${d.engagement.dau_wau_ratio.toFixed(0)}% de quienes usan la app en la semana la abren también todos los días. Es la señal más difícil de conseguir y la más difícil de perder.`,
+        cifra: `${d.engagement.dau_wau_ratio.toFixed(0)}%`,
+        cifraEtiqueta: 'de los semanales, a diario',
+      })
+    } else if (d.engagement.dau_wau_ratio < 20) {
+      out.push({
+        severidad: 'warning',
+        titulo: 'La app no se está usando a diario',
+        detalle: `Sólo ${d.engagement.dau_wau_ratio.toFixed(0)}% de los usuarios de la semana vuelven cada día. Un POS que no se abre a diario es un POS que se puede cambiar sin dolor.`,
+        cifra: `${d.engagement.dau_wau_ratio.toFixed(0)}%`,
+        cifraEtiqueta: 'de los semanales, a diario',
+      })
+    }
+  }
+
+  if (d.tenants.total > 0) {
+    const pctInactivos = (d.tenants.inactivos / d.tenants.total) * 100
+    if (pctInactivos > 15) {
+      out.push({
+        severidad: 'danger',
+        titulo: `${d.tenants.inactivos} negocios inactivos (${pctInactivos.toFixed(0)}% de la base)`,
+        detalle: 'Cada negocio inactivo es una baja que todavía no se ha formalizado. Recuperar uno cuesta menos que conseguir uno nuevo, pero la ventana se cierra rápido.',
+        cifra: String(d.tenants.inactivos),
+        cifraEtiqueta: 'sin actividad',
+      })
+    }
+  }
+
+  if (d.top_tenants.length > 0 && d.gmv.total > 0) {
+    const peso = (d.top_tenants[0]!.gmv / d.gmv.total) * 100
+    if (peso > 20) {
+      out.push({
+        severidad: 'warning',
+        titulo: `${d.top_tenants[0]!.nombre} concentra el ${peso.toFixed(0)}% del volumen`,
+        detalle: 'Si ese cliente se va o baja el ritmo, el golpe se siente en el mes. Vale la pena empujar a los negocios medianos para repartir el peso.',
+        cifra: `${peso.toFixed(0)}%`,
+        cifraEtiqueta: 'del volumen total',
+      })
+    }
+  }
+
+  if (d.tenants.geo.length > 0 && d.tenants.total > 0) {
+    const ciudad = d.tenants.geo[0]!
+    const peso = (ciudad.n / d.tenants.total) * 100
+    if (peso > 50) {
+      out.push({
+        severidad: 'opportunity',
+        titulo: `${ciudad.ciudad} concentra el ${peso.toFixed(0)}% de los negocios`,
+        detalle: 'El mercado está concentrado en una sola plaza. Lo que funcionó ahí es replicable, y hoy es la vía de crecimiento más barata que tienes.',
+        cifra: ciudad.ciudad,
+        cifraEtiqueta: `${ciudad.n} negocios`,
+      })
+    }
+  }
+
+  if (d.gmv.total > 0 && d.totales.cuentas_por_cobrar > d.gmv.total * 0.3) {
+    out.push({
+      severidad: 'info',
+      titulo: `${formatCOP(d.totales.cuentas_por_cobrar)} en fiados sin cobrar`,
+      detalle: 'Tus negocios tienen mucha plata en la calle. Ahí hay producto por vender: recordatorios automáticos y enlaces de pago por WhatsApp.',
+      cifra: formatCOP(d.totales.cuentas_por_cobrar),
+      cifraEtiqueta: 'por cobrar en la red',
+    })
+  }
+
+  if (d.audit.serie_diaria.length >= 14) {
+    const reciente = d.audit.serie_diaria.slice(-7).reduce((s, r) => s + r.n, 0)
+    const previa = d.audit.serie_diaria.slice(-14, -7).reduce((s, r) => s + r.n, 0)
+    if (previa > 0) {
+      const cambio = ((reciente - previa) / previa) * 100
+      if (Math.abs(cambio) > 50) {
         out.push({
-          severity: change > 0 ? 'info' : 'warning',
-          icon: <Shield size={16} />,
-          title: `Actividad de auditoría ${change > 0 ? 'subió' : 'bajó'} ${Math.abs(change).toFixed(0)}% esta semana`,
-          description: change > 0
-            ? `${recent} eventos vs ${previous} la semana pasada. Más uso del sistema o más operaciones sensibles. Verifica que sea actividad legítima.`
-            : `${recent} eventos vs ${previous} la semana pasada. Verifica que los tenants sigan operando normalmente.`,
-          metric: recent.toString(),
-          metricLabel: 'Eventos últimos 7d',
+          severidad: cambio > 0 ? 'info' : 'warning',
+          titulo: `La actividad registrada ${cambio > 0 ? 'subió' : 'bajó'} ${Math.abs(cambio).toFixed(0)}% esta semana`,
+          detalle: `${reciente} eventos contra ${previa} la semana pasada. ${
+            cambio > 0
+              ? 'Puede ser más uso o más operaciones sensibles: conviene confirmar que sea actividad legítima.'
+              : 'Vale la pena confirmar que los negocios sigan operando con normalidad.'
+          }`,
+          cifra: String(reciente),
+          cifraEtiqueta: 'eventos en 7 días',
         })
       }
     }
@@ -237,15 +294,36 @@ function generateMasterInsights(d: NonNullable<ReturnType<typeof useQuery<typeof
   return out
 }
 
-const SEVERITY_STYLES = {
-  success: { wrapper: 'border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-50/30', iconWrap: 'bg-white text-emerald-600', chip: 'bg-emerald-100 text-emerald-700', badge: 'Buena señal', metric: 'text-emerald-700', label: 'text-emerald-600/70' },
-  warning: { wrapper: 'border-amber-100 bg-gradient-to-br from-amber-50 to-amber-50/30', iconWrap: 'bg-white text-amber-600', chip: 'bg-amber-100 text-amber-700', badge: 'Atención', metric: 'text-amber-700', label: 'text-amber-600/70' },
-  danger:  { wrapper: 'border-red-100 bg-gradient-to-br from-red-50 to-red-50/30', iconWrap: 'bg-white text-red-600', chip: 'bg-red-100 text-red-700', badge: 'Crítico', metric: 'text-red-700', label: 'text-red-600/70' },
-  info:    { wrapper: 'border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30', iconWrap: 'bg-white text-blue-600', chip: 'bg-blue-100 text-blue-700', badge: 'Dato', metric: 'text-blue-700', label: 'text-blue-600/70' },
-  opportunity: { wrapper: 'border-violet-100 bg-gradient-to-br from-violet-50 to-violet-50/30', iconWrap: 'bg-white text-violet-600', chip: 'bg-violet-100 text-violet-700', badge: 'Oportunidad', metric: 'text-violet-700', label: 'text-violet-600/70' },
-} as const
+/** Un hallazgo se lee como una nota de informe: marca, título, cuerpo y cifra. */
+function Nota({ h }: { h: Hallazgo }) {
+  const s = SEVERIDAD[h.severidad]
+  return (
+    <li className="flex gap-3 py-3.5 first:pt-0 last:pb-0">
+      <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${s.punto}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className={`text-[9.5px] font-bold uppercase tracking-[0.12em] ${s.texto}`}>
+            {s.etiqueta}
+          </span>
+          <p className="text-[13px] font-semibold text-slate-900">{h.titulo}</p>
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">{h.detalle}</p>
+      </div>
+      {h.cifra && (
+        <div className="hidden shrink-0 pl-3 text-right sm:block sm:w-40">
+          <p className="num font-display text-[17px] leading-none tracking-[-0.02em] text-slate-900">
+            {h.cifra}
+          </p>
+          {h.cifraEtiqueta && (
+            <p className="mt-1 text-[10px] leading-tight text-slate-400">{h.cifraEtiqueta}</p>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Página ──────────────────────────────────────────────────────────────────
 
 export default function MasterAnalyticsPage() {
   const isDesktop = useIsDesktop()
@@ -255,13 +333,29 @@ export default function MasterAnalyticsPage() {
     staleTime: 60_000,
   })
 
-  const insights = useMemo(() => (data ? generateMasterInsights(data) : []), [data])
+  const notas = useMemo(() => (data ? hallazgos(data) : []), [data])
+
+  const encabezado = (
+    <PageHeader
+      subtitle="El ecosistema completo, en una sola vista"
+      actions={
+        data ? (
+          <span className="num text-[11px] text-slate-400">
+            Corte:{' '}
+            {new Date(data.generated_at).toLocaleString('es-CO', {
+              day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+            })}
+          </span>
+        ) : undefined
+      }
+    />
+  )
 
   if (isLoading) {
     return (
       <div>
-        <PageHeader subtitle="Visión global del ecosistema SimplifyPOS" />
-        <div className="flex justify-center py-24"><Spinner size={36} /></div>
+        {encabezado}
+        <div className="flex justify-center py-24"><Spinner size={34} /></div>
       </div>
     )
   }
@@ -269,9 +363,9 @@ export default function MasterAnalyticsPage() {
   if (error || !data) {
     return (
       <div>
-        <PageHeader subtitle="Visión global del ecosistema SimplifyPOS" />
+        {encabezado}
         <EmptyState
-          icon={<AlertCircle size={32} className="text-red-400" />}
+          icon={<AlertCircle size={30} className="text-rose-400" />}
           title="No se pudieron cargar las métricas"
           description="Intenta recargar la página."
         />
@@ -279,381 +373,304 @@ export default function MasterAnalyticsPage() {
     )
   }
 
-  const tenantsSerie = data.tenants.serie_mensual.map((r) => ({ mes: formatYM(r.ym), nuevos: r.n }))
-  const gmvSerie = data.gmv.serie_mensual.map((r) => ({ mes: formatYM(r.ym), gmv: r.gmv, ventas: r.n }))
+  const serieTenants = data.tenants.serie_mensual.map((r) => ({ mes: formatYM(r.ym), nuevos: r.n }))
+  const serieGmv = data.gmv.serie_mensual.map((r) => ({ mes: formatYM(r.ym), gmv: r.gmv }))
+  const maxGeo = data.tenants.geo[0]?.n ?? 1
+  const maxTop = data.top_tenants[0]?.gmv ?? 1
+  const maxAccion = data.audit.top_acciones[0]?.n ?? 1
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <PageHeader
-        subtitle="Visión global del ecosistema SimplifyPOS"
-        actions={
-          <Badge variant="purple" dot>
-            Master · {new Date(data.generated_at).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-          </Badge>
-        }
-      />
+    <div className="space-y-7">
+      {encabezado}
 
-      {/* ── KPIs principales ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="relative">
-          <StatCard
-            label="Negocios totales"
-            value={data.tenants.total.toLocaleString('es-CO')}
-            subValue={<span className="text-emerald-600 font-semibold">{data.tenants.activos} activos</span>}
-            icon={<Building2 size={16} />}
-            accent="blue"
+      {/* ── Cabecera de cifras ── */}
+      <Papel className="p-5">
+        <Cifras>
+          <Cifra
+            valor={data.tenants.total.toLocaleString('es-CO')}
+            etiqueta="Negocios"
+            nota={`${data.tenants.activos} activos · ${data.tenants.inactivos} inactivos`}
           />
-        </div>
-        <div className="relative">
-          <StatCard
-            label="GMV total histórico"
-            value={formatCOP(data.gmv.total)}
-            subValue={<span className="text-slate-500">{data.totales.ventas.toLocaleString('es-CO')} ventas</span>}
-            icon={<DollarSign size={16} />}
-            accent="green"
+          <Cifra
+            valor={formatCOP(data.gmv.total)}
+            etiqueta="Transado histórico"
+            nota={`${data.totales.ventas.toLocaleString('es-CO')} ventas`}
           />
-        </div>
-        <div className="relative">
-          <StatCard
-            label="GMV este mes"
-            value={formatCOP(data.gmv.mes_actual)}
-            subValue={<DeltaPill pct={data.gmv.delta_pct} />}
-            icon={<TrendingUp size={16} />}
-            accent="purple"
+          <Cifra
+            valor={formatCOP(data.gmv.mes_actual)}
+            etiqueta="Transado este mes"
+            nota={<Delta pct={data.gmv.delta_pct} />}
           />
-        </div>
-        <div className="relative">
-          <StatCard
-            label="Nuevos negocios (30d)"
-            value={data.tenants.nuevos_30d.toString()}
-            subValue={<DeltaPill pct={data.tenants.delta_pct} />}
-            icon={<Sparkles size={16} />}
-            accent="orange"
+          <Cifra
+            valor={data.tenants.nuevos_30d.toString()}
+            etiqueta="Nuevos en 30 días"
+            nota={<Delta pct={data.tenants.delta_pct} />}
           />
+        </Cifras>
+      </Papel>
+
+      {/* ── Uso real ── */}
+      <div>
+        <Rotulo>Uso real de la plataforma</Rotulo>
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <Engagement e={data.engagement} />
         </div>
       </div>
 
-      {/* ── Engagement ─────────────────────────────────────────────────────── */}
-      <Card padding={false}>
-        <div className="p-4 border-b border-slate-50">
-          <SectionHeader title="Engagement del ecosistema" icon={<Activity size={15} />} />
-        </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { label: 'DAU', sub: 'Usuarios activos hoy', value: data.engagement.dau, color: 'from-blue-50 to-blue-50/30 border-blue-100', text: 'text-blue-700' },
-            { label: 'WAU', sub: 'Activos últimos 7 días', value: data.engagement.wau, color: 'from-emerald-50 to-emerald-50/30 border-emerald-100', text: 'text-emerald-700' },
-            { label: 'MAU', sub: 'Activos últimos 30 días', value: data.engagement.mau, color: 'from-violet-50 to-violet-50/30 border-violet-100', text: 'text-violet-700' },
-          ].map((k) => (
-            <div key={k.label} className={`rounded-xl border bg-gradient-to-br ${k.color} p-4`}>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{k.label}</p>
-              <p className={`text-3xl font-extrabold tabular-nums mt-1 ${k.text}`}>{k.value.toLocaleString('es-CO')}</p>
-              <p className="text-[11px] text-slate-500 mt-1">{k.sub}</p>
-            </div>
-          ))}
-        </div>
-        <div className="px-5 pb-4 grid grid-cols-2 gap-3 text-xs">
-          <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Stickiness DAU/WAU:</span>
-            <span className="font-bold text-slate-800 tabular-nums">{data.engagement.dau_wau_ratio.toFixed(1)}%</span>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
-            <span className="text-slate-500">Retención WAU/MAU:</span>
-            <span className="font-bold text-slate-800 tabular-nums">{data.engagement.wau_mau_ratio.toFixed(1)}%</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* ── Crecimiento — 2 charts en grid ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* GMV mensual */}
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="GMV mensual del sistema" icon={<DollarSign size={15} />} />
-          </div>
-          <div className="p-3">
+      {/* ── Crecimiento ── */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div>
+          <Rotulo>Volumen transado por mes</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
             {isDesktop ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={gmvSerie} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <ResponsiveContainer width="100%" height={210}>
+                <BarChart data={serieGmv} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1_000_000).toFixed(1)}M`} width={50} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-                  <Bar dataKey="gmv" name="GMV" fill="var(--t-primary)" radius={[6, 6, 0, 0]} maxBarSize={42} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
+                    width={38}
+                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(15,23,42,0.04)' }} />
+                  <Bar dataKey="gmv" name="transado" fill="var(--t-primary)" radius={[2, 2, 0, 0]} maxBarSize={30} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="space-y-1.5">
-                {gmvSerie.map((r, i) => {
-                  const max = Math.max(...gmvSerie.map((x) => x.gmv), 1)
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between text-[11px] mb-0.5">
-                        <span className="text-slate-500">{r.mes}</span>
-                        <span className="font-semibold text-slate-800 tabular-nums">{formatCOP(r.gmv)}</span>
-                      </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full t-bg rounded-full" style={{ width: `${(r.gmv / max) * 100}%` }} />
-                      </div>
+              <div className="space-y-2 p-1">
+                {serieGmv.map((r, i) => (
+                  <div key={i}>
+                    <div className="mb-1 flex justify-between text-[11px]">
+                      <span className="text-slate-500">{r.mes}</span>
+                      <span className="num font-semibold text-slate-800">{formatCOP(r.gmv)}</span>
                     </div>
-                  )
-                })}
+                    <Proporcion valor={r.gmv} max={Math.max(...serieGmv.map((x) => x.gmv), 1)} />
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </Card>
+        </div>
 
-        {/* Tenants nuevos por mes */}
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="Nuevos negocios por mes" icon={<Sparkles size={15} />} />
-          </div>
-          <div className="p-3">
+        <div>
+          <Rotulo>Negocios que entran cada mes</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
             {isDesktop ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={tenantsSerie} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <ResponsiveContainer width="100%" height={210}>
+                <LineChart data={serieTenants} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
                   <Tooltip content={<ChartTooltip />} />
                   <Line
                     type="monotone"
                     dataKey="nuevos"
-                    name="Nuevos"
-                    stroke="rgb(139, 92, 246)"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: 'rgb(139, 92, 246)', strokeWidth: 0 }}
-                    activeDot={{ r: 6 }}
+                    name="negocios"
+                    stroke="#0f172a"
+                    strokeWidth={1.75}
+                    dot={{ r: 2.5, fill: '#0f172a', strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="space-y-1.5">
-                {tenantsSerie.map((r, i) => {
-                  const max = Math.max(...tenantsSerie.map((x) => x.nuevos), 1)
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between text-[11px] mb-0.5">
-                        <span className="text-slate-500">{r.mes}</span>
-                        <span className="font-semibold text-slate-800 tabular-nums">{r.nuevos}</span>
-                      </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-violet-500 rounded-full" style={{ width: `${(r.nuevos / max) * 100}%` }} />
-                      </div>
+              <div className="space-y-2 p-1">
+                {serieTenants.map((r, i) => (
+                  <div key={i}>
+                    <div className="mb-1 flex justify-between text-[11px]">
+                      <span className="text-slate-500">{r.mes}</span>
+                      <span className="num font-semibold text-slate-800">{r.nuevos}</span>
                     </div>
-                  )
-                })}
+                    <Proporcion
+                      valor={r.nuevos}
+                      max={Math.max(...serieTenants.map((x) => x.nuevos), 1)}
+                      tono="slate"
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* ── Top tenants + Geo distribution ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Top tenants */}
-        <Card padding={false} className="lg:col-span-2">
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="Top 10 negocios por GMV" icon={<TrendingUp size={15} />} />
-          </div>
-          <div className="divide-y divide-slate-50">
+      {/* ── Quién mueve el volumen + dónde están ── */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div>
+          <Rotulo contador={data.top_tenants.length}>Quién mueve el volumen</Rotulo>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
             {data.top_tenants.length === 0 ? (
-              <EmptyState title="Sin datos" description="Aún no hay transacciones registradas." />
+              <p className="py-10 text-center text-xs text-slate-400">
+                Aún no hay transacciones registradas.
+              </p>
             ) : (
-              data.top_tenants.map((t, i) => {
-                const max = data.top_tenants[0]!.gmv || 1
-                return (
-                  <div key={t.admin_id} className="flex items-center gap-3 px-4 py-3">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                      i === 0 ? 'bg-amber-100 text-amber-700' :
-                      i === 1 ? 'bg-slate-200 text-slate-700' :
-                      i === 2 ? 'bg-orange-100 text-orange-700' :
-                      'bg-slate-100 text-slate-500'
-                    }`}>
-                      #{i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{t.nombre}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+              <ul className="divide-y divide-slate-50">
+                {data.top_tenants.map((t, i) => (
+                  <li key={t.admin_id} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="num w-5 shrink-0 text-right text-[11px] font-semibold text-slate-300">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="truncate text-[13px] font-semibold text-slate-800">{t.nombre}</p>
+                        <p className="num shrink-0 text-[13px] font-semibold text-slate-900">
+                          {formatCOP(t.gmv)}
+                        </p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <div className="flex-1">
+                          <Proporcion valor={t.gmv} max={maxTop} />
+                        </div>
+                        <span className="num shrink-0 text-[10px] text-slate-400">
+                          {t.ventas} ventas
+                        </span>
                         {t.ciudad && (
-                          <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <span className="hidden shrink-0 items-center gap-0.5 text-[10px] text-slate-400 sm:flex">
                             <MapPin size={9} /> {t.ciudad}
                           </span>
                         )}
-                        <span className="text-[10px] text-slate-400">{t.ventas} ventas</span>
-                      </div>
-                      <div className="h-1 bg-slate-100 rounded-full overflow-hidden mt-1.5">
-                        <div className="h-full t-bg rounded-full transition-all" style={{ width: `${(t.gmv / max) * 100}%` }} />
                       </div>
                     </div>
-                    <p className="text-sm font-bold text-slate-800 tabular-nums shrink-0">{formatCOP(t.gmv)}</p>
-                  </div>
-                )
-              })
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        </Card>
+        </div>
 
-        {/* Geo distribution */}
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="Por ciudad" icon={<MapPin size={15} />} />
-          </div>
-          <div className="p-4 space-y-2.5">
+        <div>
+          <Rotulo>Dónde están</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
             {data.tenants.geo.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-4">Sin datos geográficos</p>
+              <p className="py-6 text-center text-xs text-slate-400">Sin datos de ciudad</p>
             ) : (
-              data.tenants.geo.map((g, i) => {
-                const max = data.tenants.geo[0]!.n || 1
-                return (
-                  <div key={i}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-semibold text-slate-700 truncate">{g.ciudad}</span>
-                      <span className="text-xs font-bold text-slate-800 tabular-nums">{g.n}</span>
+              <ul className="space-y-2.5">
+                {data.tenants.geo.map((g, i) => (
+                  <li key={i}>
+                    <div className="mb-1 flex items-baseline justify-between gap-2">
+                      <span className="truncate text-xs font-medium text-slate-700">{g.ciudad}</span>
+                      <span className="num text-xs font-semibold text-slate-900">{g.n}</span>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(g.n / max) * 100}%` }} />
-                    </div>
-                  </div>
-                )
-              })
+                    <Proporcion valor={g.n} max={maxGeo} tono="slate" />
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* ── Totales operativos del ecosistema ───────────────────────────────── */}
-      <Card padding={false}>
-        <div className="p-4 border-b border-slate-50">
-          <SectionHeader title="Salud financiera del ecosistema" icon={<BarChart3 size={15} />} />
-        </div>
-        <div className="p-5 grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-50/30 p-4">
-            <ShoppingCart size={16} className="text-blue-600 mb-2" />
-            <p className="text-xl font-extrabold text-slate-900 tabular-nums leading-none">{data.totales.ventas.toLocaleString('es-CO')}</p>
-            <p className="text-[10px] text-slate-500 font-medium mt-1.5">Ventas totales</p>
-          </div>
-          <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-50/30 p-4">
-            <CreditCard size={16} className="text-emerald-600 mb-2" />
-            <p className="text-sm font-extrabold text-slate-900 tabular-nums leading-none">{formatCOP(data.totales.pagos_recibidos)}</p>
-            <p className="text-[10px] text-slate-500 font-medium mt-1.5">Pagos recibidos</p>
-          </div>
-          <div className="rounded-xl border border-orange-100 bg-gradient-to-br from-orange-50 to-orange-50/30 p-4">
-            <Receipt size={16} className="text-orange-600 mb-2" />
-            <p className="text-sm font-extrabold text-slate-900 tabular-nums leading-none">{formatCOP(data.totales.gastos_registrados)}</p>
-            <p className="text-[10px] text-slate-500 font-medium mt-1.5">Gastos registrados</p>
-          </div>
-          <div className="rounded-xl border border-red-100 bg-gradient-to-br from-red-50 to-red-50/30 p-4">
-            <BookOpen size={16} className="text-red-600 mb-2" />
-            <p className="text-sm font-extrabold text-slate-900 tabular-nums leading-none">{formatCOP(data.totales.cuentas_por_cobrar)}</p>
-            <p className="text-[10px] text-slate-500 font-medium mt-1.5">Por cobrar (CxC)</p>
-          </div>
-          <div className="rounded-xl border border-violet-100 bg-gradient-to-br from-violet-50 to-violet-50/30 p-4">
-            <Users size={16} className="text-violet-600 mb-2" />
-            <p className="text-xl font-extrabold text-slate-900 tabular-nums leading-none">{data.totales.usuarios.toLocaleString('es-CO')}</p>
-            <p className="text-[10px] text-slate-500 font-medium mt-1.5">Usuarios totales</p>
-          </div>
-        </div>
-      </Card>
+      {/* ── Dinero del ecosistema ── */}
+      <div>
+        <Rotulo>El dinero que mueve la red</Rotulo>
+        <Papel className="p-5">
+          <Cifras>
+            <Cifra valor={data.totales.ventas.toLocaleString('es-CO')} etiqueta="Ventas" />
+            <Cifra valor={formatCOP(data.totales.pagos_recibidos)} etiqueta="Pagos recibidos" />
+            <Cifra valor={formatCOP(data.totales.gastos_registrados)} etiqueta="Gastos registrados" />
+            <Cifra
+              valor={formatCOP(data.totales.cuentas_por_cobrar)}
+              etiqueta="Fiado sin cobrar"
+              tono={data.totales.cuentas_por_cobrar > 0 ? 'yellow' : 'neutro'}
+            />
+            <Cifra valor={data.totales.usuarios.toLocaleString('es-CO')} etiqueta="Usuarios" />
+          </Cifras>
+        </Papel>
+      </div>
 
-      {/* ── Audit log activity ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card padding={false} className="lg:col-span-2">
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="Actividad de auditoría — últimos 30 días" icon={<Shield size={15} />} />
-          </div>
-          <div className="p-3">
+      {/* ── Auditoría ── */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div>
+          <Rotulo>Actividad registrada · últimos 30 días</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
             {isDesktop ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={data.audit.serie_diaria.map((r) => ({ d: r.d.slice(5), n: r.n }))} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="d" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={Math.max(0, Math.floor(data.audit.serie_diaria.length / 10) - 1)} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
-                  <Bar dataKey="n" name="Eventos" fill="rgb(99, 102, 241)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+              <ResponsiveContainer width="100%" height={165}>
+                <BarChart
+                  data={data.audit.serie_diaria.map((r) => ({ d: r.d.slice(5), n: r.n }))}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                    dataKey="d"
+                    tick={{ fontSize: 9, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    interval={Math.max(0, Math.floor(data.audit.serie_diaria.length / 10) - 1)}
+                  />
+                  <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={26} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(15,23,42,0.04)' }} />
+                  <Bar dataKey="n" name="eventos" fill="#cbd5e1" radius={[2, 2, 0, 0]} maxBarSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-xs text-slate-400 text-center py-6">Gráfico disponible en desktop</p>
+              <p className="py-6 text-center text-xs text-slate-400">
+                La gráfica diaria se ve en pantalla grande.
+              </p>
             )}
           </div>
-        </Card>
+        </div>
 
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50">
-            <SectionHeader title="Acciones más frecuentes" icon={<Activity size={15} />} />
-          </div>
-          <div className="p-4 space-y-2">
+        <div>
+          <Rotulo>Qué se hace más</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
             {data.audit.top_acciones.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-4">Sin eventos recientes</p>
+              <p className="py-6 text-center text-xs text-slate-400">Sin eventos recientes</p>
             ) : (
-              data.audit.top_acciones.map((a, i) => {
-                const max = data.audit.top_acciones[0]!.n || 1
-                return (
-                  <div key={i}>
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[11px] font-mono text-slate-700 truncate">{a.action}</span>
-                      <span className="text-[11px] font-bold text-slate-800 tabular-nums">{a.n}</span>
+              <ul className="space-y-2.5">
+                {data.audit.top_acciones.map((a, i) => (
+                  <li key={i}>
+                    <div className="mb-1 flex items-baseline justify-between gap-2">
+                      <span className="truncate font-mono text-[11px] text-slate-600">{a.action}</span>
+                      <span className="num text-xs font-semibold text-slate-900">{a.n}</span>
                     </div>
-                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-400 rounded-full" style={{ width: `${(a.n / max) * 100}%` }} />
-                    </div>
-                  </div>
-                )
-              })
+                    <Proporcion valor={a.n} max={maxAccion} tono="slate" />
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* ── Insights inteligentes ──────────────────────────────────────────── */}
-      {insights.length > 0 && (
-        <Card padding={false}>
-          <div className="p-4 border-b border-slate-50 flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-yellow-50 flex items-center justify-center">
-                <Sparkles size={15} className="text-amber-600" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-800 leading-tight">Insights para el master</h2>
-                <p className="text-[11px] text-slate-500 leading-tight">
-                  {insights.length} {insights.length === 1 ? 'hallazgo' : 'hallazgos'} a nivel ecosistema
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
-              Análisis cross-tenant
-            </span>
+      {/* ── Hallazgos ── */}
+      {notas.length > 0 && (
+        <div>
+          <Rotulo contador={notas.length}>Lo que dicen los números</Rotulo>
+          <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+            <ul className="divide-y divide-slate-100">
+              {notas.map((h, i) => (
+                <Nota key={i} h={h} />
+              ))}
+            </ul>
           </div>
-          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {insights.map((ins, i) => {
-              const s = SEVERITY_STYLES[ins.severity]
-              return (
-                <div key={i} className={`relative overflow-hidden rounded-xl border p-4 ${s.wrapper}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-lg shadow-sm flex items-center justify-center shrink-0 ${s.iconWrap}`}>
-                      {ins.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${s.chip}`}>{s.badge}</span>
-                        <p className="text-sm font-bold text-slate-800 truncate">{ins.title}</p>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">{ins.description}</p>
-                      {ins.metric && (
-                        <div className="mt-2.5 leading-none">
-                          <p className={`text-lg font-bold tabular-nums ${s.metric}`}>{ins.metric}</p>
-                          {ins.metricLabel && <p className={`text-[10px] mt-1 font-medium ${s.label}`}>{ins.metricLabel}</p>}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+          <p className="mt-2.5 flex items-center gap-1.5 text-[10.5px] text-slate-400">
+            <Activity size={10} />
+            Reglas fijas sobre los datos del corte — no es una predicción, es lo que ya pasó.
+          </p>
+        </div>
       )}
 
+      {notas.length === 0 && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-5 py-4">
+          {data.gmv.delta_pct !== null && data.gmv.delta_pct >= 0 ? (
+            <TrendingUp size={15} className="text-emerald-600" />
+          ) : (
+            <TrendingDown size={15} className="text-slate-400" />
+          )}
+          <p className="text-xs text-slate-500">
+            Sin desvíos que valga la pena señalar en este corte: todo se mueve dentro de lo esperado.
+          </p>
+        </div>
+      )}
+
+      <p className="flex items-center gap-1.5 border-t border-slate-100 pt-4 text-[10.5px] text-slate-400">
+        <Building2 size={10} />
+        Datos consolidados de todos los negocios.
+        <Shield size={10} className="ml-2" />
+        La actividad registrada proviene del historial de auditoría, que no se puede editar.
+      </p>
     </div>
   )
 }

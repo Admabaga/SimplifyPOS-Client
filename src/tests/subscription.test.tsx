@@ -19,6 +19,14 @@ vi.mock('@/features/subscription/api', () => ({
   },
 }))
 
+// El gate solo actúa si el release de SaaS está publicado en web. Estos tests
+// prueban el comportamiento con la funcionalidad encendida.
+vi.mock('@/shared/hooks/useReleases', () => ({
+  useReleases: () => ({ data: { suscripciones_saas: { api: true, web: true } }, isLoading: false }),
+  useRelease: () => true,
+  useReleaseCapas: () => ({ api: true, web: true }),
+}))
+
 const mockClearAuth = vi.fn()
 vi.mock('@/stores/auth', () => ({
   useAuthStore: Object.assign(

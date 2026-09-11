@@ -6,6 +6,7 @@ import { Save, Building2, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button, Card, Input, Select, Spinner, InfoBanner } from '@/shared/components/ui'
 import { billingApi } from '../api'
+import LogoUploader from './LogoUploader'
 import type { EmpresaConfigInput } from '../types'
 import { apiError } from '@/shared/lib/apiError'
 
@@ -90,6 +91,8 @@ export default function EmpresaConfigTab() {
           <Input label="Email" type="email" {...register('email')} className="md:col-span-2" />
         </div>
       </Card>
+
+      <LogoUploader nombreNegocio={empresa?.razon_social} />
 
       <Card>
         <h2 className="text-sm font-bold text-slate-800 mb-4">Régimen tributario</h2>

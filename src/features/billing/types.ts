@@ -38,6 +38,19 @@ export interface EmpresaConfig {
   updated_at: string
 }
 
+/**
+ * Logo del comercio. Llega como data URI y no como URL a propósito: una imagen
+ * remota no puede llevar el token de sesión, y en la impresión térmica compite
+ * con el diálogo de impresión — si no alcanza a cargar, el ticket sale sin logo.
+ */
+export interface EmpresaLogo {
+  data_uri: string       // color, para pantalla
+  data_uri_mono: string  // 1 bit, para la térmica
+  ancho: number
+  alto: number
+  actualizado_at: string
+}
+
 export type EmpresaConfigInput = Omit<
   EmpresaConfig,
   | 'id'

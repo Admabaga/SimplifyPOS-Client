@@ -1,4 +1,25 @@
-import { useState } from 'react'
+/**
+ * Master — Suscripciones
+ *
+ * Es la contabilidad del SaaS: quién paga, quién dejó de pagar y qué se hace
+ * al respecto. Tenía dos problemas de fondo.
+ *
+ * El primero: clases `dark:` por todos lados, que ninguna otra pantalla de la
+ * app usa. Media hoja de código muerto que además dejaba dos verdades sobre
+ * cada color.
+ *
+ * El segundo, el que sí se nota al trabajar: las cuentas eran tarjetas de tres
+ * columnas. Con cincuenta clientes, encontrar al que está en mora obliga a
+ * leer tarjeta por tarjeta, porque la misma cifra queda en un sitio distinto
+ * en cada una. Ahora es padrón —igual que Negocios— ordenado por urgencia: lo
+ * bloqueado arriba, lo que está al día abajo, y el filete sólo lleva color
+ * cuando hay algo que mirar.
+ *
+ * Las cinco cifras de la cabecera se leen como el encabezado de un informe, no
+ * como cinco tarjetas con su ícono de color: el ícono no aportaba nada que la
+ * etiqueta no dijera ya.
+ */
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertCircle,
@@ -12,13 +33,11 @@ import {
   Percent,
   RefreshCw,
   Search,
-  TrendingUp,
   Users,
+  X,
 } from 'lucide-react'
 import {
-  Badge,
   Button,
-  Card,
   ConfirmDialog,
   EmptyState,
   Modal,
@@ -30,6 +49,7 @@ import { apiError } from '@/shared/lib/apiError'
 import apiClient from '@/shared/api/client'
 import type { Plan, Transaccion } from '@/features/subscription/types'
 import toast from 'react-hot-toast'
+import { Cifra, Cifras, Papel, Rotulo } from './components/consola'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,71 +176,123 @@ const subsApi = {
     apiClient.put<PlanAdmin>(`/master/subscriptions/plans/${planId}`, body).then((r) => r.data),
 }
 
-// ─── Helpers de presentación ──────────────────────────────────────────────────
+// ─── Estados ──────────────────────────────────────────────────────────────────
 
-const ESTADO_UI: Record<string, { label: string; variant: 'green' | 'red' | 'yellow' | 'gray' | 'blue'; hint: string }> = {
-  ACTIVE:    { label: 'Al día',      variant: 'green',  hint: 'Pagó y puede usar todo.' },
-  TRIALING:  { label: 'En prueba',   variant: 'blue',   hint: 'Mes de prueba gratis activo.' },
-  PAST_DUE:  { label: 'En mora',     variant: 'yellow', hint: 'El cobro falló; sigue operando unos días con aviso.' },
-  SUSPENDED: { label: 'Bloqueada',   variant: 'red',    hint: 'Sin acceso hasta que pague (o la reactives tú).' },
-  CANCELED:  { label: 'Cancelada',   variant: 'gray',   hint: 'El cliente canceló su suscripción.' },
+/**
+ * `orden` es la urgencia con la que hay que mirar cada estado: manda el orden
+ * del padrón. `filete` sólo lleva color cuando dice algo — pintar de verde al
+ * que está al día hace que el ojo deje de distinguir la excepción.
+ */
+const ESTADO_UI: Record<
+  string,
+  { label: string; hint: string; orden: number; filete: string; texto: string; apagada?: boolean }
+> = {
+  SUSPENDED: {
+    label: 'Bloqueada',
+    hint: 'Sin acceso hasta que pague (o la reactives tú).',
+    orden: 0,
+    filete: 'bg-rose-500',
+    texto: 'text-rose-700',
+  },
+  PAST_DUE: {
+    label: 'En mora',
+    hint: 'El cobro falló; sigue operando unos días con aviso.',
+    orden: 1,
+    filete: 'bg-amber-500',
+    texto: 'text-amber-700',
+  },
+  TRIALING: {
+    label: 'En prueba',
+    hint: 'Mes de prueba gratis activo.',
+    orden: 2,
+    filete: 'bg-slate-300',
+    texto: 'text-slate-500',
+  },
+  CANCELED: {
+    label: 'Cancelada',
+    hint: 'El cliente canceló su suscripción.',
+    orden: 3,
+    filete: 'bg-slate-200',
+    texto: 'text-slate-400',
+    apagada: true,
+  },
+  ACTIVE: {
+    label: 'Al día',
+    hint: 'Pagó y puede usar todo.',
+    orden: 4,
+    filete: 'bg-slate-200',
+    texto: 'text-slate-400',
+  },
 }
+
+const estadoDe = (estado: string) =>
+  ESTADO_UI[estado] ?? {
+    label: estado,
+    hint: '',
+    orden: 5,
+    filete: 'bg-slate-200',
+    texto: 'text-slate-400',
+  }
 
 function fecha(d: string | null): string {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-// ─── Métricas (tarjetas de arriba) ────────────────────────────────────────────
+function fechaHora(d: string): string {
+  return new Date(d).toLocaleString('es-CO', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
+}
 
-function MetricsBar({ m }: { m: SaasMetrics }) {
-  const cards = [
-    {
-      icon: <TrendingUp size={16} className="text-emerald-600" />,
-      label: 'Ingreso mensual (MRR)',
-      value: formatCOP(m.mrr),
-      hint: 'Lo que facturas cada mes con las suscripciones al día',
-    },
-    {
-      icon: <BadgeDollarSign size={16} className="text-blue-600" />,
-      label: 'Cobrado este mes',
-      value: formatCOP(m.ingresos_mes),
-      hint: 'Pagos aprobados en el mes calendario',
-    },
-    {
-      icon: <Users size={16} className="text-indigo-600" />,
-      label: 'Clientes',
-      value: String(m.total_tenants),
-      hint: `${m.por_estado['ACTIVE'] ?? 0} al día · ${m.por_estado['PAST_DUE'] ?? 0} en mora · ${m.por_estado['SUSPENDED'] ?? 0} bloqueados`,
-    },
-    {
-      icon: <AlertCircle size={16} className="text-red-600" />,
-      label: 'Rechazado este mes',
-      value: formatCOP(m.total_rechazado_mes),
-      hint: `${m.cobros_rechazados_mes} cobro(s) fallido(s) · ${m.cuentas_bloqueadas} cuenta(s) bloqueada(s)`,
-    },
-    {
-      icon: <AlertCircle size={16} className="text-amber-600" />,
-      label: 'Pruebas por vencer',
-      value: String(m.trials_por_vencer),
-      hint: 'Trials que terminan en los próximos 7 días',
-    },
-  ]
+const nombreDe = (r: SubRow) => r.razon_social?.trim() || r.admin_nombre
+
+// ─── Cabecera de cifras ───────────────────────────────────────────────────────
+
+function Cabecera({ m }: { m: SaasMetrics }) {
+  const enProblema = (m.por_estado['PAST_DUE'] ?? 0) + (m.por_estado['SUSPENDED'] ?? 0)
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
-      {cards.map((c) => (
-        <Card key={c.label} padding>
-          <div className="flex items-center gap-2">
-            {c.icon}
-            <p className="text-xs text-gray-500 dark:text-gray-400">{c.label}</p>
-          </div>
-          <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{c.value}</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{c.hint}</p>
-        </Card>
-      ))}
-    </div>
+    <Papel className="p-5">
+      <Cifras>
+        <Cifra
+          valor={formatCOP(m.mrr)}
+          etiqueta="Ingreso mensual"
+          nota="lo que factura la base al día"
+        />
+        <Cifra
+          valor={formatCOP(m.ingresos_mes)}
+          etiqueta="Cobrado este mes"
+          nota={`${m.cobros_aprobados_mes} cobro(s) aprobado(s)`}
+        />
+        <Cifra
+          valor={String(m.total_tenants)}
+          etiqueta="Clientes"
+          nota={`${m.por_estado['ACTIVE'] ?? 0} al día · ${enProblema} con problema`}
+        />
+        <Cifra
+          valor={formatCOP(m.total_rechazado_mes)}
+          etiqueta="Rechazado este mes"
+          tono={m.total_rechazado_mes > 0 ? 'red' : 'neutro'}
+          nota={`${m.cobros_rechazados_mes} fallido(s) · ${m.cuentas_bloqueadas} bloqueada(s)`}
+        />
+        <Cifra
+          valor={String(m.trials_por_vencer)}
+          etiqueta="Pruebas por vencer"
+          tono={m.trials_por_vencer > 0 ? 'yellow' : 'neutro'}
+          nota="terminan en los próximos 7 días"
+        />
+      </Cifras>
+    </Papel>
   )
 }
+
+// ─── Campos de formulario (mismo trazo en todos los modales) ──────────────────
+
+const campo =
+  'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ' +
+  'focus:outline-none focus:ring-2 focus:ring-slate-900/10'
+
+const etiqueta = 'mb-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500'
 
 // ─── Modal de promo (días gratis / descuento) ─────────────────────────────────
 
@@ -240,7 +312,7 @@ function PromoModal({ row, onClose }: { row: SubRow; onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ['master', 'subscriptions'] })
       toast.success(
         tipo === 'dias'
-          ? `Regalaste ${dias} días a ${row.razon_social ?? row.admin_nombre}`
+          ? `Regalaste ${dias} días a ${nombreDe(row)}`
           : `Descuento de ${formatCOP(monto)} aplicado al próximo cobro`
       )
       onClose()
@@ -255,94 +327,93 @@ function PromoModal({ row, onClose }: { row: SubRow; onClose: () => void }) {
     { d: 60, label: '2 meses' },
   ]
 
+  const opcion = (activa: boolean) =>
+    `flex items-center gap-2 rounded-lg border p-3 text-sm transition-colors ${
+      activa
+        ? 'border-[var(--t-primary)] t-bg-lt font-semibold text-slate-900'
+        : 'border-slate-200 text-slate-600 hover:border-slate-300'
+    }`
+
   return (
-    <Modal open onClose={onClose} title={`Dar promoción · ${row.razon_social ?? row.admin_nombre}`}>
+    <Modal open onClose={onClose} title={`Dar promoción · ${nombreDe(row)}`}>
       <div className="space-y-4">
-        {/* Selector de tipo */}
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setTipo('dias')}
-            className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition
-              ${tipo === 'dias'
-                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 font-semibold'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
-          >
-            <CalendarPlus size={16} className="text-emerald-600" />
+          <button type="button" onClick={() => setTipo('dias')} className={opcion(tipo === 'dias')}>
+            <CalendarPlus size={15} className="text-slate-400" />
             Días gratis
           </button>
           <button
             type="button"
             onClick={() => setTipo('descuento')}
-            className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition
-              ${tipo === 'descuento'
-                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 font-semibold'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
+            className={opcion(tipo === 'descuento')}
           >
-            <Percent size={16} className="text-emerald-600" />
+            <Percent size={15} className="text-slate-400" />
             Descuento
           </button>
         </div>
 
         {tipo === 'dias' ? (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+            <p className="mb-2 text-sm text-slate-600">
               Extiende el servicio sin cobro. Si la cuenta está bloqueada o en mora,
-              <strong> se reactiva al instante</strong>.
+              <strong className="font-semibold text-slate-800"> se reactiva al instante</strong>.
             </p>
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="mb-3 flex flex-wrap gap-2">
               {presetsDias.map((p) => (
                 <button
                   key={p.d}
                   type="button"
                   onClick={() => setDias(p.d)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition
-                    ${dias === p.d
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-emerald-400'}`}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    dias === p.d
+                      ? 'border-slate-900 bg-slate-900 text-white'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                  }`}
                 >
                   {p.label}
                 </button>
               ))}
             </div>
-            <label className="block text-xs text-gray-500 mb-1">Días (personalizado)</label>
+            <label className={etiqueta}>Días (personalizado)</label>
             <input
               type="number"
               min={1}
               max={365}
               value={dias}
               onChange={(e) => setDias(Number(e.target.value))}
-              className="w-32 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+              className={`${campo} num w-32`}
             />
           </div>
         ) : (
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-              Resta este valor del <strong>siguiente cobro</strong> del cliente
+            <p className="mb-3 text-sm text-slate-600">
+              Resta este valor del{' '}
+              <strong className="font-semibold text-slate-800">siguiente cobro</strong> del cliente
               {row.monto_proximo_cobro != null && (
                 <> (hoy sería {formatCOP(row.monto_proximo_cobro)})</>
-              )}.
+              )}
+              .
             </p>
-            <label className="block text-xs text-gray-500 mb-1">Valor del descuento (COP)</label>
+            <label className={etiqueta}>Valor del descuento (COP)</label>
             <input
               type="number"
               min={1}
               step={1000}
               value={monto}
               onChange={(e) => setMonto(Number(e.target.value))}
-              className="w-44 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+              className={`${campo} num w-44`}
             />
           </div>
         )}
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Motivo (queda en la auditoría)</label>
+          <label className={etiqueta}>Motivo (queda en la auditoría)</label>
           <input
             type="text"
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder="Ej: promo de lanzamiento, compensación…"
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+            className={campo}
           />
         </div>
 
@@ -368,31 +439,36 @@ function HistorialModal({ row, onClose }: { row: SubRow; onClose: () => void }) 
     queryKey: ['master', 'subscriptions', row.admin_id, 'txs'],
     queryFn: () => subsApi.transactions(row.admin_id),
   })
-  const txVariant = (estado: string) =>
-    estado === 'APPROVED' ? 'green' : estado === 'DECLINED' ? 'red' : 'gray'
 
   return (
-    <Modal open onClose={onClose} title={`Pagos · ${row.razon_social ?? row.admin_nombre}`}>
+    <Modal open onClose={onClose} title={`Pagos · ${nombreDe(row)}`}>
       {isLoading && <Skeleton className="h-24 rounded-lg" />}
       {data && data.length === 0 && (
-        <p className="text-sm text-gray-500 py-4 text-center">Aún no hay cobros registrados.</p>
+        <p className="py-4 text-center text-sm text-slate-500">Aún no hay cobros registrados.</p>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-gray-100 dark:divide-gray-700 max-h-80 overflow-y-auto">
-          {data.map((tx) => (
-            <li key={tx.id} className="py-2.5 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {formatCOP(tx.monto)}{' '}
-                  <span className="text-xs font-normal text-gray-400">
-                    · {tx.concepto.toLowerCase()} {tx.ciclo.toLowerCase()}
-                  </span>
-                </p>
-                <p className="text-xs text-gray-500">{fecha(tx.created_at)} {tx.mensaje && `· ${tx.mensaje}`}</p>
-              </div>
-              <Badge variant={txVariant(tx.estado)}>{tx.estado}</Badge>
-            </li>
-          ))}
+        <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
+          {data.map((tx) => {
+            const ui = TX_UI[tx.estado] ?? { label: tx.estado, texto: 'text-slate-500' }
+            return (
+              <li key={tx.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="num text-sm font-semibold text-slate-900">
+                    {formatCOP(tx.monto)}{' '}
+                    <span className="text-xs font-normal text-slate-400">
+                      · {tx.concepto.toLowerCase()} {tx.ciclo.toLowerCase()}
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {fecha(tx.created_at)} {tx.mensaje && `· ${tx.mensaje}`}
+                  </p>
+                </div>
+                <span className={`shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] ${ui.texto}`}>
+                  {ui.label}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
     </Modal>
@@ -418,23 +494,24 @@ function CambiarPlanModal({ row, onClose }: { row: SubRow; onClose: () => void }
   })
 
   return (
-    <Modal open onClose={onClose} title={`Cambiar plan · ${row.razon_social ?? row.admin_nombre}`}>
+    <Modal open onClose={onClose} title={`Cambiar plan · ${nombreDe(row)}`}>
       <div className="space-y-3">
         {(plans ?? []).map((p) => (
           <button
             key={p.codigo}
             type="button"
             onClick={() => setCodigo(p.codigo)}
-            className={`w-full text-left rounded-lg border p-3 transition
-              ${codigo === p.codigo
-                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'}`}
+            className={`w-full rounded-lg border p-3 text-left transition-colors ${
+              codigo === p.codigo
+                ? 'border-[var(--t-primary)] t-bg-lt'
+                : 'border-slate-200 hover:border-slate-300'
+            }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-sm text-gray-900 dark:text-white">{p.nombre}</span>
-              <span className="text-sm text-gray-600 dark:text-gray-300">{formatCOP(p.precio_mensual)}/mes</span>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-slate-900">{p.nombre}</span>
+              <span className="num text-sm text-slate-600">{formatCOP(p.precio_mensual)}/mes</span>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="mt-0.5 text-xs text-slate-500">
               {p.limite_documentos_mes == null
                 ? 'Facturas electrónicas ilimitadas'
                 : `${p.limite_documentos_mes} facturas electrónicas/mes`}
@@ -446,7 +523,7 @@ function CambiarPlanModal({ row, onClose }: { row: SubRow; onClose: () => void }
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
           placeholder="Motivo (queda en la auditoría)"
-          className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+          className={campo}
         />
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
@@ -462,20 +539,20 @@ function CambiarPlanModal({ row, onClose }: { row: SubRow; onClose: () => void }
   )
 }
 
-// ─── Fila / tarjeta de suscripción ────────────────────────────────────────────
+// ─── Fila del padrón de cuentas ───────────────────────────────────────────────
 
-function SubCard({ row, onPromo, onHistorial, onPlan }: {
+function Fila({ row, onPromo, onHistorial, onPlan }: {
   row: SubRow
   onPromo: () => void
   onHistorial: () => void
   onPlan: () => void
 }) {
   const qc = useQueryClient()
-  const ui = ESTADO_UI[row.estado] ?? { label: row.estado, variant: 'gray' as const, hint: '' }
+  const ui = estadoDe(row.estado)
   const bloqueada = row.estado === 'SUSPENDED' || row.estado === 'PAST_DUE'
-  const [confirmToggle, setConfirmToggle] = useState(false)
+  const [confirmar, setConfirmar] = useState(false)
 
-  const toggleMutation = useMutation({
+  const toggle = useMutation({
     mutationFn: () =>
       bloqueada
         ? subsApi.reactivate(row.admin_id, 'desbloqueo manual desde panel master')
@@ -483,122 +560,268 @@ function SubCard({ row, onPromo, onHistorial, onPlan }: {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['master', 'subscriptions'] })
       toast.success(bloqueada ? 'Cuenta desbloqueada' : 'Cuenta bloqueada')
-      setConfirmToggle(false)
+      setConfirmar(false)
     },
-    onError: (err) => { toast.error(apiError(err)); setConfirmToggle(false) },
+    onError: (err) => { toast.error(apiError(err)); setConfirmar(false) },
   })
 
-  const uso =
-    row.documentos_limite == null
-      ? `${row.documentos_usados} FE este periodo (ilimitado)`
-      : `${row.documentos_usados} / ${row.documentos_limite} FE este periodo`
+  const accion =
+    'rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 ' +
+    'transition-colors hover:border-slate-300 hover:bg-white hover:text-slate-900'
 
   return (
-    <Card padding className={bloqueada ? 'border-red-200 dark:border-red-900' : ''}>
-      {/* Identidad + estado */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 dark:text-white truncate">
-            {row.razon_social ?? row.admin_nombre}
+    <tr className={`group transition-colors hover:bg-slate-50/80 ${ui.apagada ? 'opacity-55' : ''}`}>
+      <td className="py-2.5 pl-4 pr-3">
+        <div className="flex items-center gap-2.5">
+          <span className={`h-7 w-[3px] shrink-0 rounded-full ${ui.filete}`} title={ui.hint} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate text-[13px] font-semibold text-slate-900">{nombreDe(row)}</p>
+              <span
+                className={`shrink-0 text-[9.5px] font-bold uppercase tracking-[0.1em] ${ui.texto}`}
+                title={ui.hint}
+              >
+                {ui.label}
+              </span>
+            </div>
+            <p className="truncate text-[11px] text-slate-400">{row.admin_email}</p>
+          </div>
+        </div>
+      </td>
+
+      <td className="px-3 text-[11.5px] text-slate-500">
+        {row.plan_nombre ?? '—'}
+        <span className="text-slate-400"> · {row.ciclo.toLowerCase()}</span>
+      </td>
+
+      <td className="px-3 text-right text-[12px]">
+        <span className="num text-slate-700">
+          {row.documentos_usados}
+          {row.documentos_limite != null && (
+            <span className="text-slate-400">/{row.documentos_limite}</span>
+          )}
+        </span>
+        {row.excedente_acumulado > 0 && (
+          <p className="num text-[10px] text-amber-700">
+            +{formatCOP(row.excedente_acumulado)} exced.
           </p>
-          <p className="text-xs text-gray-500 truncate">{row.admin_email}</p>
-        </div>
-        <Badge variant={ui.variant} dot>{ui.label}</Badge>
-      </div>
-      <p className="text-[11px] text-gray-400 mt-1">{ui.hint}</p>
+        )}
+      </td>
 
-      {/* Datos clave */}
-      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-        <div>
-          <dt className="text-xs text-gray-500">Plan</dt>
-          <dd className="font-medium text-gray-900 dark:text-white">
-            {row.plan_nombre ?? '—'} <span className="text-xs text-gray-400">({row.ciclo.toLowerCase()})</span>
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-gray-500">Próximo cobro</dt>
-          <dd className="font-medium text-gray-900 dark:text-white">
-            {row.monto_proximo_cobro != null ? formatCOP(row.monto_proximo_cobro) : '—'}
-            <span className="text-xs text-gray-400"> · {fecha(row.proximo_cobro)}</span>
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-gray-500">Facturación electrónica</dt>
-          <dd className="text-gray-700 dark:text-gray-300 text-xs">{uso}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-gray-500">Método de pago</dt>
-          <dd className="text-gray-700 dark:text-gray-300 text-xs flex items-center gap-1">
-            <CreditCard size={12} />
-            {row.tiene_metodo_pago ? `${row.metodo_brand ?? 'Tarjeta'} •••• ${row.metodo_last4 ?? ''}` : 'Sin tarjeta'}
-          </dd>
-        </div>
-      </dl>
+      <td className="px-3 text-right text-[12px]">
+        <span className="num font-semibold text-slate-700">
+          {row.monto_proximo_cobro != null ? formatCOP(row.monto_proximo_cobro) : '—'}
+        </span>
+        <p className="num text-[10px] text-slate-400">{fecha(row.proximo_cobro)}</p>
+        {row.descuento_proximo_cobro > 0 && (
+          <p className="num text-[10px] text-emerald-700">
+            −{formatCOP(row.descuento_proximo_cobro)} promo
+          </p>
+        )}
+      </td>
 
-      {(row.descuento_proximo_cobro > 0 || row.excedente_acumulado > 0) && (
-        <p className="mt-2 text-[11px] text-gray-500">
-          {row.descuento_proximo_cobro > 0 && (
-            <span className="text-emerald-600">Promo: −{formatCOP(row.descuento_proximo_cobro)} próximo cobro. </span>
-          )}
-          {row.excedente_acumulado > 0 && (
-            <span className="text-amber-600">Excedente acumulado: {formatCOP(row.excedente_acumulado)}.</span>
-          )}
-        </p>
-      )}
+      <td className="px-3 text-[11.5px]">
+        {row.tiene_metodo_pago ? (
+          <span className="flex items-center gap-1 text-slate-500">
+            <CreditCard size={11} className="shrink-0 text-slate-400" />
+            <span className="num truncate">
+              {row.metodo_brand ?? 'Tarjeta'} ••{row.metodo_last4 ?? ''}
+            </span>
+          </span>
+        ) : (
+          <span className="text-amber-700">Sin tarjeta</span>
+        )}
+      </td>
 
-      {/* Acciones */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" icon={<Gift size={13} />} onClick={onPromo}>
-          Dar promo
-        </Button>
-        <Button size="sm" variant="ghost" icon={<History size={13} />} onClick={onHistorial}>
-          Pagos
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onPlan}>
-          Cambiar plan
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={bloqueada ? <LockOpen size={13} /> : <Lock size={13} />}
-          onClick={() => setConfirmToggle(true)}
-          disabled={toggleMutation.isPending}
-          className={bloqueada ? 'text-green-600' : 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}
-        >
-          {bloqueada ? 'Desbloquear' : 'Bloquear'}
-        </Button>
-      </div>
+      <td className="py-2.5 pl-3 pr-4">
+        <div className="flex items-center justify-end gap-1">
+          <button type="button" onClick={onPromo} className={accion} title="Dar días o descuento">
+            Promo
+          </button>
+          <button type="button" onClick={onHistorial} className={accion} title="Historial de pagos">
+            Pagos
+          </button>
+          <button type="button" onClick={onPlan} className={accion} title="Cambiar de plan">
+            Plan
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmar(true)}
+            disabled={toggle.isPending}
+            title={bloqueada ? 'Desbloquear acceso' : 'Bloquear acceso'}
+            className={`rounded-lg p-1.5 transition-colors ${
+              bloqueada
+                ? 'text-emerald-600 hover:bg-emerald-50'
+                : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
+            }`}
+          >
+            {bloqueada ? <LockOpen size={12} /> : <Lock size={12} />}
+          </button>
+        </div>
 
-      <ConfirmDialog
-        open={confirmToggle}
-        onCancel={() => setConfirmToggle(false)}
-        onConfirm={() => toggleMutation.mutate()}
-        title={bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
-        message={bloqueada
-          ? `¿Reactivar la suscripción de ${row.razon_social ?? row.admin_nombre}? Recuperarán acceso inmediato.`
-          : `¿Suspender la cuenta de ${row.razon_social ?? row.admin_nombre}? Perderán acceso hasta que paguen o los reactives.`}
-        confirmLabel={bloqueada ? 'Desbloquear' : 'Bloquear'}
-        danger={!bloqueada}
-        loading={toggleMutation.isPending}
-      />
-    </Card>
+        <ConfirmDialog
+          open={confirmar}
+          onCancel={() => setConfirmar(false)}
+          onConfirm={() => toggle.mutate()}
+          title={bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
+          message={bloqueada
+            ? `¿Reactivar la suscripción de ${nombreDe(row)}? Recuperarán acceso inmediato.`
+            : `¿Suspender la cuenta de ${nombreDe(row)}? Perderán acceso hasta que paguen o los reactives.`}
+          confirmLabel={bloqueada ? 'Desbloquear' : 'Bloquear'}
+          danger={!bloqueada}
+          loading={toggle.isPending}
+        />
+      </td>
+    </tr>
   )
 }
 
-// ─── Movimientos globales (historial de pagos de todos los tenants) ───────────
+// ─── Padrón de cuentas ────────────────────────────────────────────────────────
 
-const TX_UI: Record<string, { label: string; cls: string }> = {
-  APPROVED: { label: 'Aprobado', cls: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  DECLINED: { label: 'Rechazado', cls: 'text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300' },
-  ERROR:    { label: 'Error', cls: 'text-red-700 bg-red-50 dark:bg-red-900/30 dark:text-red-300' },
-  PENDING:  { label: 'Pendiente', cls: 'text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-300' },
-  VOIDED:   { label: 'Anulado', cls: 'text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300' },
+function PanelCuentas({
+  onPromo,
+  onHistorial,
+  onPlan,
+}: {
+  onPromo: (r: SubRow) => void
+  onHistorial: (r: SubRow) => void
+  onPlan: (r: SubRow) => void
+}) {
+  const [busqueda, setBusqueda] = useState('')
+  const [soloProblemas, setSoloProblemas] = useState(false)
+
+  const { data: rows, isLoading, error } = useQuery({
+    queryKey: ['master', 'subscriptions'],
+    queryFn: subsApi.list,
+    staleTime: 30_000,
+  })
+
+  /** Urgencia primero; dentro del mismo estado, primero el que más plata mueve. */
+  const filtradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    return (rows ?? [])
+      .filter((r) => {
+        const coincide =
+          !q ||
+          r.admin_email.toLowerCase().includes(q) ||
+          r.admin_nombre.toLowerCase().includes(q) ||
+          (r.razon_social ?? '').toLowerCase().includes(q)
+        return coincide && (!soloProblemas || ['PAST_DUE', 'SUSPENDED'].includes(r.estado))
+      })
+      .sort((a, b) => {
+        const d = estadoDe(a.estado).orden - estadoDe(b.estado).orden
+        return d !== 0 ? d : (b.monto_proximo_cobro ?? 0) - (a.monto_proximo_cobro ?? 0)
+      })
+  }, [rows, busqueda, soloProblemas])
+
+  if (isLoading) return <Skeleton className="h-96 rounded-xl" />
+  if (error != null)
+    return (
+      <EmptyState
+        icon={<AlertCircle size={30} className="text-rose-400" />}
+        title="Error al cargar suscripciones"
+        description={apiError(error)}
+      />
+    )
+
+  const total = rows?.length ?? 0
+
+  return (
+    <div>
+      <Rotulo
+        contador={filtradas.length === total ? undefined : `${filtradas.length} de ${total}`}
+        accion={
+          <label className="flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="checkbox"
+              checked={soloProblemas}
+              onChange={(e) => setSoloProblemas(e.target.checked)}
+              className="h-3 w-3 rounded border-slate-300"
+            />
+            Solo en mora o bloqueadas
+          </label>
+        }
+      >
+        Cuentas
+      </Rotulo>
+
+      <div className="relative mb-3">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Buscar negocio o correo…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm focus:outline-none"
+        />
+        {busqueda && (
+          <button
+            type="button"
+            onClick={() => setBusqueda('')}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {filtradas.length === 0 ? (
+        <EmptyState
+          icon={<Users size={30} className="text-slate-300" />}
+          title="Sin resultados"
+          description={
+            soloProblemas
+              ? 'Nadie está en mora ni bloqueado.'
+              : 'Ningún cliente coincide con la búsqueda.'
+          }
+        />
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 text-[9.5px] uppercase tracking-[0.12em] text-slate-400">
+                  <th className="py-2 pl-4 pr-3 text-left font-semibold">Cliente</th>
+                  <th className="px-3 text-left font-semibold">Plan</th>
+                  <th className="px-3 text-right font-semibold">FE del periodo</th>
+                  <th className="px-3 text-right font-semibold">Próximo cobro</th>
+                  <th className="px-3 text-left font-semibold">Método</th>
+                  <th className="py-2 pl-3 pr-4" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtradas.map((row) => (
+                  <Fila
+                    key={row.admin_id}
+                    row={row}
+                    onPromo={() => onPromo(row)}
+                    onHistorial={() => onHistorial(row)}
+                    onPlan={() => onPlan(row)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <p className="mt-3 text-[10.5px] text-slate-400">
+        Ordenado por urgencia: primero lo bloqueado, después la mora y al final lo que está al día.
+        Bloquear no borra nada — el cliente pierde el acceso hasta que pague o lo reactives.
+      </p>
+    </div>
+  )
 }
 
-function fechaHora(d: string): string {
-  return new Date(d).toLocaleString('es-CO', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  })
+// ─── Movimientos globales ─────────────────────────────────────────────────────
+
+const TX_UI: Record<string, { label: string; texto: string }> = {
+  APPROVED: { label: 'Aprobado', texto: 'text-emerald-700' },
+  DECLINED: { label: 'Rechazado', texto: 'text-rose-700' },
+  ERROR:    { label: 'Error', texto: 'text-rose-700' },
+  PENDING:  { label: 'Pendiente', texto: 'text-amber-700' },
+  VOIDED:   { label: 'Anulado', texto: 'text-slate-500' },
 }
 
 function MovimientosPanel() {
@@ -610,54 +833,86 @@ function MovimientosPanel() {
 
   if (isLoading) return <Skeleton className="h-64 rounded-xl" />
   if (error != null)
-    return <EmptyState icon={<AlertCircle size={32} className="text-red-400" />} title="Error" description={apiError(error)} />
+    return (
+      <EmptyState
+        icon={<AlertCircle size={30} className="text-rose-400" />}
+        title="Error"
+        description={apiError(error)}
+      />
+    )
   if (!data || data.length === 0)
-    return <EmptyState icon={<History size={32} className="text-gray-300" />} title="Aún no hay pagos" description="Cuando tus clientes paguen, verás aquí cada cobro." />
+    return (
+      <EmptyState
+        icon={<History size={30} className="text-slate-300" />}
+        title="Aún no hay pagos"
+        description="Cuando tus clientes paguen, verás aquí cada cobro."
+      />
+    )
 
   return (
-    <Card padding={false}>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800">
-              <th className="px-4 py-3 font-medium">Fecha</th>
-              <th className="px-4 py-3 font-medium">Cliente</th>
-              <th className="px-4 py-3 font-medium">Concepto</th>
-              <th className="px-4 py-3 font-medium text-right">Monto</th>
-              <th className="px-4 py-3 font-medium">Estado</th>
-              <th className="px-4 py-3 font-medium">Método</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((mv) => {
-              const ui = TX_UI[mv.estado] ?? { label: mv.estado, cls: 'text-gray-600 bg-gray-100' }
-              return (
-                <tr key={mv.id} className="border-b border-gray-50 dark:border-gray-800/60 hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{fechaHora(mv.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900 dark:text-white leading-tight">{mv.admin_nombre}</p>
-                    <p className="text-[11px] text-gray-400">{mv.admin_email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300 capitalize">{mv.concepto.toLowerCase()}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap">{formatCOP(mv.monto)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${ui.cls}`}>{ui.label}</span>
-                    {mv.mensaje && mv.estado !== 'APPROVED' && (
-                      <p className="text-[11px] text-gray-400 mt-0.5 max-w-44 truncate" title={mv.mensaje}>{mv.mensaje}</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{mv.metodo ?? '—'}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+    <div>
+      <Rotulo contador={data.length}>Movimientos</Rotulo>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 text-[9.5px] uppercase tracking-[0.12em] text-slate-400">
+                <th className="py-2 pl-4 pr-3 text-left font-semibold">Fecha</th>
+                <th className="px-3 text-left font-semibold">Cliente</th>
+                <th className="px-3 text-left font-semibold">Concepto</th>
+                <th className="px-3 text-right font-semibold">Monto</th>
+                <th className="px-3 text-left font-semibold">Estado</th>
+                <th className="py-2 pl-3 pr-4 text-left font-semibold">Método</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {data.map((mv) => {
+                const ui = TX_UI[mv.estado] ?? { label: mv.estado, texto: 'text-slate-500' }
+                return (
+                  <tr key={mv.id} className="transition-colors hover:bg-slate-50/80">
+                    <td className="num whitespace-nowrap py-2.5 pl-4 pr-3 text-[11.5px] text-slate-500">
+                      {fechaHora(mv.created_at)}
+                    </td>
+                    <td className="px-3">
+                      <p className="text-[12.5px] font-semibold leading-tight text-slate-900">
+                        {mv.admin_nombre}
+                      </p>
+                      <p className="text-[11px] text-slate-400">{mv.admin_email}</p>
+                    </td>
+                    <td className="px-3 text-[11.5px] capitalize text-slate-600">
+                      {mv.concepto.toLowerCase()}
+                    </td>
+                    <td className="num whitespace-nowrap px-3 text-right text-[12px] font-semibold text-slate-800">
+                      {formatCOP(mv.monto)}
+                    </td>
+                    <td className="px-3">
+                      <span className={`text-[9.5px] font-bold uppercase tracking-[0.1em] ${ui.texto}`}>
+                        {ui.label}
+                      </span>
+                      {mv.mensaje && mv.estado !== 'APPROVED' && (
+                        <p className="max-w-44 truncate text-[10.5px] text-slate-400" title={mv.mensaje}>
+                          {mv.mensaje}
+                        </p>
+                      )}
+                    </td>
+                    <td className="py-2.5 pl-3 pr-4 text-[11.5px] text-slate-500">
+                      {mv.metodo ?? '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </Card>
+      <p className="mt-3 text-[10.5px] text-slate-400">
+        Últimos 150 cobros de toda la plataforma, del más reciente al más antiguo.
+      </p>
+    </div>
   )
 }
 
-// ─── Editor de planes (precios y beneficios desde la interfaz) ────────────────
+// ─── Editor de planes ─────────────────────────────────────────────────────────
 
 const FEATURE_CATALOGO: { key: string; label: string }[] = [
   { key: 'pos', label: 'Punto de venta' },
@@ -722,79 +977,129 @@ function PlanEditorCard({ plan }: { plan: PlanAdmin }) {
     onError: (e) => toast.error(apiError(e)),
   })
 
-  const numInput = 'w-full px-2.5 py-1.5 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white'
+  const num = `${campo} num px-2.5 py-1.5`
 
   return (
-    <Card padding>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <BadgeDollarSign size={16} className="text-emerald-600" />
+    <div className={`rounded-xl border bg-white p-5 ${form.activo ? 'border-slate-200' : 'border-slate-200 opacity-60'}`}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <input
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            className="font-bold text-gray-900 dark:text-white bg-transparent border-b border-transparent focus:border-emerald-400 focus:outline-none"
+            aria-label="Nombre del plan"
+            className="min-w-0 border-b border-transparent bg-transparent font-display text-[17px] font-semibold text-slate-900 focus:border-slate-300 focus:outline-none"
           />
-          <Badge variant="gray">{plan.codigo}</Badge>
+          <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em] text-slate-500">
+            {plan.codigo}
+          </span>
         </div>
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
-          <input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} className="rounded" />
+        <label className="flex shrink-0 cursor-pointer select-none items-center gap-1.5 text-[11px] text-slate-500">
+          <input
+            type="checkbox"
+            checked={form.activo}
+            onChange={(e) => setForm({ ...form, activo: e.target.checked })}
+            className="h-3 w-3 rounded border-slate-300"
+          />
           Activo
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Precio mensual (COP)
-          <input type="number" value={form.precio_mensual} onChange={(e) => setForm({ ...form, precio_mensual: Number(e.target.value) })} className={numInput} />
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <label>
+          <span className={etiqueta}>Precio mensual (COP)</span>
+          <input
+            type="number"
+            value={form.precio_mensual}
+            onChange={(e) => setForm({ ...form, precio_mensual: Number(e.target.value) })}
+            className={num}
+          />
         </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Precio anual (COP)
-          <input type="number" value={form.precio_anual} onChange={(e) => setForm({ ...form, precio_anual: Number(e.target.value) })} className={numInput} />
+        <label>
+          <span className={etiqueta}>Precio anual (COP)</span>
+          <input
+            type="number"
+            value={form.precio_anual}
+            onChange={(e) => setForm({ ...form, precio_anual: Number(e.target.value) })}
+            className={num}
+          />
         </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Cupo facturas DIAN / mes
-          <input type="number" disabled={form.limite_ilimitado} value={form.limite_documentos_mes} onChange={(e) => setForm({ ...form, limite_documentos_mes: Number(e.target.value) })} className={`${numInput} disabled:opacity-40`} />
-          <label className="flex items-center gap-1 mt-1 cursor-pointer">
-            <input type="checkbox" checked={form.limite_ilimitado} onChange={(e) => setForm({ ...form, limite_ilimitado: e.target.checked })} className="rounded" /> Ilimitado
+        <div>
+          <span className={etiqueta}>Cupo facturas DIAN / mes</span>
+          <input
+            type="number"
+            disabled={form.limite_ilimitado}
+            value={form.limite_documentos_mes}
+            aria-label="Cupo de facturas DIAN por mes"
+            onChange={(e) => setForm({ ...form, limite_documentos_mes: Number(e.target.value) })}
+            className={`${num} disabled:opacity-40`}
+          />
+          <label className="mt-1 flex cursor-pointer select-none items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="checkbox"
+              checked={form.limite_ilimitado}
+              onChange={(e) => setForm({ ...form, limite_ilimitado: e.target.checked })}
+              className="h-3 w-3 rounded border-slate-300"
+            />
+            Ilimitado
           </label>
+        </div>
+        <label>
+          <span className={etiqueta}>Precio excedente (COP c/u)</span>
+          <input
+            type="number"
+            value={form.precio_excedente}
+            onChange={(e) => setForm({ ...form, precio_excedente: Number(e.target.value) })}
+            className={num}
+          />
         </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Precio excedente (COP c/u)
-          <input type="number" value={form.precio_excedente} onChange={(e) => setForm({ ...form, precio_excedente: Number(e.target.value) })} className={numInput} />
-        </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Máx. usuarios
-          <input type="number" disabled={form.usuarios_ilimitados} value={form.max_usuarios} onChange={(e) => setForm({ ...form, max_usuarios: Number(e.target.value) })} className={`${numInput} disabled:opacity-40`} />
-          <label className="flex items-center gap-1 mt-1 cursor-pointer">
-            <input type="checkbox" checked={form.usuarios_ilimitados} onChange={(e) => setForm({ ...form, usuarios_ilimitados: e.target.checked })} className="rounded" /> Ilimitado
+        <div>
+          <span className={etiqueta}>Máx. usuarios</span>
+          <input
+            type="number"
+            disabled={form.usuarios_ilimitados}
+            value={form.max_usuarios}
+            aria-label="Máximo de usuarios"
+            onChange={(e) => setForm({ ...form, max_usuarios: Number(e.target.value) })}
+            className={`${num} disabled:opacity-40`}
+          />
+          <label className="mt-1 flex cursor-pointer select-none items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="checkbox"
+              checked={form.usuarios_ilimitados}
+              onChange={(e) => setForm({ ...form, usuarios_ilimitados: e.target.checked })}
+              className="h-3 w-3 rounded border-slate-300"
+            />
+            Ilimitado
           </label>
-        </label>
+        </div>
       </div>
 
-      <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Beneficios incluidos</p>
-      <div className="flex flex-wrap gap-1.5 mb-4">
+      <p className={etiqueta}>Beneficios incluidos</p>
+      <div className="mb-4 flex flex-wrap gap-1.5">
         {FEATURE_CATALOGO.map((f) => {
           const on = form.features.has(f.key)
           return (
             <button
               key={f.key}
+              type="button"
               onClick={() => toggleFeature(f.key)}
-              className={`px-2 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+              aria-pressed={on}
+              className={`rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
                 on
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300'
-                  : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-gray-800 dark:border-gray-700'
+                  ? 'border-[var(--t-primary)] t-bg-lt t-text-dk'
+                  : 'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'
               }`}
             >
-              {on ? '✓ ' : '+ '}{f.label}
+              {f.label}
             </button>
           )
         })}
       </div>
 
-      <Button size="sm" onClick={() => save.mutate()} loading={save.isPending} icon={<BadgeDollarSign size={14} />}>
+      <Button size="sm" onClick={() => save.mutate()} loading={save.isPending}>
         Guardar cambios
       </Button>
-    </Card>
+    </div>
   )
 }
 
@@ -804,162 +1109,105 @@ function PlanesEditor() {
     queryFn: subsApi.plansAdmin,
     staleTime: 30_000,
   })
-  if (isLoading) return <div className="grid sm:grid-cols-2 gap-4">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-xl" />)}</div>
-  if (error != null) return <EmptyState icon={<AlertCircle size={32} className="text-red-400" />} title="Error" description={apiError(error)} />
+
+  if (isLoading)
+    return (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-80 rounded-xl" />)}
+      </div>
+    )
+  if (error != null)
+    return (
+      <EmptyState
+        icon={<AlertCircle size={30} className="text-rose-400" />}
+        title="Error"
+        description={apiError(error)}
+      />
+    )
+
   return (
-    <>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Cambia precios y beneficios cuando quieras. Los cambios aplican de inmediato a tu página pública de planes y al próximo cobro de cada cliente.
-      </p>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div>
+      <Rotulo contador={data?.length}>Planes y precios</Rotulo>
+      <div className="grid gap-4 lg:grid-cols-2">
         {(data ?? []).map((p) => <PlanEditorCard key={p.id} plan={p} />)}
       </div>
-    </>
+      <p className="mt-3 text-[10.5px] text-slate-400">
+        Los cambios aplican de inmediato a la página pública de planes y al próximo cobro de cada
+        cliente. Nadie que ya pagó este periodo se ve afectado hasta su siguiente renovación.
+      </p>
+    </div>
   )
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Página ───────────────────────────────────────────────────────────────────
 
 type Tab = 'cuentas' | 'movimientos' | 'planes'
 
+const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
+  { id: 'cuentas', label: 'Cuentas', icon: Users },
+  { id: 'movimientos', label: 'Movimientos', icon: History },
+  { id: 'planes', label: 'Planes', icon: BadgeDollarSign },
+]
+
 export default function MasterSubscriptionsPage() {
   const [tab, setTab] = useState<Tab>('cuentas')
-  const [search, setSearch] = useState('')
-  const [soloProblemas, setSoloProblemas] = useState(false)
   const [promoRow, setPromoRow] = useState<SubRow | null>(null)
   const [historialRow, setHistorialRow] = useState<SubRow | null>(null)
   const [planRow, setPlanRow] = useState<SubRow | null>(null)
 
-  const { data: rows, isLoading, error, refetch, isFetching } = useQuery({
-    queryKey: ['master', 'subscriptions'],
-    queryFn: subsApi.list,
-    staleTime: 30_000,
-  })
-  const { data: metrics } = useQuery({
+  const qc = useQueryClient()
+  const { data: metrics, isFetching } = useQuery({
     queryKey: ['master', 'subscriptions', 'metrics'],
     queryFn: subsApi.metrics,
     staleTime: 30_000,
   })
 
-  const filtered = (rows ?? []).filter((r) => {
-    const q = search.toLowerCase()
-    const matchSearch =
-      !q ||
-      r.admin_email.toLowerCase().includes(q) ||
-      r.admin_nombre.toLowerCase().includes(q) ||
-      (r.razon_social ?? '').toLowerCase().includes(q)
-    const matchProblema = !soloProblemas || ['PAST_DUE', 'SUSPENDED'].includes(r.estado)
-    return matchSearch && matchProblema
-  })
-
   return (
-    <div>
+    <div className="space-y-7">
       <PageHeader
-        subtitle="Tu negocio SaaS de un vistazo: quién paga, quién está en mora y promos"
+        subtitle="El negocio SaaS: quién paga, quién está en mora y qué se le da a quién"
         actions={
           <Button
             size="sm"
             variant="outline"
-            icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />}
-            onClick={() => refetch()}
+            icon={<RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />}
+            onClick={() => qc.invalidateQueries({ queryKey: ['master', 'subscriptions'] })}
           >
             Actualizar
           </Button>
         }
       />
 
-      {metrics && <MetricsBar m={metrics} />}
+      {metrics && <Cabecera m={metrics} />}
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-5 border-b border-gray-200 dark:border-gray-700">
-        {([
-          { id: 'cuentas', label: 'Cuentas', icon: <Users size={15} /> },
-          { id: 'movimientos', label: 'Movimientos (pagos)', icon: <History size={15} /> },
-          { id: 'planes', label: 'Planes y precios', icon: <BadgeDollarSign size={15} /> },
-        ] as { id: Tab; label: string; icon: React.ReactNode }[]).map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === t.id
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
+      {/* Pestañas en versalitas: el subrayado marca dónde estás sin gastar color. */}
+      <div className="flex gap-1 border-b border-slate-200">
+        {TABS.map((t) => {
+          const Icono = t.icon
+          const activa = tab === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                activa
+                  ? 'border-slate-900 text-slate-900'
+                  : 'border-transparent text-slate-400 hover:text-slate-700'
+              }`}
+            >
+              <Icono size={13} />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
+      {tab === 'cuentas' && (
+        <PanelCuentas onPromo={setPromoRow} onHistorial={setHistorialRow} onPlan={setPlanRow} />
+      )}
       {tab === 'movimientos' && <MovimientosPanel />}
       {tab === 'planes' && <PlanesEditor />}
-
-      {tab === 'cuentas' && isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-xl" />
-          ))}
-        </div>
-      )}
-
-      {tab === 'cuentas' && error != null && (
-        <EmptyState
-          icon={<AlertCircle size={32} className="text-red-400" />}
-          title="Error al cargar suscripciones"
-          description={apiError(error)}
-        />
-      )}
-
-      {tab === 'cuentas' && rows && (
-        <>
-          <div className="flex gap-3 mb-5 flex-wrap">
-            <div className="relative flex-1 min-w-48">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar negocio o email…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={soloProblemas}
-                onChange={(e) => setSoloProblemas(e.target.checked)}
-                className="rounded"
-              />
-              Solo en mora o bloqueadas
-            </label>
-          </div>
-
-          {filtered.length === 0 ? (
-            <EmptyState
-              icon={<Users size={32} className="text-gray-300" />}
-              title="Sin resultados"
-              description={
-                soloProblemas
-                  ? '¡Buenas noticias! Nadie está en mora ni bloqueado.'
-                  : 'Ningún cliente coincide con la búsqueda.'
-              }
-            />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filtered.map((row) => (
-                <SubCard
-                  key={row.admin_id}
-                  row={row}
-                  onPromo={() => setPromoRow(row)}
-                  onHistorial={() => setHistorialRow(row)}
-                  onPlan={() => setPlanRow(row)}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
 
       {promoRow && <PromoModal row={promoRow} onClose={() => setPromoRow(null)} />}
       {historialRow && <HistorialModal row={historialRow} onClose={() => setHistorialRow(null)} />}

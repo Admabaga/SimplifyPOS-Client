@@ -8,6 +8,7 @@ import { formatCOP } from './types'
 import WompiCheckout from './WompiCheckout'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
+import { useRelease } from '@/shared/hooks/useReleases'
 
 /**
  * Envuelve el área autenticada. Si la suscripción del tenant está SUSPENDED,
@@ -18,18 +19,21 @@ import { apiError } from '@/shared/lib/apiError'
 export default function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient()
   const isMaster = useAuthStore((s) => s.user?.role === 'master')
+  // Con el release de SaaS apagado no existe el cobro por suscripción, así que
+  // tampoco existe el bloqueo por falta de pago: el gate se vuelve transparente.
+  const saasActivo = useRelease('suscripciones_saas')
 
   const { data: sub } = useQuery({
     queryKey: ['subscription'],
     queryFn: subscriptionApi.getMe,
-    enabled: !isMaster,
+    enabled: !isMaster && saasActivo,
     retry: false,
     staleTime: 60_000,
   })
   const { data: config } = useQuery({
     queryKey: ['subscription-config'],
     queryFn: subscriptionApi.getConfig,
-    enabled: !isMaster,
+    enabled: !isMaster && saasActivo,
     retry: false,
   })
 
@@ -63,6 +67,9 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
   }
 
   const bloqueada = sub && !sub.acceso_permitido
+
+  // Release apagado: ni banners, ni bloqueo, ni checkout. La app sigue de largo.
+  if (!saasActivo) return <>{children}</>
 
   return (
     <>
