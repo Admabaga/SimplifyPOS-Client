@@ -17,6 +17,7 @@ import {
 import { authApi } from './api'
 import { useAuthStore } from '@/stores/auth'
 import { apiError } from '@/shared/lib/apiError'
+import { useRelease } from '@/shared/hooks/useReleases'
 import Logo from '@/assets/logo-mark.svg'
 
 // ─── Live activity panel — feed dinámico estilo dashboard ────────────────────
@@ -199,6 +200,9 @@ type FormValues = z.infer<typeof schema>
 export default function LoginPage() {
   const navigate = useNavigate()
   const setUser = useAuthStore((s) => s.setUser)
+  // Con las suscripciones apagadas las cuentas se crean a mano: no hay alta
+  // por cuenta propia que ofrecer.
+  const saasActivo = useRelease('suscripciones_saas')
   const [loading, setLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('simplifypos_remember') === '1')
   const [showPwd, setShowPwd] = useState(false)
@@ -1017,7 +1021,11 @@ export default function LoginPage() {
             </p>
 
             {/* Registro: tercer nivel de jerarquía — es para quien AÚN no es
-                cliente, así que no debe competir con el botón de entrar. */}
+                cliente, así que no debe competir con el botón de entrar.
+                Con las suscripciones apagadas no hay alta por cuenta propia
+                —las cuentas se crean a mano— así que el bloque desaparece: un
+                enlace a planes que no existen es peor que no ofrecer nada. */}
+            {saasActivo && (
             <div className="mt-6 border-t border-slate-100 pt-5 text-center">
               <p className="text-sm text-slate-500">
                 ¿No tienes cuenta?{' '}
@@ -1030,6 +1038,7 @@ export default function LoginPage() {
               </p>
               <p className="mt-1.5 text-xs text-slate-400">1 mes gratis · sin permanencia</p>
             </div>
+            )}
           </div>
           )}
 

@@ -4,6 +4,7 @@ import ProtectedRoute from './ProtectedRoute'
 import SessionBootstrap from './SessionBootstrap'
 import Layout from '@/shared/components/Layout'
 import SubscriptionGate from '@/features/subscription/SubscriptionGate'
+import ReleaseRoute from './ReleaseRoute'
 import { Spinner } from '@/shared/components/ui'
 
 // Lazy imports
@@ -36,6 +37,7 @@ const MasterAnalyticsPage = lazy(() => import('@/features/master/MasterAnalytics
 const MasterInfraPage = lazy(() => import('@/features/master/MasterInfraPage'))
 const MasterAIPage = lazy(() => import('@/features/master/MasterAIPage'))
 const MasterSubscriptionsPage = lazy(() => import('@/features/master/MasterSubscriptionsPage'))
+const MasterReleasesPage = lazy(() => import('@/features/master/MasterReleasesPage'))
 
 function Loading() {
   return (
@@ -63,8 +65,13 @@ export default function AppRoutes() {
       <Routes>
         {/* Públicas */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/planes" element={<PlansPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        {/* Alta por cuenta propia — solo existe con el release de SaaS publicado.
+            Apagado, las cuentas las crea el operador y estas páginas no van a
+            ninguna parte: la API de planes responde 404. */}
+        <Route element={<ReleaseRoute release="suscripciones_saas" redirectTo="/login" />}>
+          <Route path="/planes" element={<PlansPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
         <Route path="/403" element={<Forbidden />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -117,9 +124,11 @@ export default function AppRoutes() {
               {/* Perfil */}
             <Route path="/profile" element={<ProfilePage />} />
 
-            {/* Suscripción (admin) */}
+            {/* Suscripción (admin) — solo si el release de SaaS está publicado */}
             <Route element={<ProtectedRoute permission="suscripcion:read" />}>
-              <Route path="/cuenta/suscripcion" element={<SubscriptionPage />} />
+              <Route element={<ReleaseRoute release="suscripciones_saas" />}>
+                <Route path="/cuenta/suscripcion" element={<SubscriptionPage />} />
+              </Route>
             </Route>
 
             {/* Admin — usuarios (admin + master) */}
@@ -142,6 +151,7 @@ export default function AppRoutes() {
               <Route path="/master/infra" element={<MasterInfraPage />} />
               <Route path="/master/ai" element={<MasterAIPage />} />
               <Route path="/master/suscripciones" element={<MasterSubscriptionsPage />} />
+              <Route path="/master/releases" element={<MasterReleasesPage />} />
             </Route>
           </Route>
         </Route>

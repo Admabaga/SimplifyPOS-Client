@@ -3,6 +3,7 @@ import { useState } from 'react'
 import ThemePanel from './ThemePanel'
 import LogoutOverlay from './LogoutOverlay'
 import {
+  ToggleRight,
   LayoutDashboard, Package, Tags, Truck, FileText, Users,
   Receipt, CreditCard, TrendingUp, LogOut, ChevronLeft, ChevronRight,
   Shield, ClipboardList, ActivitySquare, Menu, X, Wallet, UserCog, Landmark, Bell,
@@ -18,6 +19,7 @@ import Logo from '@/assets/logo-mark.svg'
 import { useQuery } from '@tanstack/react-query'
 import { notificationsApi } from '@/features/notifications/api'
 import { subscriptionApi } from '@/features/subscription/api'
+import { useReleases, type ReleaseKey } from '@/shared/hooks/useReleases'
 
 interface NavItem {
   label: string
@@ -27,6 +29,8 @@ interface NavItem {
   /** Funcionalidad del plan requerida (ej: 'crm_clientes', 'gastos'). Si el plan
    *  del tenant no la incluye, el item se oculta. */
   feature?: string
+  /** Release de plataforma. Con su capa web apagada, el item no existe. */
+  release?: ReleaseKey
 }
 interface NavGroup {
   label: string
@@ -62,7 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Medios de pago',to: '/payment-methods',icon: <CreditCard size={17} />,   permission: 'medios_pago:read' },
       { label: 'Reportes',      to: '/reports',        icon: <TrendingUp size={17} />,    permission: 'reportes:read' },
       { label: 'Facturación',   to: '/admin/billing',  icon: <ScrollText size={17} />,    permission: 'facturacion:read' },
-      { label: 'Suscripción',   to: '/cuenta/suscripcion', icon: <Gem size={17} />,       permission: 'suscripcion:read' },
+      { label: 'Suscripción',   to: '/cuenta/suscripcion', icon: <Gem size={17} />,       permission: 'suscripcion:read', release: 'suscripciones_saas' },
     ],
   },
   {
@@ -105,6 +109,12 @@ function NavContent({ collapsed, onNavigate, can, role }: {
   })
   const planFeatures = subMe?.plan.features ?? null
   const hasFeature = (f?: string) => !f || planFeatures === null || planFeatures.includes(f)
+
+  // Releases de plataforma. Fail-closed al revés que las features del plan: si
+  // aún no cargó, no se dibuja. Un item que aparece y desaparece es peor que
+  // uno que tarda un instante en aparecer.
+  const { data: releases } = useReleases()
+  const hasRelease = (r?: ReleaseKey) => !r || (releases?.[r]?.web ?? false)
   return (
     <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto py-2 px-2">
 
@@ -149,10 +159,13 @@ function NavContent({ collapsed, onNavigate, can, role }: {
             { to: '/master/today',     label: 'Mi día',    icon: <Sunrise size={17} />,   title: 'Lo que importa HOY — alertas y contactos prioritarios' },
             { to: '/master/analytics', label: 'Analytics', icon: <BarChart3 size={17} />, title: 'Métricas cross-tenant del ecosistema' },
             { to: '/master',           label: 'Negocios',  icon: <Building2 size={17} />, title: 'Gestión de tenants' },
-            { to: '/master/suscripciones', label: 'Suscripciones', icon: <Gem size={17} />, title: 'Pagos, planes, promos y cuentas bloqueadas' },
+            { to: '/master/suscripciones', label: 'Suscripciones', icon: <Gem size={17} />, title: 'Pagos, planes, promos y cuentas bloqueadas', release: 'suscripciones_saas' as ReleaseKey },
             { to: '/master/infra',     label: 'Infra',     icon: <Server size={17} />,    title: 'Salud técnica e infraestructura' },
             { to: '/master/ai',        label: 'IA Center', icon: <Brain size={17} />,     title: 'Centro de Inteligencia IA' },
-          ].map((item) => (
+            { to: '/master/releases',  label: 'Releases',  icon: <ToggleRight size={17} />, title: 'Interruptores de funcionalidad de la plataforma' },
+            // El panel de suscripciones del master también vive detrás del release:
+            // sin SaaS no hay cartera que administrar.
+          ].filter((item) => hasRelease((item as { release?: ReleaseKey }).release)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -223,7 +236,7 @@ function NavContent({ collapsed, onNavigate, can, role }: {
       {NAV_GROUPS.map((group) => {
         if (group.permission && !can(group.permission)) return null
         const items = group.items.filter(
-          (i) => (!i.permission || can(i.permission)) && hasFeature(i.feature),
+          (i) => (!i.permission || can(i.permission)) && hasFeature(i.feature) && hasRelease(i.release),
         )
         if (items.length === 0) return null
         return (
