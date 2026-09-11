@@ -13,6 +13,7 @@
  * peligroso: web sin API, donde la interfaz ofrece algo que el backend
  * rechaza. Ese va en rojo y con su explicación, no con un ícono de alerta.
  */
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -54,45 +55,86 @@ function fechaHora(iso: string | null): string {
 
 // ─── Interruptor ──────────────────────────────────────────────────────────────
 
+/**
+ * Un solo interruptor, y dos casillas que eligen sobre qué capas actúa.
+ *
+ * La alternativa —un interruptor por capa— obliga a pensar en dos cosas a la
+ * vez y hace fácil dejar la web encendida con la API apagada sin notarlo. Así
+ * la decisión es una sola: "esto va arriba o abajo", y aparte se elige el
+ * alcance. Por defecto vienen las dos marcadas, que es lo que se quiere el 90%
+ * de las veces; desmarcar una es el gesto deliberado de quien está haciendo un
+ * encendido por etapas.
+ */
 function Interruptor({
   encendido,
-  etiqueta,
-  nota,
   onToggle,
   cargando,
+  disabled,
 }: {
   encendido: boolean
-  etiqueta: string
-  nota: string
   onToggle: () => void
   cargando: boolean
+  disabled: boolean
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-          {etiqueta}
-        </p>
-        <p className="mt-0.5 text-[11.5px] text-slate-500">{nota}</p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={encendido}
-        aria-label={`${etiqueta}: ${encendido ? 'encendido' : 'apagado'}`}
-        disabled={cargando}
-        onClick={onToggle}
-        className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
-          encendido ? 'bg-[var(--t-primary)]' : 'bg-slate-200'
+    <button
+      type="button"
+      role="switch"
+      aria-checked={encendido}
+      aria-label={encendido ? 'Apagar release' : 'Encender release'}
+      disabled={cargando || disabled}
+      onClick={onToggle}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        encendido ? 'bg-[var(--t-primary)]' : 'bg-slate-200'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${
+          encendido ? 'translate-x-[22px]' : 'translate-x-0.5'
         }`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-            encendido ? 'translate-x-[22px]' : 'translate-x-0.5'
-          }`}
-        />
-      </button>
-    </div>
+      />
+    </button>
+  )
+}
+
+function CasillaCapa({
+  etiqueta,
+  nota,
+  marcada,
+  activa,
+  onChange,
+}: {
+  etiqueta: string
+  nota: string
+  marcada: boolean
+  activa: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer select-none items-start gap-2.5 py-2">
+      <input
+        type="checkbox"
+        checked={marcada}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-label={etiqueta}
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-slate-300 accent-[var(--t-primary)]"
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            {etiqueta}
+          </span>
+          <span
+            className={`text-[9.5px] font-bold uppercase tracking-[0.1em] ${
+              activa ? 't-text-dk' : 'text-slate-300'
+            }`}
+          >
+            {activa ? 'activa' : 'apagada'}
+          </span>
+        </span>
+        <span className="mt-0.5 block text-[11.5px] leading-relaxed text-slate-500">{nota}</span>
+      </span>
+    </label>
   )
 }
 
@@ -131,16 +173,39 @@ function Estado({ r }: { r: Release }) {
 
 function FichaRelease({ r }: { r: Release }) {
   const qc = useQueryClient()
+  // Qué capas toca el interruptor. Las dos por defecto: el encendido por etapas
+  // es el caso deliberado, no el habitual.
+  const [alcance, setAlcance] = useState({ api: true, web: true })
+
   const mutation = useMutation({
     mutationFn: (capas: { api?: boolean; web?: boolean }) => releasesApi.cambiar(r.clave, capas),
     onSuccess: (actualizado) => {
       qc.invalidateQueries({ queryKey: ['master', 'releases'] })
       qc.invalidateQueries({ queryKey: ['releases'] })
-      const capa = actualizado.completo ? 'de punta a punta' : ''
-      toast.success(`${actualizado.nombre} actualizado ${capa}`.trim())
+      toast.success(
+        actualizado.completo
+          ? `${actualizado.nombre}: activo de punta a punta`
+          : `${actualizado.nombre} actualizado`,
+      )
     },
     onError: (e) => toast.error(apiError(e)),
   })
+
+  // El interruptor está arriba cuando todas las capas marcadas lo están.
+  const capas = [
+    { marcada: alcance.api, activa: r.api },
+    { marcada: alcance.web, activa: r.web },
+  ]
+  const marcadas = capas.filter((c) => c.marcada)
+  const encendido = marcadas.length > 0 && marcadas.every((c) => c.activa)
+
+  const cambiar = () => {
+    const valor = !encendido
+    mutation.mutate({
+      ...(alcance.api ? { api: valor } : {}),
+      ...(alcance.web ? { web: valor } : {}),
+    })
+  }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -150,27 +215,55 @@ function FichaRelease({ r }: { r: Release }) {
       </div>
       <p className="text-xs leading-relaxed text-slate-600">{r.descripcion}</p>
 
-      <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
-        <Interruptor
-          etiqueta="API"
-          nota="El backend atiende. Préndelo primero: no cambia nada de lo que se ve."
-          encendido={r.api}
-          cargando={mutation.isPending}
-          onToggle={() => mutation.mutate({ api: !r.api })}
-        />
-        <Interruptor
-          etiqueta="Web"
-          nota="La interfaz lo dibuja. Préndelo cuando la API esté verificada."
-          encendido={r.web}
-          cargando={mutation.isPending}
-          onToggle={() => mutation.mutate({ web: !r.web })}
-        />
+      <div className="mt-4 flex items-start gap-5 border-y border-slate-100 py-3">
+        <div className="min-w-0 flex-1">
+          {mutation.isPending ? (
+            <p className="flex items-center gap-2 py-3 text-[11.5px] text-slate-400">
+              <Loader2 size={13} className="animate-spin" />
+              Aplicando…
+            </p>
+          ) : (
+            <>
+              <CasillaCapa
+                etiqueta="API"
+                nota="El backend atiende. Enciéndela primero: no cambia nada de lo que se ve."
+                marcada={alcance.api}
+                activa={r.api}
+                onChange={(v) => setAlcance((a) => ({ ...a, api: v }))}
+              />
+              <CasillaCapa
+                etiqueta="Web"
+                nota="La interfaz lo dibuja. Enciéndela cuando la API esté verificada."
+                marcada={alcance.web}
+                activa={r.web}
+                onChange={(v) => setAlcance((a) => ({ ...a, web: v }))}
+              />
+            </>
+          )}
+        </div>
+        <div className="flex flex-col items-center gap-1.5 pt-2">
+          <Interruptor
+            encendido={encendido}
+            cargando={mutation.isPending}
+            disabled={marcadas.length === 0}
+            onToggle={cambiar}
+          />
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-slate-400">
+            {marcadas.length === 0 ? 'sin capas' : encendido ? 'encendido' : 'apagado'}
+          </span>
+        </div>
       </div>
+
+      {marcadas.length === 0 && (
+        <p className="mt-3 text-[11.5px] text-slate-400">
+          Marca al menos una capa para poder mover el interruptor.
+        </p>
+      )}
 
       {r.inconsistente && (
         <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-[11.5px] leading-relaxed text-rose-800">
           La web está ofreciendo esta funcionalidad y la API la está rechazando: quien la use va
-          a ver un error. Prende la API o apaga la web.
+          a ver un error. Enciende la API o apaga la web.
         </p>
       )}
 
@@ -183,7 +276,7 @@ function FichaRelease({ r }: { r: Release }) {
         </div>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-            Antes de prenderlo
+            Antes de encenderlo
           </p>
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-slate-600">
             {r.riesgo_al_prender}
