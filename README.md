@@ -1,237 +1,188 @@
 # SimplifyPOS — Frontend
 
-Interfaz web para el sistema POS SimplifyPOS. Construida con React 19 + TypeScript + Vite. Diseñada para comerciantes colombianos que operan la app 8+ horas al día — velocidad y simplicidad primero.
+Aplicación web del punto de venta SimplifyPOS. Es lo que ve el comerciante para vender, fiar, cuadrar caja y controlar su inventario, y lo que ve el operador de la plataforma para administrar toda la red de negocios.
 
-[![CI](https://github.com/Admabaga/SimplifyPOS-Client/actions/workflows/ci.yml/badge.svg)](https://github.com/Admabaga/SimplifyPOS-Client/actions/workflows/ci.yml)
-
----
-
-## Stack tecnológico
-
-| Componente | Tecnología |
-|---|---|
-| Framework | React 19 |
-| Lenguaje | TypeScript |
-| Build | Vite |
-| Routing | React Router v6 |
-| Server state | TanStack Query v5 |
-| Forms | React Hook Form + Zod |
-| HTTP client | Axios (con interceptor de refresh automático) |
-| Estado global | Zustand |
-| Búsqueda fuzzy | Fuse.js |
-| Iconos | Lucide React |
-| Gráficas | Recharts |
-| Notificaciones | React Hot Toast |
-| Linting | ESLint + TypeScript strict |
-| Deploy | Render (auto-deploy desde main) |
-| AI Advisor | Claude Haiku 4.5 (via Anthropic API) |
+**Estado al 11 de septiembre de 2026** — 20 módulos · 296 pruebas · TypeScript estricto sin errores.
 
 ---
 
-## Estructura del proyecto
+## Empezar en tres minutos
+
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+
+Por defecto Vite hace proxy de `/api` hacia `http://localhost:8000`, así que basta con tener la API corriendo en ese puerto. No hace falta configurar nada más.
+
+Si la API está en otro sitio, crear `.env.local` (no se commitea):
+
+```bash
+VITE_API_URL=http://127.0.0.1:8010/api/v1
+```
+
+> Ojo con esto: apuntar a otro origen activa CORS y **la cookie de refresh deja de viajar**, así que la sesión se pierde al recargar. Para desarrollo normal, mejor el proxy.
+
+### Comandos
+
+```bash
+npm run dev            # servidor de desarrollo
+npm run build          # verifica tipos y compila para producción
+npm run lint           # ESLint
+npm run check:types    # tsc --noEmit
+npm test               # 296 pruebas (vitest)
+npm run test:watch     # en modo watch
+```
+
+---
+
+## Stack
+
+| Componente | Elección | Por qué |
+|---|---|---|
+| Lenguaje | TypeScript estricto | |
+| UI | React 19 | |
+| Build | Vite 6 | |
+| Rutas | React Router v6 | |
+| Estado del servidor | TanStack Query v5 | Caché e invalidación por dominio, sin replicar datos a mano |
+| Estado global | Zustand | Solo sesión y tenant activo; lo demás es del servidor |
+| Formularios | React Hook Form + Zod | Validación compartida entre esquema y tipos |
+| HTTP | Axios con interceptor de refresh | |
+| Estilos | Tailwind CSS 4 | |
+| Gráficas | Recharts | |
+| Búsqueda | Fuse.js | Difusa, para el buscador de la venta rápida |
+| Íconos | Lucide React | Trazo de línea, sin emojis |
+| Pruebas | Vitest + Testing Library | |
+| Publicación | Render, automático desde `main` | |
+
+---
+
+## Estructura
 
 ```
 src/
-├── features/               # Módulos por dominio de negocio
-│   ├── accounts/           # Cuentas crédito + ventas + pagos
-│   ├── admin/              # Panel master (gestión de tenants)
-│   ├── auth/               # Login, 2FA
-│   ├── billing/            # Facturación DIAN (empresa, resoluciones)
-│   ├── caja/               # Apertura, cierre y cuadre de caja
-│   ├── categories/         # Categorías de productos
-│   ├── clients/            # Directorio de clientes fiscales
-│   ├── expenses/           # Gastos operativos
-│   ├── invoices/           # Historial de tickets emitidos
-│   ├── master/             # Herramientas super-admin
-│   ├── notifications/      # Centro de notificaciones
-│   ├── onboarding/         # Wizard de configuración inicial
-│   ├── payment-methods/    # Medios de pago
-│   ├── products/           # Catálogo de productos
-│   ├── reports/            # Dashboard de KPIs y reportes
-│   ├── sales/              # Registro de ventas
-│   └── suppliers/          # Proveedores
+├── features/          Un módulo por dominio de negocio
+│   ├── accounts/      Cuentas de crédito (fiados) y venta rápida
+│   ├── auth/          Login, perfil, passkeys, 2FA
+│   ├── billing/       Empresa, resoluciones DIAN, tickets emitidos
+│   ├── caja/          Apertura, movimientos, cierre y reporte Z
+│   ├── master/        Consola del operador de la plataforma
+│   ├── subscription/  Planes y suscripción (detrás de release)
+│   └── …              products, sales, expenses, reports, clients…
+├── routes/            Definición de rutas y guardas
 ├── shared/
-│   ├── api/
-│   │   └── client.ts       # Axios instance + interceptor refresh token
-│   ├── components/
-│   │   ├── ui.tsx          # Design system (Button, Input, Modal, Table...)
-│   │   ├── Layout.tsx      # Shell principal con sidebar
-│   │   └── Sidebar.tsx     # Navegación lateral
-│   └── lib/
-│       └── apiError.ts     # Extractor de mensajes de error de la API
-├── stores/
-│   └── auth.ts             # Zustand store — usuario + token + permisos
-└── routes/                 # Definición de rutas React Router
+│   ├── api/           Cliente Axios y APIs por dominio
+│   ├── components/    Sistema de diseño (ui.tsx), Layout, Sidebar
+│   ├── hooks/         useReleases, useIsDesktop, useBarcode…
+│   └── lib/           Formateadores, manejo de errores, markdown seguro
+├── stores/            Zustand: auth, master, theme
+└── tests/             296 pruebas
 ```
+
+Cada carpeta de `features/` es autónoma: sus componentes, su `api.ts` y sus tipos. Lo que se comparte sube a `shared/`.
 
 ---
 
-## Módulos principales
+## Releases — qué se dibuja y qué no
 
-| Módulo | Ruta | Descripción |
-|---|---|---|
-| Dashboard | `/` | KPIs del día, ventas, saldo de caja + **Asesor de negocio (IA)** |
-| Cuentas | `/accounts` | Cuentas crédito — lista y detalle |
-| Detalle cuenta | `/accounts/:id` | Agregar ventas, registrar pagos, emitir ticket |
-| Productos | `/products` | CRUD de productos y precios |
-| Caja | `/caja` | Abrir/cerrar caja, movimientos, cuadre |
-| Reportes | `/reports` | Ventas del mes, gastos, audit log |
-| Facturación | `/billing` | Config empresa + resoluciones DIAN |
-| Clientes | `/clients` | Directorio fiscal |
-| Gastos | `/expenses` | Registro de egresos |
-| Medios de pago | `/payment-methods` | Configurar métodos aceptados |
-| Notificaciones | `/notifications` | Alertas de stock bajo (análisis de velocidad de ventas) |
-| Roles | `/roles` | RBAC — gestionar roles y permisos |
-| Usuarios | `/users` | Gestión de usuarios del tenant |
-| **Master: Analytics** | `/master/analytics` | KPIs cross-tenant, GMV, engagement, audit + **Estrategia de Marketing (IA)** |
-| **Master: Salud Técnica** | `/master/infra` | Métricas DB, carga por tenant, proyecciones de escala + **Análisis de infraestructura (IA)** |
-| **Master: Negocios** | `/master` | Gestión de tenants — activos/inactivos |
+Las funcionalidades grandes viven detrás de un interruptor que administra el master. La web consulta `GET /releases` (endpoint público, porque el login y la página de planes también necesitan saberlo) y **solo mira la capa `web`**.
 
----
+```tsx
+import { useRelease } from '@/shared/hooks/useReleases'
 
-## Setup local
-
-### Prerrequisitos
-
-- Node.js 20+
-- Backend SimplifyPOS corriendo en `localhost:8000`
-
-### Pasos
-
-```bash
-# 1. Clonar
-git clone https://github.com/Admabaga/SimplifyPOS-Client.git
-cd SimplifyPOS-Client
-
-# 2. Instalar dependencias
-npm install
-
-# 3. Variables de entorno
-echo "VITE_API_URL=http://localhost:8000/api/v1" > .env.local
-
-# 4. Arrancar en desarrollo
-npm run dev
+const saasActivo = useRelease('suscripciones_saas')
+if (!saasActivo) return null
 ```
 
-App disponible en: `http://localhost:5173`
+Tres formas de esconder, según el caso:
 
----
+| Qué | Cómo |
+|---|---|
+| Entrada del menú | Campo `release` en el ítem de `Sidebar.tsx` |
+| Ruta completa | `<ReleaseRoute release="…" redirectTo="/login">` |
+| Un bloque dentro de una pantalla | `useRelease(...)` y condicional |
 
-## Variables de entorno
+**El hook responde `false` mientras la consulta está en vuelo.** Es deliberado: que un ítem del menú aparezca y desaparezca es peor que tarde un instante en aparecer.
 
-```env
-# URL base de la API (sin trailing slash)
-VITE_API_URL=http://localhost:8000/api/v1
-```
-
-En producción se configura en Render como variable de entorno.
-
----
-
-## Scripts disponibles
-
-```bash
-npm run dev          # Servidor de desarrollo con HMR
-npm run build        # Build de producción (tsc + vite build)
-npm run preview      # Preview del build de producción
-npm run lint         # ESLint
-npm run check:types  # TypeScript sin emitir archivos
-```
+> El punto de venta no depende de ningún release. Vender, cobrar e imprimir funcionan con todo apagado.
 
 ---
 
 ## Autenticación
 
-- Login con email + password → access token en memoria + refresh token en cookie HttpOnly
-- El interceptor de Axios renueva el access token automáticamente al recibir 401
-- Los permisos del usuario se almacenan en Zustand y controlan qué secciones y acciones son visibles
-- Soporte 2FA TOTP (Google Authenticator / Authy)
+- Login con correo y contraseña → **token de acceso en memoria** y refresh en cookie `HttpOnly`.
+- El interceptor de Axios renueva el token al recibir un 401, y reintenta la petición original.
+- Los permisos viven en Zustand y controlan qué se dibuja y qué no.
+- Segundo factor: TOTP y passkeys (huella, Face ID, llave de seguridad).
+
+**El token no se guarda en `localStorage`**, a propósito: ahí cualquier script inyectado puede leerlo. El costo es que recargar la página obliga a renovar contra el servidor; a cambio, un XSS deja de ser una sesión robada.
 
 ---
 
-## Design system
+## Sistema de diseño
 
-El componente `shared/components/ui.tsx` centraliza todos los elementos visuales:
+`shared/components/ui.tsx` centraliza los componentes: `Button`, `Input`, `Modal`, `ConfirmDialog`, `Table`, `Badge`, `Spinner`, `PageHeader`, `EmptyState`, `TabBar`, `Pagination`, entre otros.
 
-| Componente | Descripción |
-|---|---|
-| `Button` | Primario, secundario, ghost, danger. Con loading state. |
-| `Input` | Con label, error y soporte para íconos |
-| `Modal` | Con backdrop, Escape para cerrar, scroll interno |
-| `ConfirmDialog` | Modal de confirmación con mensaje personalizable |
-| `Table` | Tabla con cabeceras, filas vacías y skeleton loader |
-| `Badge` | Etiquetas de estado con colores semánticos |
-| `Spinner` | Indicador de carga |
+Los colores de marca son variables CSS (`--t-primary`, `--t-sidebar-bg`…) definidas en `index.css`, con varios temas seleccionables.
 
-Los colores de la marca se definen como CSS variables (`--t-primary`, etc.) en `index.css`.
+### La consola del Master es su propio lenguaje
+
+Las pantallas de `features/master/` **no usan el sistema de diseño general**. Tienen el suyo (`master/components/consola.tsx`): papel con retícula, rótulos en versalitas, cifras en la tipografía de titulares. Es deliberado — quien opera la plataforma pasa del panel de un cliente a la vista global muchas veces al día, y el cambio de contexto debe notarse sin leer el título.
+
+Dos reglas de esas pantallas:
+
+- **El color solo donde significa algo.** Pintar de verde lo que está bien enseña al ojo a ignorarlo, y entonces deja de servir para detectar la excepción.
+- **Listas largas van en tabla, no en tarjetas.** Las tarjetas se ven bien con seis elementos y son imposibles de barrer con cincuenta.
+
+---
+
+## Pruebas
+
+296 pruebas en 42 archivos. Qué se cubre:
+
+- **Render con datos reales** de cada pantalla, no solo que monte.
+- **Interacciones** de los flujos que mueven dinero: venta rápida, cobro, cierre de caja.
+- **Lógica de hooks** por separado (`useQuickSale`, `useProductFilters`, `useReleases`).
+- **Comportamiento condicionado por releases**: que lo apagado no se dibuje, y que lo encendido sí.
+
+```bash
+npm test                     # todo
+npm test -- releases         # un archivo
+```
+
+Convención: cuando una prueba comprueba que algo **no** aparece, debe comprobar también que aparece cuando corresponde. Si no, puede estar pasando por la razón equivocada — nos pasó tres veces.
 
 ---
 
 ## CI/CD
 
-El pipeline de GitHub Actions corre en cada push a `main`:
+GitHub Actions en cada push a `main`: ESLint → `tsc --noEmit` → `vite build` → despliegue en Render.
 
-1. **ESLint** — sin errores de lint
-2. **TypeScript check** — `tsc --noEmit`
-3. **Build** — `vite build` con URL placeholder
-4. **Deploy to Render** — dispara deploy automático si los pasos anteriores pasan
+**Orden de despliegue:** la API va primero cuando la versión trae migraciones. Al revés, la web consulta endpoints que aún no existen; con los releases eso degrada a "todo apagado", que es el fallo seguro, pero conviene evitarlo.
 
 ---
 
-## Wizard de onboarding
+## Asistente de IA
 
-Al primer inicio de sesión de un admin, el sistema muestra un wizard de configuración de 5 pasos:
+Dos paneles con Claude Haiku:
 
-1. **Bienvenida** — resumen de lo que se va a configurar
-2. **Datos del negocio** — razón social, NIT, dirección (para las facturas)
-3. **Primer producto** — nombre y precio de venta
-4. **Medios de pago** — revisión de los métodos activos
-5. **Caja** — instrucciones para abrir la primera sesión
+- **Asesor de negocio** (tablero del comerciante) — diagnóstico del mes, tres acciones concretas, alerta principal.
+- **Inteligencia** (consola del Master) — estado del ecosistema y estrategia de crecimiento.
 
-El wizard no vuelve a aparecer una vez completado o descartado (persiste en `localStorage` por usuario).
+El análisis generado **se guarda en el navegador** y se vuelve a mostrar al entrar, sin volver a consultar la IA, hasta que se pida uno nuevo de forma explícita. Cada consulta cuesta tokens de Anthropic.
 
 ---
 
-## 🤖 Asesor IA — Claude Haiku
+## Onboarding
 
-SimplifyPOS incluye paneles de asesoría inteligente impulsados por Claude Haiku 4.5:
-
-### Dashboard: "Asesor de negocio"
-Analiza tus datos mensuales (ventas, cuentas, stock, gastos) y retorna:
-- Diagnóstico del negocio: cómo estás vs mes anterior
-- Top 3 acciones para esta semana
-- Alerta principal (si hay stock crítico, deuda alta, etc.)
-- Consejo del mes para mejorar rentabilidad
-
-### Master: "Estrategia de Marketing"
-Solo para master. Analiza métricas cross-tenant (tenants activos, GMV, engagement, geografía) y retorna:
-- Diagnóstico de crecimiento
-- 3 movimientos de marketing concretos
-- Estrategia geográfica (dónde concentrar esfuerzos)
-- Tácticas de retención para tenants inactivos
-- Oportunidades de upsell
-- Meta a 60 días
-
-### Master: "Análisis de infraestructura"
-En `/master/infra`. Analiza tamaño de DB, filas por tabla, crecimiento mensual, carga por tenant y retorna:
-- Diagnóstico ejecutivo (qué tan urgente actuar)
-- Cuándo escalar: proyecciones a 500MB, 2GB, 5M filas
-- Top 3 acciones inmediatas
-- Plan de escala a 6 meses
-- Señales de alarma a monitorear
-
-**Requisito:** Agrega `ANTHROPIC_API_KEY=sk-ant-...` en el `.env` del servidor backend.
+Al primer ingreso de un admin aparece un asistente de cinco pasos: bienvenida, datos del negocio, primer producto, medios de pago y apertura de caja. No vuelve a aparecer una vez completado o descartado.
 
 ---
 
-## Facturación DIAN
+## Documentación
 
-Desde el módulo de **Detalle de cuenta** se puede emitir un ticket en tres modalidades:
-
-| Tipo | Descripción |
+| Documento | Para qué |
 |---|---|
-| Informal | Recibo sin numeración fiscal — idempotente |
-| POS | Factura POS con resolución DIAN activa |
-| Factura de venta | Factura electrónica completa (Art. 617 ET) |
-
-El ticket incluye desglose de IVA por categoría, datos de la empresa y hash de integridad.
+| `Informe_SimplifyPOS_Tecnico_v6.pdf` | Arquitectura y decisiones, versión por versión |
+| `Informe_SimplifyPOS_Producto_Comercial_v6.pdf` | Visión funcional y comercial |
+| [`SimplifyPOS-API`](https://github.com/Admabaga/SimplifyPOS-API) | Backend: contrato DIAN, releases, modo seguro |
